@@ -39,7 +39,13 @@ export const useAuthStore = create<AuthStore>((set) => ({
       throw error
     }
     if (data.user) {
-      await supabase.from('users').insert({ id: data.user.id, email, username })
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({ id: data.user.id, email, username })
+      if (insertError) {
+        set({ isLoading: false })
+        throw new Error('No se pudo crear el perfil: ' + insertError.message)
+      }
     }
     set({
       user: data.user ? { ...data.user, username } : null,

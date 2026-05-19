@@ -16,26 +16,34 @@ Red social tipo Letterboxd para rock nacional argentino.
 - DB: Supabase (Postgres + Auth) — schema en `supabaseschema.sql` (el usuario lo ejecuta manualmente)
 - APIs: MusicBrainz (catálogo), Spotify (futuro, Tramo 3)
 
-## Estado actual (2026-05-18)
-Fases 1.1 + 1.3 + 1.4 completadas. App funcional: búsqueda → artista → discografía.
+## Estado actual (2026-05-19)
 
-Archivos clave:
-- `frontend/src/` — componentes, páginas, services, hooks, stores
-- `backend/src/` — routes, services, middleware
-- `.gitignore`, `README.md`
+### Completado
+- **Fase 1.1** — estructura monorepo, configs, .gitignore, README
+- **Fase 1.3** — ingesta MusicBrainz: búsqueda → guarda artista al entrar al detalle (no al buscar)
+- **Fase 1.4** — UI base: todas las páginas y componentes
+- **Fase 1.5** — Auth con Supabase: signup/login/logout funcional ✓
 
-Búsqueda: botón submit (no debounce). Solo guarda artista en DB al entrar al detalle, no al buscar.
-Filtros MB: post-filter por country (AR/UY) + área conocida + género (bloquea trap/reggaeton/etc).
-"Próximamente..." si hay resultados AR/UY pero todos bloqueados por género.
+### Decisiones tomadas
+- Búsqueda: botón submit, no debounce
+- Guardar artista en DB solo al entrar al detalle del artista, no en resultados de búsqueda
+- Filtros MusicBrainz: post-filter por country (AR/UY) + lista de áreas conocidas + géneros bloqueados (trap/reggaeton/hip-hop/etc)
+- "Próximamente..." si hay resultados AR/UY pero todos bloqueados por género
+- Email confirmation deshabilitado en Supabase (MVP)
+- Monorepo: un repo git en raíz, `frontend/` y `backend/` como subcarpetas
+- Memoria del proyecto en `.claude/memory/` dentro del repo
 
-**Pendiente del usuario:**
-1. Ejecutar `supabaseschema.sql` en Supabase (si no lo hizo)
-2. `.env.local` en frontend y `.env` en backend con credenciales reales
-3. `npm install` en ambos directorios
+### Ajustes realizados
+- `users` table requería política RLS de INSERT (faltaba en el schema original) → ejecutar: `CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);`
+- `authStore.signup()` ahora muestra error si el INSERT al perfil falla
+- `ArtistCard` navega con `external_mb_id` para artistas no guardados, `slug` para guardados
+- Búsqueda no guarda artistas, solo devuelve datos crudos de MB
 
-**Próximas fases:**
-- Fase 1.5: Auth flow completo con Supabase
-- Fase 1.6: Reviews/Comments conectados
+### En progreso
+- **Fase 1.6** — Reviews/Comments: código base existe, falta testear end-to-end
+
+### Próximas fases
+- Fase 1.6: Reviews con rating en artistas/álbumes/canciones
 - Fase 1.7: Favoritos + feed de actividad
 
 ## Deploy (pendiente)
