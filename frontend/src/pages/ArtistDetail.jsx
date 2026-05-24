@@ -10,6 +10,7 @@ export default function ArtistDetail() {
   const { slug } = useParams()
   const [artist, setArtist] = useState(null)
   const [albums, setAlbums] = useState([])
+  const [ingestingAlbums, setIngestingAlbums] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { reviews, createReview, deleteReview } = useReviews('artist', artist?.id)
@@ -20,10 +21,26 @@ export default function ArtistDetail() {
       .then(data => {
         setArtist(data.artist)
         setAlbums(data.albums || [])
+        setIngestingAlbums(data.ingestingAlbums || false)
       })
       .catch(() => setError('Artista no encontrado.'))
       .finally(() => setLoading(false))
   }, [slug])
+
+  // Auto-poll mientras la ingesta está en curso
+  useEffect(() => {
+    if (!ingestingAlbums || !artist) return
+    const interval = setInterval(() => {
+      getArtist(slug).then(data => {
+        if ((data.albums || []).length > 0) {
+          setAlbums(data.albums)
+          setIngestingAlbums(false)
+          clearInterval(interval)
+        }
+      }).catch(() => clearInterval(interval))
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [ingestingAlbums, artist, slug])
 
   if (loading) return <p className="text-gray-500">Cargando...</p>
   if (error) return <p className="text-red-400">{error}</p>
@@ -54,16 +71,20 @@ export default function ArtistDetail() {
       </div>
 
       {/* Albums */}
-      {albums.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-rock-text mb-4">
-            Discografía ({albums.length})
-          </h2>
+      <section>
+        <h2 className="text-xl font-bold text-rock-text mb-4">
+          Discografía{albums.length > 0 && ` (${albums.length})`}
+        </h2>
+        {ingestingAlbums ? (
+          <p className="text-gray-500 text-sm">Cargando discografía... recargá en unos segundos.</p>
+        ) : albums.length === 0 ? (
+          <p className="text-gray-500 text-sm">Sin discografía disponible.</p>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {albums.map(a => <AlbumCard key={a.id} album={a} />)}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* Reviews */}
       <section>

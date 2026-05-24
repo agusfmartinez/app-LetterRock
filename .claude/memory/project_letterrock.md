@@ -39,11 +39,15 @@ Red social tipo Letterboxd para rock nacional argentino.
 - `ArtistCard` navega con `external_mb_id` para artistas no guardados, `slug` para guardados
 - Búsqueda no guarda artistas, solo devuelve datos crudos de MB
 
-### En progreso
-- **Fase 1.6** — Reviews/Comments: código base existe, falta testear end-to-end
+### Completado (cont.)
+- **Fase 1.6** — Reviews con rating en artistas/álbumes ✓
+
+### Ajustes fase 1.6
+- `albums` table necesitaba UNIQUE constraint: `ALTER TABLE albums ADD CONSTRAINT albums_mb_release_group_id_unique UNIQUE (external_mb_release_group_id);`
+- Ingesta de álbumes ahora es fire-and-forget (no bloquea respuesta). Frontend hace auto-poll cada 3 seg hasta que aparecen.
+- `ingestingNow` Set previene ingestas concurrentes del mismo artista.
 
 ### Próximas fases
-- Fase 1.6: Reviews con rating en artistas/álbumes/canciones
 - Fase 1.7: Favoritos + feed de actividad
 
 ## Deploy (pendiente)
