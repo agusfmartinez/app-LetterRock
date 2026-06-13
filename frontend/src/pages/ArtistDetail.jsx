@@ -13,6 +13,7 @@ export default function ArtistDetail() {
   const [ingestingAlbums, setIngestingAlbums] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [albumFilter, setAlbumFilter] = useState('album')
   const { reviews, createReview, deleteReview } = useReviews('artist', artist?.id)
 
   useEffect(() => {
@@ -72,18 +73,39 @@ export default function ArtistDetail() {
 
       {/* Albums */}
       <section>
-        <h2 className="text-xl font-bold text-rock-text mb-4">
-          Discografía{albums.length > 0 && ` (${albums.length})`}
-        </h2>
+        <div className="flex items-center gap-4 mb-4">
+          <h2 className="text-xl font-bold text-rock-text">Discografía</h2>
+          <div className="flex gap-1 bg-rock-card border border-rock-border rounded-lg p-1">
+            {[
+              { value: 'album', label: 'Álbumes' },
+              { value: 'single', label: 'Sencillos y EP' },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setAlbumFilter(value)}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  albumFilter === value
+                    ? 'bg-rock-accent text-black font-semibold'
+                    : 'text-gray-400 hover:text-rock-text'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {ingestingAlbums ? (
           <p className="text-gray-500 text-sm">Cargando discografía... recargá en unos segundos.</p>
-        ) : albums.length === 0 ? (
-          <p className="text-gray-500 text-sm">Sin discografía disponible.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {albums.map(a => <AlbumCard key={a.id} album={a} />)}
-          </div>
-        )}
+        ) : (() => {
+          const filtered = albums.filter(a => a.album_type === albumFilter)
+          return filtered.length === 0 ? (
+            <p className="text-gray-500 text-sm">Sin resultados.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {filtered.map(a => <AlbumCard key={a.id} album={a} />)}
+            </div>
+          )
+        })()}
       </section>
 
       {/* Reviews */}

@@ -46,6 +46,29 @@ Red social tipo Letterboxd para rock nacional argentino.
 - `albums` table necesitaba UNIQUE constraint: `ALTER TABLE albums ADD CONSTRAINT albums_mb_release_group_id_unique UNIQUE (external_mb_release_group_id);`
 - Ingesta de álbumes ahora es fire-and-forget (no bloquea respuesta). Frontend hace auto-poll cada 3 seg hasta que aparecen.
 - `ingestingNow` Set previene ingestas concurrentes del mismo artista.
+- `ingestFailed` Set previene reintentos infinitos si la ingesta falla.
+
+### Fase 1.6.5 — Spotify para álbumes ✓ (2026-06-12)
+- **MB sigue siendo la fuente para búsqueda de artistas** (filtro país AR/UY + género)
+- **Spotify reemplaza MB para ingesta de álbumes** — data oficial, sin bootlegs, portadas incluidas
+- Nuevo `backend/src/services/spotifyService.js`: Client Credentials auth con token cacheado, `searchArtist`, `getArtistAlbums` con paginación
+- `albums` table: columnas nuevas `spotify_id TEXT`, `cover_url TEXT`
+- `albums` upsert usa `onConflict: 'spotify_id'` (requiere UNIQUE constraint)
+- `artists` table: columna `external_spotify_id` ya existía en el schema original
+- `album_type` ahora usa valores de Spotify: `'album'` | `'single'` | `'compilation'`
+- Frontend `ArtistDetail`: tabs "Álbumes" / "Sencillos y EP" — filtra por `album_type`
+- `AlbumCard` ya tenía soporte para `cover_url`
+- Logs: `[Spotify]` prefix para llamadas a Spotify API, `[DB]` para Supabase
+- Límite Spotify `/artists/{id}/albums`: **máximo 10** (no 50 ni 20)
+
+### SQL ejecutado en Supabase (acumulado)
+```sql
+CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
+ALTER TABLE albums ADD CONSTRAINT albums_mb_release_group_id_unique UNIQUE (external_mb_release_group_id);
+ALTER TABLE albums ADD COLUMN spotify_id TEXT;
+ALTER TABLE albums ADD COLUMN cover_url TEXT;
+ALTER TABLE albums ADD CONSTRAINT albums_spotify_id_unique UNIQUE (spotify_id);
+```
 
 ### Próximas fases
 - Fase 1.7: Favoritos + feed de actividad

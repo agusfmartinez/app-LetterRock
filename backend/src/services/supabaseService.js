@@ -10,7 +10,12 @@ function makeSlug(name) {
   return slugify(name, { lower: true, strict: true })
 }
 
+function dbLog(label) {
+  console.log(`[DB] ${new Date().toISOString()} ${label}`)
+}
+
 async function searchInDatabase(query) {
+  dbLog(`searchInDatabase query="${query}"`)
   const { data } = await supabase
     .from('artists')
     .select('*')
@@ -20,6 +25,8 @@ async function searchInDatabase(query) {
 }
 
 async function saveArtist(mbArtist) {
+  dbLog(`saveArtist name="${mbArtist.name}"`)
+
   const slug = makeSlug(mbArtist.name)
   const payload = {
     external_mb_id: mbArtist.id,
@@ -39,23 +46,43 @@ async function saveArtist(mbArtist) {
   return data
 }
 
-async function saveAlbum(releaseGroup, artistId) {
-  const slug = makeSlug(releaseGroup.title)
+function normalizeSpotifyDate(raw, precision) {
+  if (!raw) return null
+  if (precision === 'year') return `${raw}-01-01`
+  if (precision === 'month') return `${raw}-01`
+  return raw
+}
+
+async function saveAlbum(spotifyAlbum, artistId) {
+  dbLog(`saveAlbum title="${spotifyAlbum.name}"`)
+
+  const slug = makeSlug(spotifyAlbum.name)
+  const coverUrl = spotifyAlbum.images?.[0]?.url || null
   const payload = {
     artist_id: artistId,
-    external_mb_release_group_id: releaseGroup.id,
-    title: releaseGroup.title,
+    external_spotify_id: spotifyAlbum.id,
+    title: spotifyAlbum.name,
     slug,
-    release_date: releaseGroup['first-release-date'] || null,
-    album_type: releaseGroup['primary-type']?.toLowerCase() || 'studio',
+    release_date: normalizeSpotifyDate(spotifyAlbum.release_date, spotifyAlbum.release_date_precision),
+    album_type: spotifyAlbum.album_type,
+    cover_url: coverUrl,
   }
   const { data, error } = await supabase
     .from('albums')
-    .upsert(payload, { onConflict: 'external_mb_release_group_id' })
+    .upsert(payload, { onConflict: 'external_spotify_id' })
     .select()
     .single()
   if (error) throw error
   return data
+}
+
+async function updateArtistSpotifyId(artistId, spotifyId) {
+  dbLog(`updateArtistSpotifyId artistId="${artistId}"`)
+  const { error } = await supabase
+    .from('artists')
+    .update({ external_spotify_id: spotifyId })
+    .eq('id', artistId)
+  if (error) throw error
 }
 
 async function saveTracks(tracks, albumId) {
@@ -77,16 +104,22 @@ async function saveTracks(tracks, albumId) {
 }
 
 async function getArtistBySlug(slug) {
+  dbLog(`getArtistBySlug slug="${slug}"`)
+
   const { data } = await supabase.from('artists').select('*').eq('slug', slug).single()
   return data
 }
 
 async function getArtistByMbId(mbId) {
+  dbLog(`getArtistByMbId mbId="${mbId}"`)
+
   const { data } = await supabase.from('artists').select('*').eq('external_mb_id', mbId).single()
   return data
 }
 
 async function getAlbumsByArtist(artistId) {
+  dbLog(`getAlbumsByArtist artistId="${artistId}"`)
+
   const { data } = await supabase
     .from('albums')
     .select('*')
@@ -118,6 +151,7 @@ module.exports = {
   searchInDatabase,
   saveArtist,
   saveAlbum,
+  updateArtistSpotifyId,
   saveTracks,
   getArtistBySlug,
   getArtistByMbId,

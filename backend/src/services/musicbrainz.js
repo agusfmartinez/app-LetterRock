@@ -13,6 +13,8 @@ async function rateLimitedRequest(url, params = {}) {
   }
   lastRequestTime = Date.now()
 
+  const shortUrl = url.replace(BASE_URL, '')
+  console.log(`[MB API] ${new Date().toISOString()} ${shortUrl} ${JSON.stringify(params)}`)
   const response = await axios.get(url, {
     params: { ...params, fmt: 'json' },
     headers: { 'User-Agent': USER_AGENT },
@@ -58,7 +60,7 @@ function isRockCandidate(artist) {
 
 async function searchArtist(query) {
   const data = await rateLimitedRequest(`${BASE_URL}/artist`, {
-    query: `artist:${query}`,
+    query: `artist:"${query}"`,
     limit: 25,
     inc: 'tags',
   })
@@ -77,22 +79,41 @@ async function getArtistById(artistId) {
   return data || null
 }
 
+const ALLOWED_SECONDARY_TYPES = new Set(['', 'live'])
+const BLOCKED_PRIMARY_TYPES = new Set(['single', 'broadcast', 'other'])
+
+const DATE_TITLE_REGEX = /^\d{4}-\d{2}-\d{2}[\s:]/
+
+function isAllowedReleaseGroup(rg) {
+  const primary = (rg['primary-type'] || '').toLowerCase()
+  if (BLOCKED_PRIMARY_TYPES.has(primary)) return false
+  const secondary = (rg['secondary-types'] || []).map(s => s.toLowerCase())
+  if (!secondary.every(s => ALLOWED_SECONDARY_TYPES.has(s))) return false
+  // Bloquear grabaciones de conciertos nombradas por fecha (bootlegs)
+  if (DATE_TITLE_REGEX.test(rg.title)) return false
+  return true
+}
+
 async function getArtistReleaseGroups(artistId) {
   const data = await rateLimitedRequest(`${BASE_URL}/release-group`, {
     artist: artistId,
-    type: 'album|single|ep',
     limit: 100,
   })
-  return data['release-groups'] || []
+  const all = data['release-groups'] || []
+  return all.filter(isAllowedReleaseGroup)
 }
 
 async function getReleaseGroupReleases(releaseGroupId) {
   const data = await rateLimitedRequest(`${BASE_URL}/release`, {
     'release-group': releaseGroupId,
-    limit: 1,
-    inc: 'recordings',
+    limit: 10,
   })
   return data.releases || []
 }
 
-module.exports = { searchArtist, getArtistById, getArtistReleaseGroups, getReleaseGroupReleases }
+async function getFirstOfficialRelease(releaseGroupId) {
+  const releases = await getReleaseGroupReleases(releaseGroupId)
+  return releases.find(r => r.status === 'Official') || null
+}
+
+module.exports = { searchArtist, getArtistById, getArtistReleaseGroups, getReleaseGroupReleases, getFirstOfficialRelease }
