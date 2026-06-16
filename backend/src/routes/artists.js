@@ -2,26 +2,32 @@ const express = require('express')
 const router = express.Router()
 const mb = require('../services/musicbrainz')
 const spotify = require('../services/spotifyService')
+const wiki = require('../services/wikipediaService')
 const db = require('../services/supabaseService')
 
 const ingestingNow = new Set()
 const ingestFailed = new Set()
+const ingestAttempts = new Map()
+const MAX_INGEST_ATTEMPTS = 2
 
 async function ingestAlbumsInBackground(artist) {
   if (ingestingNow.has(artist.id)) return
   if (ingestFailed.has(artist.id)) return
   ingestingNow.add(artist.id)
   try {
-    // Buscar o recuperar el Spotify ID del artista
     let spotifyId = artist.external_spotify_id
     if (!spotifyId) {
       const spotifyArtist = await spotify.searchArtist(artist.name)
       if (!spotifyArtist) {
         console.log(`[ingest] ${artist.name}: no encontrado en Spotify`)
+        const attempts = (ingestAttempts.get(artist.id) || 0) + 1
+        ingestAttempts.set(artist.id, attempts)
+        if (attempts >= MAX_INGEST_ATTEMPTS) ingestFailed.add(artist.id)
         return
       }
       spotifyId = spotifyArtist.id
-      await db.updateArtistSpotifyId(artist.id, spotifyId)
+      const imageUrl = spotifyArtist.images?.[0]?.url || null
+      await db.updateArtistSpotifyId(artist.id, spotifyId, imageUrl)
     }
 
     const albums = await spotify.getArtistAlbums(spotifyId)
@@ -67,10 +73,37 @@ router.get('/:slugOrMbId', async (req, res, next) => {
       return res.status(404).json({ error: 'Artista no encontrado' })
     }
 
+    // Imagen y bio: buscar inline si faltan (calls rápidos, solo 1 vez)
+    const needsImage = !artist.image_url && artist.external_spotify_id
+    const needsBio = !artist.bio
+    console.log(`[artist enrich] ${artist.name}: needsImage=${needsImage} needsBio=${needsBio} bio=${artist.bio?.slice(0,30) ?? 'null'}`)
+
+    const [imageResult, bioResult] = await Promise.allSettled([
+      needsImage
+        ? spotify.getArtistById(artist.external_spotify_id)
+            .then(d => d?.images?.[0]?.url || null)
+        : Promise.resolve(null),
+      needsBio
+        ? wiki.getArtistBio(artist.name)
+        : Promise.resolve(null),
+    ])
+
+    if (needsImage && imageResult.status === 'fulfilled' && imageResult.value) {
+      await db.updateArtistSpotifyId(artist.id, artist.external_spotify_id, imageResult.value)
+      artist = { ...artist, image_url: imageResult.value }
+    }
+    if (needsBio && bioResult.status === 'fulfilled' && bioResult.value) {
+      await db.saveBio(artist.id, bioResult.value)
+      artist = { ...artist, bio: bioResult.value }
+    }
+
     const albums = await db.getAlbumsByArtist(artist.id)
 
+    const stillIngesting = ingestingNow.has(artist.id)
+    const failed = ingestFailed.has(artist.id)
+
     // Responder inmediatamente con lo que hay en DB
-    res.json({ artist, albums, ingestingAlbums: albums.length === 0 })
+    res.json({ artist, albums, ingestingAlbums: (albums.length === 0 && !failed) || stillIngesting })
 
     // Si no hay álbumes todavía, ingestar en background sin bloquear
     if (albums.length === 0 && artist.external_mb_id) {

@@ -76,28 +76,40 @@ async function saveAlbum(spotifyAlbum, artistId) {
   return data
 }
 
-async function updateArtistSpotifyId(artistId, spotifyId) {
-  dbLog(`updateArtistSpotifyId artistId="${artistId}"`)
+async function saveBio(artistId, bio) {
+  dbLog(`saveBio artistId="${artistId}"`)
   const { error } = await supabase
     .from('artists')
-    .update({ external_spotify_id: spotifyId })
+    .update({ bio })
     .eq('id', artistId)
   if (error) throw error
 }
 
-async function saveTracks(tracks, albumId) {
-  if (!tracks || !tracks.length) return []
-  const payload = tracks.map((t, i) => ({
+async function updateArtistSpotifyId(artistId, spotifyId, imageUrl) {
+  dbLog(`updateArtistSpotifyId artistId="${artistId}"`)
+  const update = { external_spotify_id: spotifyId }
+  if (imageUrl) update.image_url = imageUrl
+  const { error } = await supabase
+    .from('artists')
+    .update(update)
+    .eq('id', artistId)
+  if (error) throw error
+}
+
+async function saveTracks(spotifyTracks, albumId) {
+  if (!spotifyTracks || !spotifyTracks.length) return []
+  dbLog(`saveTracks albumId="${albumId}" count=${spotifyTracks.length}`)
+  const payload = spotifyTracks.map(t => ({
     album_id: albumId,
-    external_mb_recording_id: t.id,
-    title: t.title,
-    duration_ms: t.length || null,
-    track_number: t.position || i + 1,
-    disc_number: 1,
+    external_spotify_id: t.id,
+    title: t.name,
+    duration_ms: t.duration_ms || null,
+    track_number: t.track_number,
+    disc_number: t.disc_number || 1,
   }))
   const { data, error } = await supabase
     .from('tracks')
-    .upsert(payload, { onConflict: 'external_mb_recording_id' })
+    .upsert(payload, { onConflict: 'external_spotify_id' })
     .select()
   if (error) throw error
   return data || []
@@ -151,6 +163,7 @@ module.exports = {
   searchInDatabase,
   saveArtist,
   saveAlbum,
+  saveBio,
   updateArtistSpotifyId,
   saveTracks,
   getArtistBySlug,

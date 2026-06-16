@@ -33,13 +33,14 @@ export default function ArtistDetail() {
     if (!ingestingAlbums || !artist) return
     const interval = setInterval(() => {
       getArtist(slug).then(data => {
-        if ((data.albums || []).length > 0) {
-          setAlbums(data.albums)
+        setArtist(data.artist)
+        setAlbums(data.albums || [])
+        if (!data.ingestingAlbums) {
           setIngestingAlbums(false)
           clearInterval(interval)
         }
       }).catch(() => clearInterval(interval))
-    }, 3000)
+    }, 2000)
     return () => clearInterval(interval)
   }, [ingestingAlbums, artist, slug])
 
@@ -66,7 +67,11 @@ export default function ArtistDetail() {
             {artist.formed_year && `Formado en ${artist.formed_year}`}
           </p>
           {artist.bio && (
-            <p className="text-gray-300 mt-3 max-w-2xl text-sm leading-relaxed">{artist.bio}</p>
+            <div className="mt-3 max-w-2xl space-y-2">
+              {artist.bio.split(/\n+/).filter(Boolean).map((para, i) => (
+                <p key={i} className="text-gray-300 text-sm leading-relaxed">{para}</p>
+              ))}
+            </div>
           )}
         </div>
       </div>

@@ -71,4 +71,21 @@ async function getArtistAlbums(spotifyArtistId) {
   return albums
 }
 
-module.exports = { searchArtist, getArtistAlbums }
+async function getArtistById(spotifyArtistId) {
+  return spotifyRequest(`/artists/${spotifyArtistId}`)
+}
+
+async function getAlbumTracks(spotifyAlbumId) {
+  const tracks = []
+  let url = `/albums/${spotifyAlbumId}/tracks?limit=50`
+
+  while (url) {
+    const data = await spotifyRequest(url)
+    tracks.push(...(data.items || []))
+    url = data.next ? data.next.replace(BASE_URL, '') : null
+  }
+
+  return tracks
+}
+
+module.exports = { searchArtist, getArtistById, getArtistAlbums, getAlbumTracks }

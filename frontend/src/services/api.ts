@@ -11,7 +11,7 @@ export async function getArtist(slug: string) {
 
 export async function getAlbum(id: string) {
   const { data } = await api.get(`/api/albums/${id}`)
-  return data as { album: any; tracks: any[] }
+  return data as { album: any; tracks: any[]; ingestingTracks: boolean }
 }
 
 export async function getTrack(id: string) {

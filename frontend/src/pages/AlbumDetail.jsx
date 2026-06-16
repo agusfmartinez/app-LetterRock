@@ -10,6 +10,7 @@ export default function AlbumDetail() {
   const { id } = useParams()
   const [album, setAlbum] = useState(null)
   const [tracks, setTracks] = useState([])
+  const [ingestingTracks, setIngestingTracks] = useState(false)
   const [loading, setLoading] = useState(true)
   const { reviews, createReview, deleteReview } = useReviews('album', id)
 
@@ -18,9 +19,24 @@ export default function AlbumDetail() {
       .then(data => {
         setAlbum(data.album)
         setTracks(data.tracks || [])
+        setIngestingTracks(data.ingestingTracks || false)
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!ingestingTracks || !album) return
+    const interval = setInterval(() => {
+      getAlbum(id).then(data => {
+        if ((data.tracks || []).length > 0) {
+          setTracks(data.tracks)
+          setIngestingTracks(false)
+          clearInterval(interval)
+        }
+      }).catch(() => clearInterval(interval))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [ingestingTracks, album, id])
 
   if (loading) return <p className="text-gray-500">Cargando...</p>
   if (!album) return <p className="text-red-400">Álbum no encontrado.</p>
@@ -53,16 +69,20 @@ export default function AlbumDetail() {
       </div>
 
       {/* Tracklist */}
-      {tracks.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-rock-text mb-2">
-            Canciones ({tracks.length})
-          </h2>
+      <section>
+        <h2 className="text-xl font-bold text-rock-text mb-2">
+          Canciones{tracks.length > 0 && ` (${tracks.length})`}
+        </h2>
+        {ingestingTracks ? (
+          <p className="text-gray-500 text-sm">Cargando canciones...</p>
+        ) : tracks.length === 0 ? (
+          <p className="text-gray-500 text-sm">Sin canciones disponibles.</p>
+        ) : (
           <div className="bg-rock-card border border-rock-border rounded-lg py-2">
             {tracks.map((t, i) => <TrackRow key={t.id} track={t} index={i} />)}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* Reviews */}
       <section>
