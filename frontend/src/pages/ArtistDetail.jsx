@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
+import FavoriteButton from '../components/common/FavoriteButton'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getArtist } from '../services/api'
@@ -40,7 +41,10 @@ export default function ArtistDetail() {
           )}
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-rock-text">{artist.name}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold text-rock-text">{artist.name}</h1>
+            <FavoriteButton entityType="artist" entityId={artist.id} />
+          </div>
           <p className="text-gray-500 mt-1 text-sm">
             {artist.country && `${artist.country}`}
             {artist.country && artist.formed_year && ' · '}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
+import FavoriteButton from '../components/common/FavoriteButton'
 import CommentThread from '../components/common/CommentThread'
 import CommentForm from '../components/forms/CommentForm'
 import { getAlbum } from '../services/api'
@@ -144,6 +145,9 @@ export default function TrackDetail() {
               {track.track_number ? `Pista ${track.track_number} · ` : ''}
               {formatDuration(track.duration_ms)}
             </p>
+            <div className="mt-3">
+              <FavoriteButton entityType="track" entityId={id} />
+            </div>
           </div>
 
           {/* Lyrics */}

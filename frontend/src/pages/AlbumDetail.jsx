@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
+import FavoriteButton from '../components/common/FavoriteButton'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getAlbum } from '../services/api'
@@ -60,6 +61,9 @@ export default function AlbumDetail() {
               ★ {parseFloat(album.avg_rating).toFixed(1)}
             </p>
           )}
+          <div className="mt-3">
+            <FavoriteButton entityType="album" entityId={id} />
+          </div>
         </div>
       </div>
 
