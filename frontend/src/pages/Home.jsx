@@ -1,27 +1,24 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import ActivityItem from '../components/common/ActivityItem'
 import ArtistCard from '../components/common/ArtistCard'
-import ReviewCard from '../components/common/ReviewCard'
+import { useActivityFeed } from '../hooks/useActivityFeed'
 import { supabase } from '../services/supabaseClient'
 
 export default function Home() {
-  const [recentArtists, setRecentArtists] = useState([])
-  const [recentReviews, setRecentReviews] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    Promise.all([
-      supabase.from('artists').select('*').order('created_at', { ascending: false }).limit(12),
-      supabase
-        .from('reviews')
-        .select('*, user:users(username, avatar_url)')
+  const { data: recentArtists = [], isLoading: loading } = useQuery({
+    queryKey: ['recent-artists'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('artists')
+        .select('*')
         .order('created_at', { ascending: false })
-        .limit(5),
-    ]).then(([{ data: artists }, { data: reviews }]) => {
-      setRecentArtists(artists || [])
-      setRecentReviews(reviews || [])
-    }).finally(() => setLoading(false))
-  }, [])
+        .limit(12)
+      return data || []
+    },
+  })
+
+  const { data: activity = [], isLoading: loadingActivity } = useActivityFeed(20)
 
   return (
     <div className="space-y-12">
@@ -68,15 +65,19 @@ export default function Home() {
         )}
       </section>
 
-      {/* Recent Reviews */}
-      {recentReviews.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-rock-text mb-4">Últimas opiniones</h2>
-          <div className="space-y-3 max-w-2xl">
-            {recentReviews.map(r => <ReviewCard key={r.id} review={r} />)}
+      {/* Activity feed */}
+      <section>
+        <h2 className="text-xl font-bold text-rock-text mb-4">Actividad reciente</h2>
+        {loadingActivity ? (
+          <p className="text-gray-500">Cargando...</p>
+        ) : activity.length === 0 ? (
+          <p className="text-gray-500 text-sm">Todavía no hay actividad en la comunidad.</p>
+        ) : (
+          <div className="max-w-2xl bg-rock-card border border-rock-border rounded-lg px-4">
+            {activity.map(a => <ActivityItem key={`${a.kind}-${a.id}`} activity={a} />)}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   )
 }
