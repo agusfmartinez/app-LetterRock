@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
@@ -8,44 +9,23 @@ import { useReviews } from '../hooks/useReviews'
 
 export default function ArtistDetail() {
   const { slug } = useParams()
-  const [artist, setArtist] = useState(null)
-  const [albums, setAlbums] = useState([])
-  const [ingestingAlbums, setIngestingAlbums] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [albumFilter, setAlbumFilter] = useState('album')
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['artist', slug],
+    queryFn: () => getArtist(slug),
+    refetchInterval: (query) => {
+      const d = query.state.data
+      return d?.ingestingAlbums ? 2000 : false
+    },
+  })
+
+  const artist = data?.artist
+  const albums = data?.albums || []
   const { reviews, createReview, deleteReview } = useReviews('artist', artist?.id)
 
-  useEffect(() => {
-    setLoading(true)
-    getArtist(slug)
-      .then(data => {
-        setArtist(data.artist)
-        setAlbums(data.albums || [])
-        setIngestingAlbums(data.ingestingAlbums || false)
-      })
-      .catch(() => setError('Artista no encontrado.'))
-      .finally(() => setLoading(false))
-  }, [slug])
-
-  // Auto-poll mientras la ingesta está en curso
-  useEffect(() => {
-    if (!ingestingAlbums || !artist) return
-    const interval = setInterval(() => {
-      getArtist(slug).then(data => {
-        setArtist(data.artist)
-        setAlbums(data.albums || [])
-        if (!data.ingestingAlbums) {
-          setIngestingAlbums(false)
-          clearInterval(interval)
-        }
-      }).catch(() => clearInterval(interval))
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [ingestingAlbums, artist, slug])
-
-  if (loading) return <p className="text-gray-500">Cargando...</p>
-  if (error) return <p className="text-red-400">{error}</p>
+  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (error) return <p className="text-red-400">Artista no encontrado.</p>
   if (!artist) return null
 
   return (
@@ -99,8 +79,8 @@ export default function ArtistDetail() {
             ))}
           </div>
         </div>
-        {ingestingAlbums ? (
-          <p className="text-gray-500 text-sm">Cargando discografía... recargá en unos segundos.</p>
+        {data?.ingestingAlbums ? (
+          <p className="text-gray-500 text-sm">Cargando discografía...</p>
         ) : (() => {
           const filtered = albums.filter(a => a.album_type === albumFilter)
           return filtered.length === 0 ? (

@@ -129,6 +129,12 @@ async function getArtistByMbId(mbId) {
   return data
 }
 
+async function getArtistById(id) {
+  dbLog(`getArtistById id="${id}"`)
+  const { data } = await supabase.from('artists').select('*').eq('id', id).single()
+  return data
+}
+
 async function getAlbumsByArtist(artistId) {
   dbLog(`getAlbumsByArtist artistId="${artistId}"`)
 
@@ -168,6 +174,7 @@ module.exports = {
   saveTracks,
   getArtistBySlug,
   getArtistByMbId,
+  getArtistById,
   getAlbumsByArtist,
   getAlbumById,
   getTracksByAlbum,

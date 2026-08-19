@@ -28,8 +28,11 @@ router.get('/:id', async (req, res, next) => {
     const album = await db.getAlbumById(req.params.id)
     if (!album) return res.status(404).json({ error: 'Álbum no encontrado' })
 
-    const tracks = await db.getTracksByAlbum(album.id)
-    res.json({ album, tracks, ingestingTracks: tracks.length === 0 })
+    const [tracks, artist] = await Promise.all([
+      db.getTracksByAlbum(album.id),
+      db.getArtistById(album.artist_id),
+    ])
+    res.json({ album, tracks, artist: artist || null, ingestingTracks: tracks.length === 0 })
 
     if (tracks.length === 0) {
       ingestTracksInBackground(album)

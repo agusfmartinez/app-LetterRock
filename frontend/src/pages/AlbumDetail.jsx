@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
@@ -8,43 +8,38 @@ import { useReviews } from '../hooks/useReviews'
 
 export default function AlbumDetail() {
   const { id } = useParams()
-  const [album, setAlbum] = useState(null)
-  const [tracks, setTracks] = useState([])
-  const [ingestingTracks, setIngestingTracks] = useState(false)
-  const [loading, setLoading] = useState(true)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['album', id],
+    queryFn: () => getAlbum(id),
+    refetchInterval: (query) => {
+      const d = query.state.data
+      return d?.ingestingTracks ? 1000 : false
+    },
+  })
+
+  const album = data?.album
+  const tracks = data?.tracks || []
+  const artist = data?.artist
   const { reviews, createReview, deleteReview } = useReviews('album', id)
 
-  useEffect(() => {
-    getAlbum(id)
-      .then(data => {
-        setAlbum(data.album)
-        setTracks(data.tracks || [])
-        setIngestingTracks(data.ingestingTracks || false)
-      })
-      .finally(() => setLoading(false))
-  }, [id])
-
-  useEffect(() => {
-    if (!ingestingTracks || !album) return
-    const interval = setInterval(() => {
-      getAlbum(id).then(data => {
-        if ((data.tracks || []).length > 0) {
-          setTracks(data.tracks)
-          setIngestingTracks(false)
-          clearInterval(interval)
-        }
-      }).catch(() => clearInterval(interval))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [ingestingTracks, album, id])
-
-  if (loading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!album) return <p className="text-red-400">Álbum no encontrado.</p>
 
   const year = album.release_date ? new Date(album.release_date).getFullYear() : null
 
   return (
     <div className="space-y-10">
+      {/* Back to artist */}
+      {artist && (
+        <Link
+          to={`/artist/${artist.slug}`}
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-rock-accent text-sm transition-colors"
+        >
+          ← {artist.name}
+        </Link>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-48 h-48 rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start">
@@ -73,7 +68,7 @@ export default function AlbumDetail() {
         <h2 className="text-xl font-bold text-rock-text mb-2">
           Canciones{tracks.length > 0 && ` (${tracks.length})`}
         </h2>
-        {ingestingTracks ? (
+        {data?.ingestingTracks ? (
           <p className="text-gray-500 text-sm">Cargando canciones...</p>
         ) : tracks.length === 0 ? (
           <p className="text-gray-500 text-sm">Sin canciones disponibles.</p>
