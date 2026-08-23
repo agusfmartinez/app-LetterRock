@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Navbar from './components/common/Navbar'
 import Footer from './components/common/Footer'
@@ -10,13 +10,25 @@ import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
+import CollectionDetail from './pages/CollectionDetail'
+import CollectionSection from './pages/CollectionSection'
 import { useAuth } from './hooks/useAuth'
+
+/** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
 
 export default function App() {
   useAuth()
 
   return (
     <div className="min-h-screen flex flex-col bg-rock-dark text-rock-text">
+      <ScrollToTop />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <Routes>
@@ -25,6 +37,8 @@ export default function App() {
           <Route path="/artist/:slug" element={<ArtistDetail />} />
           <Route path="/album/:id" element={<AlbumDetail />} />
           <Route path="/track/:id" element={<TrackDetail />} />
+          <Route path="/coleccion/:slug" element={<CollectionDetail />} />
+          <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
           <Route path="/user/:username" element={<Profile />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />

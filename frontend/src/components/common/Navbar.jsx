@@ -21,6 +21,13 @@ export default function Navbar() {
           🎸 LetterRock
         </Link>
 
+        <Link
+          to="/coleccion/historia-del-rock-argentino"
+          className="hidden sm:block text-sm text-gray-300 hover:text-rock-accent flex-shrink-0"
+        >
+          Historia
+        </Link>
+
         <form onSubmit={handleSearch} className="flex-1 max-w-md">
           <input
             type="text"
