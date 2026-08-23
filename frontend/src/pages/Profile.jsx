@@ -5,6 +5,7 @@ import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { useUserFavorites } from '../hooks/useFavorite'
+import { ROLE_LABEL } from '../hooks/useRole'
 import { supabase } from '../services/supabaseClient'
 
 const FAV_FILTERS = [
@@ -95,7 +96,14 @@ export default function Profile() {
           {profile.username[0].toUpperCase()}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
+            {profile.role && profile.role !== 'user' && (
+              <span className="text-xs uppercase tracking-widest px-2 py-0.5 rounded border border-rock-accent text-rock-accent">
+                {ROLE_LABEL[profile.role]}
+              </span>
+            )}
+          </div>
           {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
           <p className="text-gray-500 text-xs mt-1">
             {reviews.length} opiniones · {favorites.length} favoritos

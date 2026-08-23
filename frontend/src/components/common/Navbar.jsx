@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { useRole } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
 
 export default function Navbar() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
+  const { isAdmin } = useRole()
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -32,6 +34,11 @@ export default function Navbar() {
         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
           {user ? (
             <>
+              {isAdmin && (
+                <Link to="/admin/users" className="text-sm text-gray-500 hover:text-rock-accent">
+                  Admin
+                </Link>
+              )}
               <Link to={`/user/${user.username}`} className="text-sm text-gray-300 hover:text-white">
                 {user.username}
               </Link>

@@ -9,6 +9,7 @@ import AlbumDetail from './pages/AlbumDetail'
 import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
+import AdminUsers from './pages/AdminUsers'
 import { useAuth } from './hooks/useAuth'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/album/:id" element={<AlbumDetail />} />
           <Route path="/track/:id" element={<TrackDetail />} />
           <Route path="/user/:username" element={<Profile />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />
           <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
         </Routes>
