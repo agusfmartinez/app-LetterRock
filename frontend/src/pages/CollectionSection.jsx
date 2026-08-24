@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import TimelineEntry from '../components/common/TimelineEntry'
 import { useCollectionSection } from '../hooks/useCollections'
+import { useRole } from '../hooks/useRole'
 
 function SectionNav({ collectionSlug, prev, next }) {
   return (
@@ -27,6 +28,7 @@ function SectionNav({ collectionSlug, prev, next }) {
 
 export default function CollectionSection() {
   const { slug, sectionSlug } = useParams()
+  const { isEditor } = useRole()
   const { data, isLoading } = useCollectionSection(slug, sectionSlug)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
@@ -45,7 +47,17 @@ export default function CollectionSection() {
       </Link>
 
       <header className="max-w-2xl">
-        <h1 className="text-5xl font-black text-rock-text">{section.title}</h1>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <h1 className="text-5xl font-black text-rock-text">{section.title}</h1>
+          {isEditor && (
+            <Link
+              to={`/admin/coleccion/${collection.slug}/${section.slug}`}
+              className="text-sm text-gray-500 hover:text-rock-accent"
+            >
+              Editar
+            </Link>
+          )}
+        </div>
         {section.subtitle && (
           <p className="text-rock-accent mt-2 tracking-wide">{section.subtitle}</p>
         )}

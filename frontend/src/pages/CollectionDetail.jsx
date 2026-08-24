@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useCollection } from '../hooks/useCollections'
+import { useRole } from '../hooks/useRole'
 
 function SectionCard({ collectionSlug, section }) {
   return (
@@ -42,6 +43,7 @@ function SectionCard({ collectionSlug, section }) {
 
 export default function CollectionDetail() {
   const { slug } = useParams()
+  const { isEditor } = useRole()
   const { data, isLoading } = useCollection(slug)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
@@ -57,7 +59,17 @@ export default function CollectionDetail() {
             Borrador
           </span>
         )}
-        <h1 className="text-4xl font-bold text-rock-text mt-3">{collection.title}</h1>
+        <div className="flex items-baseline gap-3 flex-wrap mt-3">
+          <h1 className="text-4xl font-bold text-rock-text">{collection.title}</h1>
+          {isEditor && (
+            <Link
+              to={`/admin/coleccion/${collection.slug}`}
+              className="text-sm text-gray-500 hover:text-rock-accent"
+            >
+              Editar
+            </Link>
+          )}
+        </div>
         {collection.description && (
           <p className="text-gray-400 mt-3 leading-relaxed">{collection.description}</p>
         )}

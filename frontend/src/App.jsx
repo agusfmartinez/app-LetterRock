@@ -12,6 +12,9 @@ import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
 import CollectionDetail from './pages/CollectionDetail'
 import CollectionSection from './pages/CollectionSection'
+import AdminCollections from './pages/AdminCollections'
+import AdminCollectionEdit from './pages/AdminCollectionEdit'
+import AdminSectionEdit from './pages/AdminSectionEdit'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -41,6 +44,9 @@ export default function App() {
           <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
           <Route path="/user/:username" element={<Profile />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/colecciones" element={<AdminCollections />} />
+          <Route path="/admin/coleccion/:slug" element={<AdminCollectionEdit />} />
+          <Route path="/admin/coleccion/:slug/:sectionSlug" element={<AdminSectionEdit />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />
           <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
         </Routes>

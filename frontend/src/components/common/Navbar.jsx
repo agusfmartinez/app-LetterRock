@@ -7,7 +7,7 @@ export default function Navbar() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  const { isAdmin } = useRole()
+  const { isAdmin, isEditor } = useRole()
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -41,6 +41,11 @@ export default function Navbar() {
         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
           {user ? (
             <>
+              {isEditor && (
+                <Link to="/admin/colecciones" className="text-sm text-gray-500 hover:text-rock-accent">
+                  Editor
+                </Link>
+              )}
               {isAdmin && (
                 <Link to="/admin/users" className="text-sm text-gray-500 hover:text-rock-accent">
                   Admin
