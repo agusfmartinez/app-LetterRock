@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import FavoriteButton from './FavoriteButton'
 import SpotifyEmbed from './SpotifyEmbed'
+import { effectivePrecision, formatReleaseDate } from '../../services/dates'
 
 function Paragraphs({ text }) {
   if (!text) return null
@@ -13,14 +14,39 @@ function Paragraphs({ text }) {
   )
 }
 
+/**
+ * El año ya va en el encabezado del grupo, así que acá sólo se muestra la fecha
+ * cuando aporta algo más: el mes o el día exacto.
+ */
+function PreciseDate({ album }) {
+  const precision = effectivePrecision(album)
+  if (precision !== 'day' && precision !== 'month') return null
+
+  return (
+    <p className="text-rock-accent text-xs font-bold tracking-widest uppercase">
+      {formatReleaseDate(album)}
+    </p>
+  )
+}
+
 /** Bloque de texto suelto, sin disco ni banda asociada. */
 function NarrativeEntry({ entry }) {
   return (
-    <article className="max-w-2xl mx-auto py-12 border-b border-rock-border last:border-0">
-      {entry.title && (
-        <h3 className="text-2xl font-bold text-rock-text mb-4">{entry.title}</h3>
-      )}
-      <Paragraphs text={entry.body_text} />
+    <article className="py-10 border-b border-rock-border last:border-0">
+      <div className="max-w-2xl">
+        {entry.image_url && (
+          <img
+            src={entry.image_url}
+            alt={entry.title || ''}
+            loading="lazy"
+            className="w-full rounded-lg border border-rock-border mb-5"
+          />
+        )}
+        {entry.title && (
+          <h3 className="text-2xl font-bold text-rock-text mb-3">{entry.title}</h3>
+        )}
+        <Paragraphs text={entry.body_text} />
+      </div>
     </article>
   )
 }
@@ -28,17 +54,14 @@ function NarrativeEntry({ entry }) {
 function AlbumEntry({ entry }) {
   const album = entry.album
   const artist = album?.artist
-  const year = album?.release_date
-    ? new Date(album.release_date).getFullYear()
-    : entry.year
 
   return (
-    <article className="py-12 border-b border-rock-border last:border-0">
+    <article className="py-10 border-b border-rock-border last:border-0">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Portada */}
         <Link
           to={`/album/${album.id}`}
-          className="w-full md:w-64 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block group"
+          className="w-full md:w-56 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block group"
         >
           {album.cover_url ? (
             <img
@@ -55,9 +78,7 @@ function AlbumEntry({ entry }) {
         {/* Texto */}
         <div className="flex-1 min-w-0 space-y-4">
           <div>
-            {year && (
-              <p className="text-rock-accent font-bold text-sm tracking-widest">{year}</p>
-            )}
+            <PreciseDate album={album} />
             <Link
               to={`/album/${album.id}`}
               className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
@@ -76,9 +97,7 @@ function AlbumEntry({ entry }) {
 
           <Paragraphs text={entry.body_text} />
 
-          <div className="flex items-center gap-3">
-            <FavoriteButton entityType="album" entityId={album.id} />
-          </div>
+          <FavoriteButton entityType="album" entityId={album.id} />
 
           {album.external_spotify_id && (
             <SpotifyEmbed spotifyId={album.external_spotify_id} compact />
@@ -93,11 +112,11 @@ function ArtistEntry({ entry }) {
   const artist = entry.artist
 
   return (
-    <article className="py-12 border-b border-rock-border last:border-0">
+    <article className="py-10 border-b border-rock-border last:border-0">
       <div className="flex flex-col md:flex-row gap-8">
         <Link
           to={`/artist/${artist.slug}`}
-          className="w-full md:w-64 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block"
+          className="w-full md:w-56 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block"
         >
           {artist.image_url ? (
             <img
@@ -112,17 +131,12 @@ function ArtistEntry({ entry }) {
         </Link>
 
         <div className="flex-1 min-w-0 space-y-4">
-          <div>
-            {entry.year && (
-              <p className="text-rock-accent font-bold text-sm tracking-widest">{entry.year}</p>
-            )}
-            <Link
-              to={`/artist/${artist.slug}`}
-              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
-            >
-              {artist.name}
-            </Link>
-          </div>
+          <Link
+            to={`/artist/${artist.slug}`}
+            className="text-3xl font-bold text-rock-text hover:text-rock-accent block"
+          >
+            {artist.name}
+          </Link>
           <Paragraphs text={entry.body_text} />
           <FavoriteButton entityType="artist" entityId={artist.id} />
         </div>

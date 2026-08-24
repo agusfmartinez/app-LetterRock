@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import TimelineEntry from '../components/common/TimelineEntry'
-import { useCollectionSection } from '../hooks/useCollections'
+import YearRail from '../components/common/YearRail'
+import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
 
 function SectionNav({ collectionSlug, prev, next }) {
@@ -30,6 +32,37 @@ export default function CollectionSection() {
   const { slug, sectionSlug } = useParams()
   const { isEditor } = useRole()
   const { data, isLoading } = useCollectionSection(slug, sectionSlug)
+
+  const groups = useMemo(
+    () => groupEntriesByYear(data?.entries || []),
+    [data?.entries]
+  )
+
+  const [activeLabel, setActiveLabel] = useState(null)
+  const yearRefs = useRef({})
+
+  // Marca en el índice lateral el año que el lector está mirando.
+  useEffect(() => {
+    const nodes = Object.values(yearRefs.current).filter(Boolean)
+    if (nodes.length === 0) return
+
+    const observer = new IntersectionObserver(
+      (observed) => {
+        const visible = observed
+          .filter(o => o.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) setActiveLabel(visible[0].target.dataset.year)
+      },
+      { rootMargin: '-15% 0px -70% 0px' }
+    )
+
+    nodes.forEach(node => observer.observe(node))
+    return () => observer.disconnect()
+  }, [groups])
+
+  const goToYear = (label) => {
+    yearRefs.current[label]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!data?.collection) return <p className="text-red-400">Colección no encontrada.</p>
@@ -75,8 +108,25 @@ export default function CollectionSection() {
           Todavía no hay discos cargados en esta época.
         </p>
       ) : (
-        <div className="max-w-4xl">
-          {entries.map(e => <TimelineEntry key={e.id} entry={e} />)}
+        <div className="flex gap-10">
+          <YearRail groups={groups} activeLabel={activeLabel} onSelect={goToYear} />
+
+          <div className="flex-1 min-w-0 max-w-4xl">
+            {groups.map(group => (
+              <section
+                key={group.label}
+                ref={el => { yearRefs.current[group.label] = el }}
+                data-year={group.label}
+                className="scroll-mt-24"
+              >
+                <div className="sticky top-16 z-10 bg-rock-dark/95 backdrop-blur py-3 -mx-2 px-2 border-b border-rock-border">
+                  <h2 className="text-4xl font-black text-rock-accent">{group.label}</h2>
+                </div>
+
+                {group.entries.map(e => <TimelineEntry key={e.id} entry={e} />)}
+              </section>
+            ))}
+          </div>
         </div>
       )}
 

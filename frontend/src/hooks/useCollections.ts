@@ -1,26 +1,46 @@
 import { useQuery } from '@tanstack/react-query'
+import { entrySortKey, entryYear } from '../services/dates'
 import { supabase } from '../services/supabaseClient'
 
 const ENTRY_SELECT = `
-  id, entry_type, title, body_text, year, rank, source, position, section_id,
-  album:albums(id, title, cover_url, release_date, album_type, external_spotify_id,
-               artist:artists(id, name, slug)),
+  id, entry_type, title, body_text, year, rank, source, position, section_id, image_url,
+  album:albums(id, title, cover_url, release_date, release_date_precision, album_type,
+               external_spotify_id, artist:artists(id, name, slug)),
   artist:artists(id, name, slug, image_url, formed_year)
 `
-
-/** Fecha de la entry: la del álbum, o el `year` cargado a mano. */
-function entryTime(entry: any): number {
-  if (entry.album?.release_date) return new Date(entry.album.release_date).getTime()
-  if (entry.year) return new Date(`${entry.year}-01-01`).getTime()
-  return Number.POSITIVE_INFINITY // sin fecha → al final
-}
 
 /**
  * Orden dentro de una sección: cronológico ascendente, `position` como desempate.
  * Así el editor no carga números a mano salvo que quiera forzar una excepción.
  */
 export function sortEntries(entries: any[]): any[] {
-  return [...entries].sort((a, b) => entryTime(a) - entryTime(b) || a.position - b.position)
+  return [...entries].sort((a, b) => {
+    const ka = entrySortKey(a)
+    const kb = entrySortKey(b)
+    if (ka !== kb) return ka < kb ? -1 : 1
+    return a.position - b.position
+  })
+}
+
+export type YearGroup = { year: number | null; label: string; entries: any[] }
+
+/**
+ * Agrupa las entries por año conservando el orden cronológico.
+ * Es la unidad de lectura de la timeline: un año, los discos que salieron.
+ */
+export function groupEntriesByYear(entries: any[]): YearGroup[] {
+  const groups: YearGroup[] = []
+
+  for (const entry of sortEntries(entries)) {
+    const year = entryYear(entry)
+    const last = groups[groups.length - 1]
+    if (last && last.year === year) {
+      last.entries.push(entry)
+    } else {
+      groups.push({ year, label: year ? String(year) : 'Sin año', entries: [entry] })
+    }
+  }
+  return groups
 }
 
 /** Colección + sus secciones + cuántas entries tiene cada una. */

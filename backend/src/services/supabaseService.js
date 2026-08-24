@@ -64,6 +64,9 @@ async function saveAlbum(spotifyAlbum, artistId) {
     title: spotifyAlbum.name,
     slug,
     release_date: normalizeSpotifyDate(spotifyAlbum.release_date, spotifyAlbum.release_date_precision),
+    // Sin la precisión no se puede distinguir un disco del 1 de enero de uno
+    // del que Spotify sólo sabe el año: ambos quedan como 'YYYY-01-01'.
+    release_date_precision: spotifyAlbum.release_date_precision || null,
     album_type: spotifyAlbum.album_type,
     cover_url: coverUrl,
   }

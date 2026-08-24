@@ -1,8 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
-import { useAlbumSuggestions, useCollectionAdmin } from '../hooks/useCollectionAdmin'
-import { useCollectionSection } from '../hooks/useCollections'
+import {
+  describeError,
+  EMPTY_ALBUM_FILTERS,
+  useAlbumSearch,
+  useCollectionAdmin,
+} from '../hooks/useCollectionAdmin'
+import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
+import { formatReleaseDate } from '../services/dates'
+
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
 
 function SectionFields({ section }) {
   const { updateSection } = useCollectionAdmin()
@@ -14,6 +22,7 @@ function SectionFields({ section }) {
     year_from: section.year_from ?? '',
     year_to: section.year_to ?? '',
   })
+  const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
@@ -29,200 +38,248 @@ function SectionFields({ section }) {
         year_from: form.year_from ? Number(form.year_from) : null,
         year_to: form.year_to ? Number(form.year_to) : null,
       },
-      { onError: e => setError(e.message) }
+      { onError: e => setError(describeError(e)) }
+    )
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+        Editar datos de la época ▾
+      </button>
     )
   }
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
       <div className="flex gap-2 flex-wrap">
-        <input
-          value={form.title}
-          onChange={set('title')}
-          className="flex-1 min-w-[160px] bg-rock-dark border border-rock-border rounded px-3 py-2 text-rock-text focus:outline-none focus:border-rock-accent"
-        />
-        <input
-          value={form.year_from}
-          onChange={set('year_from')}
-          placeholder="Desde"
-          type="number"
-          className="w-24 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500"
-        />
-        <input
-          value={form.year_to}
-          onChange={set('year_to')}
-          placeholder="Hasta"
-          type="number"
-          className="w-24 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500"
-        />
+        <input value={form.title} onChange={set('title')} className={`flex-1 min-w-[160px] ${INPUT}`} />
+        <input value={form.year_from} onChange={set('year_from')} placeholder="Desde" type="number" className={`w-24 ${INPUT}`} />
+        <input value={form.year_to} onChange={set('year_to')} placeholder="Hasta" type="number" className={`w-24 ${INPUT}`} />
       </div>
-      <input
-        value={form.subtitle}
-        onChange={set('subtitle')}
-        placeholder="Bajada"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-      />
+      <input value={form.subtitle} onChange={set('subtitle')} placeholder="Bajada" className={`w-full ${INPUT}`} />
       <textarea
         value={form.intro_text}
         onChange={set('intro_text')}
         placeholder="Texto de apertura de la época. Una línea en blanco separa párrafos."
         rows={4}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className={`w-full ${INPUT}`}
       />
-      <input
-        value={form.cover_url}
-        onChange={set('cover_url')}
-        placeholder="URL de portada de la sección (opcional)"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-      />
+      <input value={form.cover_url} onChange={set('cover_url')} placeholder="URL de portada de la sección (opcional)" className={`w-full ${INPUT}`} />
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button
-        onClick={save}
-        disabled={updateSection.isPending}
-        className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-      >
-        Guardar sección
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={updateSection.isPending}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          Guardar sección
+        </button>
+        <button onClick={() => setOpen(false)} className="text-sm text-gray-500 hover:text-rock-text">
+          Cerrar
+        </button>
+      </div>
     </div>
   )
 }
 
-function EntryRow({ entry }) {
-  const { updateEntry, deleteEntry } = useCollectionAdmin()
-  const [body, setBody] = useState(entry.body_text || '')
-  const [error, setError] = useState('')
-
+/** Fila de una línea. No despliega nada: al elegirla se edita en el panel derecho. */
+function EntryRow({ entry, selected, onSelect }) {
   const album = entry.album
   const artist = entry.artist || album?.artist
-  const year = album?.release_date ? new Date(album.release_date).getFullYear() : entry.year
   const label = album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
-  const dirty = body !== (entry.body_text || '')
-
-  const remove = () => {
-    if (!window.confirm(`¿Quitar "${label}" de esta sección?`)) return
-    deleteEntry.mutate(entry.id, { onError: e => setError(e.message) })
-  }
+  const dateLabel = album ? formatReleaseDate(album) : entry.year ? String(entry.year) : null
 
   return (
-    <div className="flex gap-3 p-3">
-      <div className="w-14 h-14 rounded overflow-hidden bg-rock-dark flex-shrink-0">
+    <button
+      onClick={onSelect}
+      className={`w-full text-left flex items-center gap-3 px-3 py-2 transition-colors ${
+        selected ? 'bg-rock-accent/10 border-l-2 border-rock-accent' : 'hover:bg-rock-dark'
+      }`}
+    >
+      <div className="w-9 h-9 rounded overflow-hidden bg-rock-dark flex-shrink-0">
         {album?.cover_url ? (
           <img src={album.cover_url} alt="" className="w-full h-full object-cover" />
         ) : entry.artist?.image_url ? (
           <img src={entry.artist.image_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-xl">📝</div>
+          <div className="w-full h-full flex items-center justify-center text-sm">📝</div>
         )}
       </div>
 
-      <div className="flex-1 min-w-0 space-y-2">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-rock-text font-medium">{label}</span>
-          {artist && <span className="text-gray-500 text-sm">{artist.name}</span>}
-          {year && <span className="text-rock-accent text-xs font-bold">{year}</span>}
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm truncate ${selected ? 'text-rock-accent font-semibold' : 'text-rock-text'}`}>
+          {label}
+        </p>
+        <p className="text-gray-500 text-xs truncate">
+          {artist?.name}
+          {artist?.name && dateLabel ? ' · ' : ''}
+          {dateLabel}
+        </p>
+      </div>
+
+      {!entry.body_text && <span className="text-xs text-gray-600 flex-shrink-0">sin texto</span>}
+    </button>
+  )
+}
+
+function EntriesByYear({ entries, selectedId, onSelect }) {
+  const groups = useMemo(() => groupEntriesByYear(entries), [entries])
+
+  return (
+    <div className="space-y-4">
+      {groups.map(group => (
+        <div key={group.label}>
+          <div className="flex items-baseline gap-2 mb-1">
+            <h3 className="text-lg font-black text-rock-accent">{group.label}</h3>
+            <span className="text-gray-600 text-xs">
+              {group.entries.length} {group.entries.length === 1 ? 'entrada' : 'entradas'}
+            </span>
+          </div>
+          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border overflow-hidden">
+            {group.entries.map(e => (
+              <EntryRow
+                key={e.id}
+                entry={e}
+                selected={selectedId === e.id}
+                onSelect={() => onSelect(e.id)}
+              />
+            ))}
+          </div>
         </div>
+      ))}
+    </div>
+  )
+}
 
-        <textarea
-          value={body}
-          onChange={e => setBody(e.target.value)}
-          placeholder="Texto editorial del disco."
-          rows={3}
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-        />
+/**
+ * Único formulario de edición de la página. Se remonta con `key={entry.id}`
+ * al cambiar de entrada, así el estado local arranca limpio.
+ */
+function EntryEditor({ entry, onClose }) {
+  const { updateEntry, deleteEntry } = useCollectionAdmin()
+  const [form, setForm] = useState({
+    body_text: entry.body_text || '',
+    title: entry.title || '',
+    year: entry.year ?? '',
+    image_url: entry.image_url || '',
+  })
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+  const album = entry.album
+  const isNarrative = entry.entry_type === 'narrative'
+  const label = album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => updateEntry.mutate(
-              { id: entry.id, body_text: body.trim() || null },
-              { onError: e => setError(e.message) }
-            )}
-            disabled={!dirty || updateEntry.isPending}
-            className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-          >
-            Guardar texto
-          </button>
-          <button onClick={remove} className="text-xs text-gray-500 hover:text-red-400">
-            Quitar
-          </button>
+  const set = (key) => (e) => {
+    setSaved(false)
+    setForm({ ...form, [key]: e.target.value })
+  }
+
+  const save = () => {
+    const patch = { id: entry.id, body_text: form.body_text.trim() || null }
+    if (isNarrative) {
+      patch.title = form.title.trim() || null
+      patch.year = form.year ? Number(form.year) : null
+      patch.image_url = form.image_url.trim() || null
+    }
+    updateEntry.mutate(patch, {
+      onSuccess: () => { setError(''); setSaved(true) },
+      onError: e => setError(describeError(e)),
+    })
+  }
+
+  const remove = () => {
+    if (!window.confirm(`¿Quitar "${label}" de esta sección?`)) return
+    deleteEntry.mutate(entry.id, {
+      onSuccess: onClose,
+      onError: e => setError(describeError(e)),
+    })
+  }
+
+  return (
+    <div className="bg-rock-card border border-rock-accent rounded-lg p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        {album?.cover_url && (
+          <img src={album.cover_url} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-rock-text font-semibold truncate">{label}</p>
+          <p className="text-gray-500 text-xs truncate">
+            {(entry.artist || album?.artist)?.name}
+          </p>
         </div>
+        <button onClick={onClose} className="text-gray-500 hover:text-rock-text text-sm flex-shrink-0">
+          ✕
+        </button>
+      </div>
+
+      {isNarrative && (
+        <div className="flex gap-2 flex-wrap">
+          <input value={form.title} onChange={set('title')} placeholder="Título del bloque" className={`flex-1 min-w-[140px] ${INPUT}`} />
+          <input value={form.year} onChange={set('year')} placeholder="Año" type="number" className={`w-24 ${INPUT}`} />
+        </div>
+      )}
+
+      <textarea
+        value={form.body_text}
+        onChange={set('body_text')}
+        placeholder="Texto editorial. Una línea en blanco separa párrafos."
+        rows={10}
+        className={`w-full ${INPUT}`}
+      />
+
+      {isNarrative && (
+        <>
+          <input value={form.image_url} onChange={set('image_url')} placeholder="URL de imagen (opcional)" className={`w-full ${INPUT}`} />
+          {form.image_url && (
+            <img src={form.image_url} alt="" className="max-h-32 rounded border border-rock-border" />
+          )}
+        </>
+      )}
+
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={updateEntry.isPending}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          Guardar
+        </button>
+        {saved && <span className="text-xs text-gray-500">Guardado</span>}
+        <button onClick={remove} className="ml-auto text-xs text-gray-500 hover:text-red-400">
+          Quitar de la sección
+        </button>
       </div>
     </div>
   )
 }
 
-function NewNarrativeForm({ collection, section }) {
+/** Buscador de discos. Arranca vacío: muestra resultados recién al ejecutar la consulta. */
+function AlbumSearchPanel({ collection, section }) {
+  const [form, setForm] = useState({
+    ...EMPTY_ALBUM_FILTERS,
+    yearFrom: section.year_from ?? '',
+    yearTo: section.year_to ?? '',
+  })
+  const [filters, setFilters] = useState(null)
+  const { data: albums = [], isLoading, error } = useAlbumSearch(section, filters, !!filters)
   const { createEntry } = useCollectionAdmin()
-  const [title, setTitle] = useState('')
-  const [year, setYear] = useState('')
-  const [body, setBody] = useState('')
-  const [error, setError] = useState('')
+  const [addError, setAddError] = useState('')
 
-  const submit = (e) => {
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
+
+  const search = (e) => {
     e.preventDefault()
-    if (!body.trim()) return
-    createEntry.mutate(
-      {
-        collection_id: collection.id,
-        section_id: section.id,
-        entry_type: 'narrative',
-        title: title.trim() || null,
-        year: year ? Number(year) : null,
-        body_text: body.trim(),
-      },
-      {
-        onSuccess: () => { setTitle(''); setYear(''); setBody(''); setError('') },
-        onError: (err) => setError(err.message),
-      }
-    )
+    setFilters({ ...form })
   }
 
-  return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h3 className="font-bold text-rock-text text-sm">Bloque de texto</h3>
-      <p className="text-gray-600 text-xs">
-        Para hitos sin disco asociado. El año lo ubica en la cronología.
-      </p>
-      <div className="flex gap-2">
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Título (opcional)"
-          className="flex-1 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-        />
-        <input
-          value={year}
-          onChange={e => setYear(e.target.value)}
-          placeholder="Año"
-          type="number"
-          className="w-24 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500"
-        />
-      </div>
-      <textarea
-        value={body}
-        onChange={e => setBody(e.target.value)}
-        placeholder="Texto"
-        rows={3}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-      />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button
-        type="submit"
-        disabled={createEntry.isPending || !body.trim()}
-        className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-      >
-        Agregar bloque
-      </button>
-    </form>
-  )
-}
-
-function Suggestions({ collection, section }) {
-  const [search, setSearch] = useState('')
-  const { data: albums = [], isLoading } = useAlbumSuggestions(section, search)
-  const { createEntry } = useCollectionAdmin()
-  const [error, setError] = useState('')
+  const reset = () => {
+    setForm({ ...EMPTY_ALBUM_FILTERS, yearFrom: section.year_from ?? '', yearTo: section.year_to ?? '' })
+    setFilters(null)
+  }
 
   const add = (album) => {
     createEntry.mutate(
@@ -232,44 +289,67 @@ function Suggestions({ collection, section }) {
         entry_type: 'album',
         album_id: album.id,
       },
-      { onError: e => setError(e.message) }
+      {
+        onSuccess: () => setAddError(''),
+        onError: e => setAddError(describeError(e)),
+      }
     )
   }
 
-  const rangeLabel = section.year_from && section.year_to
-    ? `${section.year_from}–${section.year_to}`
-    : 'sin rango de años'
-
   return (
-    <div className="space-y-3">
-      <div>
-        <h2 className="text-lg font-bold text-rock-text">Agregar discos</h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Álbumes de la DB que caen en {rangeLabel} y todavía no están en la sección.
-          Buscá por título para salir del rango.
+    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+      <h2 className="font-bold text-rock-text">Buscar discos</h2>
+
+      <form onSubmit={search} className="space-y-2">
+        <input value={form.title} onChange={set('title')} placeholder="Título del disco" className={`w-full ${INPUT}`} />
+        <input value={form.artist} onChange={set('artist')} placeholder="Banda" className={`w-full ${INPUT}`} />
+        <div className="flex gap-2">
+          <input value={form.yearFrom} onChange={set('yearFrom')} placeholder="Desde" type="number" className={`w-1/2 ${INPUT}`} />
+          <input value={form.yearTo} onChange={set('yearTo')} placeholder="Hasta" type="number" className={`w-1/2 ${INPUT}`} />
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-400">
+          <input
+            type="checkbox"
+            checked={form.studioOnly}
+            onChange={e => setForm({ ...form, studioOnly: e.target.checked })}
+            className="accent-rock-accent"
+          />
+          Sólo álbumes de estudio
+        </label>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90"
+          >
+            Buscar
+          </button>
+          {filters && (
+            <button type="button" onClick={reset} className="text-xs text-gray-500 hover:text-rock-text">
+              Limpiar
+            </button>
+          )}
+        </div>
+      </form>
+
+      {addError && <p className="text-red-400 text-sm">{addError}</p>}
+      {error && <p className="text-red-400 text-sm">{describeError(error)}</p>}
+
+      {!filters ? (
+        <p className="text-gray-600 text-xs border-t border-rock-border pt-3">
+          Los años vienen del rango de la época. Ajustá los filtros y tocá Buscar.
         </p>
-      </div>
-
-      <input
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Buscar por título de álbum..."
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-      />
-
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-
-      {isLoading ? (
-        <p className="text-gray-500 text-sm">Cargando...</p>
+      ) : isLoading ? (
+        <p className="text-gray-500 text-sm border-t border-rock-border pt-3">Buscando...</p>
       ) : albums.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          Sin candidatos. Si falta una banda, buscala primero en la app para que se ingeste.
+        <p className="text-gray-500 text-sm border-t border-rock-border pt-3">
+          Sin resultados. Si falta una banda, buscala primero en la app para que se ingeste.
         </p>
       ) : (
-        <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border max-h-96 overflow-y-auto">
+        <div className="border-t border-rock-border pt-3 space-y-1 max-h-[28rem] overflow-y-auto">
+          <p className="text-gray-600 text-xs">{albums.length} resultados</p>
           {albums.map(a => (
-            <div key={a.id} className="flex items-center gap-3 p-2">
-              <div className="w-10 h-10 rounded overflow-hidden bg-rock-dark flex-shrink-0">
+            <div key={a.id} className="flex items-center gap-2 py-1">
+              <div className="w-9 h-9 rounded overflow-hidden bg-rock-dark flex-shrink-0">
                 {a.cover_url ? (
                   <img src={a.cover_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -280,15 +360,15 @@ function Suggestions({ collection, section }) {
                 <p className="text-rock-text text-sm truncate">{a.title}</p>
                 <p className="text-gray-500 text-xs truncate">
                   {a.artist?.name}
-                  {a.release_date ? ` · ${new Date(a.release_date).getFullYear()}` : ''}
+                  {a.release_date ? ` · ${formatReleaseDate(a)}` : ''}
                 </p>
               </div>
               <button
                 onClick={() => add(a)}
                 disabled={createEntry.isPending}
-                className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+                className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50 flex-shrink-0"
               >
-                + Agregar
+                +
               </button>
             </div>
           ))}
@@ -298,9 +378,87 @@ function Suggestions({ collection, section }) {
   )
 }
 
+function NewNarrativeForm({ collection, section }) {
+  const { createEntry } = useCollectionAdmin()
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ title: '', year: '', body: '', image_url: '' })
+  const [error, setError] = useState('')
+
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!form.body.trim()) return
+    createEntry.mutate(
+      {
+        collection_id: collection.id,
+        section_id: section.id,
+        entry_type: 'narrative',
+        title: form.title.trim() || null,
+        year: form.year ? Number(form.year) : null,
+        image_url: form.image_url.trim() || null,
+        body_text: form.body.trim(),
+      },
+      {
+        onSuccess: () => {
+          setForm({ title: '', year: '', body: '', image_url: '' })
+          setError('')
+          setOpen(false)
+        },
+        onError: (err) => setError(describeError(err)),
+      }
+    )
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+        + Agregar bloque de texto
+      </button>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+      <h3 className="font-bold text-rock-text text-sm">Bloque de texto</h3>
+      <p className="text-gray-600 text-xs">
+        Para hitos sin disco asociado. El año lo ubica en la cronología.
+      </p>
+      <div className="flex gap-2">
+        <input value={form.title} onChange={set('title')} placeholder="Título (opcional)" className={`flex-1 ${INPUT}`} />
+        <input value={form.year} onChange={set('year')} placeholder="Año" type="number" className={`w-24 ${INPUT}`} />
+      </div>
+      <textarea value={form.body} onChange={set('body')} placeholder="Texto" rows={3} className={`w-full ${INPUT}`} />
+      <input value={form.image_url} onChange={set('image_url')} placeholder="URL de imagen (opcional)" className={`w-full ${INPUT}`} />
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={createEntry.isPending || !form.body.trim()}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          Agregar bloque
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500 hover:text-rock-text">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export default function AdminSectionEdit() {
   const { slug, sectionSlug } = useParams()
   const { data, isLoading } = useCollectionSection(slug, sectionSlug)
+  const [selectedId, setSelectedId] = useState(null)
+
+  const entries = data?.entries || []
+  const selected = entries.find(e => e.id === selectedId) || null
+
+  // Si la entrada abierta se borró, cerrar el panel.
+  useEffect(() => {
+    if (selectedId && !selected) setSelectedId(null)
+  }, [selectedId, selected])
 
   return (
     <RequireEditor>
@@ -309,7 +467,7 @@ export default function AdminSectionEdit() {
       ) : !data?.section ? (
         <p className="text-red-400">Sección no encontrada.</p>
       ) : (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-6">
           <div className="flex items-center gap-4 flex-wrap">
             <Link
               to={`/admin/coleccion/${data.collection.slug}`}
@@ -327,27 +485,44 @@ export default function AdminSectionEdit() {
 
           <h1 className="text-2xl font-bold text-rock-text">{data.section.title}</h1>
 
-          <SectionFields section={data.section} />
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Contenido cargado */}
+            <div className="flex-1 min-w-0 space-y-6">
+              <SectionFields section={data.section} />
 
-          <div>
-            <h2 className="text-lg font-bold text-rock-text mb-1">
-              Entradas ({data.entries.length})
-            </h2>
-            <p className="text-gray-500 text-sm mb-3">
-              Se ordenan solas por fecha de edición del disco.
-            </p>
-            {data.entries.length === 0 ? (
-              <p className="text-gray-500 text-sm">Todavía no hay entradas.</p>
-            ) : (
-              <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
-                {data.entries.map(e => <EntryRow key={e.id} entry={e} />)}
+              <div>
+                <h2 className="text-lg font-bold text-rock-text mb-1">
+                  Entradas ({entries.length})
+                </h2>
+                <p className="text-gray-500 text-sm mb-3">
+                  Agrupadas por año. Elegí una para editarla en el panel de la derecha.
+                </p>
+                {entries.length === 0 ? (
+                  <p className="text-gray-500 text-sm">Todavía no hay entradas.</p>
+                ) : (
+                  <EntriesByYear
+                    entries={entries}
+                    selectedId={selectedId}
+                    onSelect={id => setSelectedId(id === selectedId ? null : id)}
+                  />
+                )}
               </div>
-            )}
+
+              <NewNarrativeForm collection={data.collection} section={data.section} />
+            </div>
+
+            {/* Panel lateral: edición + búsqueda */}
+            <aside className="w-full lg:w-96 lg:flex-shrink-0 lg:sticky lg:top-24 space-y-4">
+              {selected && (
+                <EntryEditor
+                  key={selected.id}
+                  entry={selected}
+                  onClose={() => setSelectedId(null)}
+                />
+              )}
+              <AlbumSearchPanel collection={data.collection} section={data.section} />
+            </aside>
           </div>
-
-          <Suggestions collection={data.collection} section={data.section} />
-
-          <NewNarrativeForm collection={data.collection} section={data.section} />
         </div>
       )}
     </RequireEditor>
