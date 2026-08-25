@@ -51,6 +51,7 @@ export default function App() {
           <Route path="/admin/coleccion/:slug" element={<AdminCollectionEdit />} />
           <Route path="/admin/coleccion/:slug/:sectionSlug" element={<AdminSectionEdit />} />
           <Route path="/admin/catalogo" element={<AdminArtists />} />
+          <Route path="/admin/catalogo/ocultos" element={<AdminArtists hidden />} />
           <Route path="/admin/artista/:id" element={<AdminArtistEdit />} />
           <Route path="/admin/album/:id" element={<AdminAlbumEdit />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />

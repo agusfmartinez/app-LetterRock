@@ -30,7 +30,10 @@ function nextManualFields(table: Table, current: string[] | null, patch: Record<
 function useInvalidateCatalog() {
   const queryClient = useQueryClient()
   return () => {
-    for (const key of ['admin-artists', 'admin-artist', 'admin-album', 'artist', 'album', 'collection-section']) {
+    for (const key of [
+      'admin-artists', 'admin-artists-hidden-count', 'admin-artist',
+      'admin-album', 'artist', 'album', 'collection-section',
+    ]) {
       queryClient.invalidateQueries({ queryKey: [key] })
     }
   }
@@ -144,16 +147,20 @@ export function useToggleHidden(table: 'artists' | 'albums') {
   })
 }
 
-/** Listado de artistas para el panel, con búsqueda por nombre. */
-export function useAdminArtists(search: string) {
+/**
+ * Listado de artistas para el panel, con búsqueda por nombre.
+ * Los ocultos viven en su propia pantalla para no ensuciar el catálogo.
+ */
+export function useAdminArtists(search: string, hidden = false) {
   const term = search.trim()
 
   return useQuery({
-    queryKey: ['admin-artists', term],
+    queryKey: ['admin-artists', term, hidden],
     queryFn: async () => {
       let query = supabase
         .from('artists')
         .select('id, name, slug, image_url, country, formed_year, manual_fields, hidden')
+        .eq('hidden', hidden)
         .order('name', { ascending: true })
         .limit(100)
 
@@ -161,6 +168,20 @@ export function useAdminArtists(search: string) {
 
       const { data } = await query
       return data || []
+    },
+  })
+}
+
+/** Cuántos artistas hay ocultos, para el acceso desde el catálogo. */
+export function useHiddenArtistCount() {
+  return useQuery({
+    queryKey: ['admin-artists-hidden-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('artists')
+        .select('id', { count: 'exact', head: true })
+        .eq('hidden', true)
+      return count || 0
     },
   })
 }
