@@ -188,4 +188,44 @@ router.post('/:id/refresh-spotify', requireEditor, async (req, res, next) => {
   }
 })
 
+/**
+ * Trae la formación de la banda desde MusicBrainz.
+ *
+ * No corre sola al entrar al artista: MusicBrainz limita a un pedido por
+ * segundo para toda la app, así que gastarlo en cada visita pública dejaría sin
+ * margen a la búsqueda, que es lo que sí necesita responder rápido.
+ *
+ * Es repetible: actualiza las etapas que ya estaban en vez de duplicarlas.
+ */
+router.post('/:id/members', requireEditor, async (req, res, next) => {
+  try {
+    const artist = await db.getArtistById(req.params.id)
+    if (!artist) return res.status(404).json({ error: 'Artista no encontrado' })
+    if (!artist.external_mb_id) {
+      return res.status(400).json({ error: 'Este artista no está vinculado a MusicBrainz' })
+    }
+
+    // Las dos lecturas del mismo pedido: una banda trae sus integrantes, un
+    // solista trae las bandas por las que pasó. No hay que saber de antemano
+    // cuál es cuál, y un artista que sea las dos cosas se resuelve igual.
+    const { members, bands } = await mb.getMemberRelations(artist.external_mb_id)
+    const stages = [...members, ...bands]
+
+    if (stages.length === 0) {
+      return res.json({ total: 0, saved: 0, linked: 0, skipped: 0, people: 0 })
+    }
+
+    const { saved, linked, skipped } = await db.saveMembers(stages)
+    const people = new Set(stages.map(s => s.person_mb_id)).size
+
+    console.log(
+      `[members] ${artist.name}: ${saved} etapas guardadas, ${people} músicos, ` +
+      `${linked} con ficha, ${skipped} salteadas por banda fuera del catálogo`
+    )
+    res.json({ total: stages.length, saved, linked, skipped, people })
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router

@@ -14,7 +14,7 @@ type Table = 'artists' | 'albums' | 'tracks'
  * protección: nadie los va a pisar.
  */
 const INGESTED_FIELDS: Record<Table, string[]> = {
-  artists: ['name', 'country', 'formed_year', 'image_url', 'bio'],
+  artists: ['name', 'country', 'formed_year', 'artist_type', 'image_url', 'bio'],
   albums: ['title', 'release_date', 'release_date_precision', 'album_type', 'cover_url'],
   tracks: ['title', 'duration_ms', 'track_number', 'disc_number'],
 }

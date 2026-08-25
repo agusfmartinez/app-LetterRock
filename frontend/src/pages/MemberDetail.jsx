@@ -1,0 +1,91 @@
+import { Link, useParams } from 'react-router-dom'
+import { formatPeriod, roleLabel, useMemberTrajectory } from '../hooks/useArtistMembers'
+
+/**
+ * El paso de un músico por las bandas.
+ *
+ * No es una ficha de artista: la mayoría de los integrantes no tiene
+ * discografía propia ni entrada en Wikipedia, y forzarles un perfil vacío no
+ * agrega nada. Lo que sí tiene sentido es ver por dónde anduvo y cuándo.
+ *
+ * Los que además son artistas del catálogo tienen su ficha en /artist/:slug, y
+ * la formación de la banda enlaza directo ahí.
+ */
+export default function MemberDetail() {
+  const { mbId } = useParams()
+  const { data: stages = [], isLoading } = useMemberTrajectory(mbId)
+
+  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (stages.length === 0) {
+    return <p className="text-gray-500">No hay datos de este músico.</p>
+  }
+
+  const name = stages[0].member_name
+  const bands = new Set(stages.map(s => s.group?.id).filter(Boolean)).size
+  const allRoles = [...new Set(stages.flatMap(s => s.roles))].map(roleLabel)
+
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <div>
+        <h1 className="text-3xl font-bold text-rock-text">{name}</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          {bands === 1 ? '1 banda' : `${bands} bandas`}
+          {allRoles.length > 0 && ` · ${allRoles.join(' · ')}`}
+        </p>
+        <a
+          href={`https://musicbrainz.org/artist/${mbId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-600 hover:text-rock-accent text-xs"
+        >
+          Ver en MusicBrainz →
+        </a>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold text-rock-text mb-3">Trayectoria</h2>
+        <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+          {stages.map(stage => (
+            <div key={stage.id} className="flex items-center gap-3 p-3 flex-wrap">
+              <span className="text-gray-500 text-xs font-mono w-28 flex-shrink-0">
+                {formatPeriod(stage)}
+              </span>
+
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-rock-dark flex-shrink-0">
+                {stage.group?.image_url ? (
+                  <img src={stage.group.image_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm">🎸</div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                {stage.group?.slug ? (
+                  <Link
+                    to={`/artist/${stage.group.slug}`}
+                    className="text-rock-text font-medium hover:text-rock-accent"
+                  >
+                    {stage.group.name}
+                  </Link>
+                ) : (
+                  <span className="text-rock-text font-medium">—</span>
+                )}
+                {stage.roles.length > 0 && (
+                  <p className="text-gray-500 text-xs">
+                    {stage.roles.map(roleLabel).join(' · ')}
+                  </p>
+                )}
+              </div>
+
+              {stage.is_original && (
+                <span className="text-[10px] uppercase tracking-wide text-rock-accent border border-rock-accent rounded px-1 flex-shrink-0">
+                  original
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js')
 const slugify = require('slugify')
+const mb = require('./musicbrainz')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -82,14 +83,121 @@ async function saveArtist(mbArtist) {
     formed_year: mbArtist['life-span']?.begin
       ? parseInt(mbArtist['life-span'].begin.substring(0, 4), 10)
       : null,
+    artist_type: mb.normalizeArtistType(mbArtist.type),
   }
+
+  // Igual que `saveAlbum`: esta función corre en cada visita al artista, así
+  // que sin esto un nombre o un año corregidos desde el CRUD volverían al
+  // valor de MusicBrainz.
+  const { data: existing } = await supabase
+    .from('artists')
+    .select('manual_fields')
+    .eq('external_mb_id', mbArtist.id)
+    .maybeSingle()
+
   const { data, error } = await supabase
     .from('artists')
-    .upsert(payload, { onConflict: 'external_mb_id' })
+    .upsert(stripManualFields(payload, existing?.manual_fields), { onConflict: 'external_mb_id' })
     .select()
     .single()
   if (error) throw error
   return data
+}
+
+async function artistsByMbId(mbIds) {
+  const ids = [...new Set(mbIds.filter(Boolean))]
+  if (ids.length === 0) return new Map()
+  const { data } = await supabase
+    .from('artists')
+    .select('id, name, external_mb_id')
+    .in('external_mb_id', ids)
+  return new Map((data || []).map(a => [a.external_mb_id, a]))
+}
+
+/**
+ * Guarda etapas de "fulano tocó en tal banda" tal como las trajo MusicBrainz.
+ *
+ * Sirve para las dos direcciones: la formación de una banda y las bandas por
+ * las que pasó un músico. `mb_key` se arma siempre desde el músico, así que
+ * importar los dos lados de la misma relación cae en la misma fila.
+ *
+ * `mb_key` también hace la importación repetible: si un editor corrigió el año
+ * de una etapa, la próxima corrida actualiza esa fila en vez de duplicarla.
+ *
+ * `member_id` se completa sólo cuando el músico ya está en el catálogo. Los
+ * demás quedan con el nombre suelto: un segundo guitarrista sin discografía no
+ * necesita ficha propia para figurar en la formación.
+ */
+async function saveMembers(stages) {
+  if (stages.length === 0) return { saved: 0, linked: 0, skipped: 0 }
+
+  const catalog = await artistsByMbId([
+    ...stages.map(s => s.person_mb_id),
+    ...stages.map(s => s.band_mb_id),
+  ])
+
+  const keysByGroup = new Map()
+  for (const stage of stages) {
+    const group = catalog.get(stage.band_mb_id)
+    if (!group) continue
+    if (!keysByGroup.has(group.id)) keysByGroup.set(group.id, [])
+    keysByGroup.get(group.id).push(stage.mb_key)
+  }
+
+  const manualByKey = new Map()
+  for (const [groupId, keys] of keysByGroup) {
+    const { data } = await supabase
+      .from('artist_members')
+      .select('mb_key, manual_fields')
+      .eq('group_id', groupId)
+      .in('mb_key', keys)
+    for (const row of data || []) manualByKey.set(`${groupId}:${row.mb_key}`, row.manual_fields)
+  }
+
+  const rows = []
+  let skipped = 0
+  let linked = 0
+
+  for (const stage of stages) {
+    // La banda tiene que existir en el catálogo: `group_id` es obligatorio. Al
+    // importar un solista, las bandas que todavía no cargamos se saltean.
+    const group = catalog.get(stage.band_mb_id)
+    if (!group) {
+      skipped++
+      continue
+    }
+
+    const person = catalog.get(stage.person_mb_id)
+    if (person) linked++
+
+    rows.push(stripManualFields(
+      {
+        group_id: group.id,
+        member_id: person?.id || null,
+        member_mb_id: stage.person_mb_id,
+        // El nombre del músico: del otro extremo si estamos mirando la banda,
+        // o del propio artista del catálogo si estamos mirando a la persona.
+        member_name: person?.name || stage.other_name,
+        roles: stage.roles,
+        year_from: stage.year_from,
+        year_to: stage.year_to,
+        is_original: stage.is_original,
+        ended: stage.ended,
+        mb_key: stage.mb_key,
+        source: 'musicbrainz',
+      },
+      manualByKey.get(`${group.id}:${stage.mb_key}`)
+    ))
+  }
+
+  if (rows.length === 0) return { saved: 0, linked: 0, skipped }
+
+  const { error } = await supabase
+    .from('artist_members')
+    .upsert(rows, { onConflict: 'group_id,mb_key' })
+  if (error) throw error
+
+  return { saved: rows.length, linked, skipped }
 }
 
 function normalizeSpotifyDate(raw, precision) {
@@ -291,6 +399,7 @@ module.exports = {
   saveBio,
   updateArtistSpotifyId,
   saveTracks,
+  saveMembers,
   saveMediaLinks,
   getMediaLinks,
   getArtistBySlug,

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ManualFieldMark from '../components/common/ManualFieldMark'
+import MembersPanel from '../components/common/MembersPanel'
 import RequireEditor from '../components/common/RequireEditor'
 import {
   describeError,
@@ -35,6 +36,7 @@ function ArtistForm({ artist }) {
     name: artist.name || '',
     country: artist.country || '',
     formed_year: artist.formed_year ?? '',
+    artist_type: artist.artist_type || '',
     image_url: artist.image_url || '',
     bio: artist.bio || '',
   })
@@ -52,6 +54,7 @@ function ArtistForm({ artist }) {
     if (form.country.trim() !== (artist.country || '')) patch.country = form.country.trim() || null
     const year = form.formed_year ? Number(form.formed_year) : null
     if (year !== (artist.formed_year ?? null)) patch.formed_year = year
+    if (form.artist_type !== (artist.artist_type || '')) patch.artist_type = form.artist_type || null
     if (form.image_url.trim() !== (artist.image_url || '')) patch.image_url = form.image_url.trim() || null
     if (form.bio.trim() !== (artist.bio || '')) patch.bio = form.bio.trim() || null
     return patch
@@ -85,6 +88,14 @@ function ArtistForm({ artist }) {
         </Field>
         <Field label="Año de formación" field="formed_year" {...marks}>
           <input value={form.formed_year} onChange={set('formed_year')} type="number" className={`w-28 ${INPUT}`} />
+        </Field>
+        <Field label="Tipo" field="artist_type" {...marks}>
+          <select value={form.artist_type} onChange={set('artist_type')} className={INPUT}>
+            <option value="">Sin definir</option>
+            <option value="group">Banda</option>
+            <option value="person">Músico</option>
+            <option value="other">Otro</option>
+          </select>
         </Field>
       </div>
 
@@ -437,6 +448,8 @@ export default function AdminArtistEdit() {
           <SpotifyRefresh artistId={data.artist.id} />
 
           <YoutubeDiscography artistId={data.artist.id} />
+
+          <MembersPanel artist={data.artist} />
 
           <div>
             <h2 className="text-lg font-bold text-rock-text mb-3">

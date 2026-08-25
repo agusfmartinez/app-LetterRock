@@ -80,6 +80,24 @@ export async function refreshArtistFromSpotify(artistId: string) {
   return data as { total: number; saved: number; errors: string[] }
 }
 
+/**
+ * Importa de MusicBrainz el paso de los músicos por las bandas. Sirve para las
+ * dos direcciones: en una banda trae su formación, en un solista trae las
+ * bandas por las que pasó. Se puede repetir sin duplicar.
+ */
+export async function importArtistMembers(artistId: string) {
+  const { data } = await api.post(`/api/artists/${artistId}/members`, null, {
+    headers: await authHeaders(),
+  })
+  return data as {
+    total: number
+    saved: number
+    linked: number
+    skipped: number
+    people: number
+  }
+}
+
 /** Refresca sólo las reproducciones. Cuesta 1 unidad cada 50 temas. */
 export async function refreshYoutubeViews(id: string) {
   const { data } = await api.post(`/api/albums/${id}/youtube/refresh`, null, {

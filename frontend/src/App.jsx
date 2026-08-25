@@ -18,6 +18,7 @@ import AdminSectionEdit from './pages/AdminSectionEdit'
 import AdminArtists from './pages/AdminArtists'
 import AdminArtistEdit from './pages/AdminArtistEdit'
 import AdminAlbumEdit from './pages/AdminAlbumEdit'
+import MemberDetail from './pages/MemberDetail'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/artist/:slug" element={<ArtistDetail />} />
           <Route path="/album/:id" element={<AlbumDetail />} />
+          <Route path="/musico/:mbId" element={<MemberDetail />} />
           <Route path="/track/:id" element={<TrackDetail />} />
           <Route path="/coleccion/:slug" element={<CollectionDetail />} />
           <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
