@@ -69,6 +69,17 @@ export async function linkArtistDiscography(artistId: string) {
   return data as ArtistLinkResult
 }
 
+/**
+ * Vuelve a traer los metadatos de los discos desde Spotify. Respeta los campos
+ * que el admin corrigió a mano.
+ */
+export async function refreshArtistFromSpotify(artistId: string) {
+  const { data } = await api.post(`/api/artists/${artistId}/refresh-spotify`, null, {
+    headers: await authHeaders(),
+  })
+  return data as { total: number; saved: number; errors: string[] }
+}
+
 /** Refresca sólo las reproducciones. Cuesta 1 unidad cada 50 temas. */
 export async function refreshYoutubeViews(id: string) {
   const { data } = await api.post(`/api/albums/${id}/youtube/refresh`, null, {

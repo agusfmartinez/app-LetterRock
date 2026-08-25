@@ -5,7 +5,7 @@ import { supabase } from '../services/supabaseClient'
 const ENTRY_SELECT = `
   id, entry_type, title, body_text, year, rank, source, position, section_id, image_url,
   album:albums(id, title, cover_url, release_date, release_date_precision, album_type,
-               external_spotify_id, artist:artists(id, name, slug)),
+               description, external_spotify_id, artist:artists(id, name, slug)),
   artist:artists(id, name, slug, image_url, formed_year)
 `
 

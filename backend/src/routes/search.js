@@ -25,15 +25,21 @@ router.get('/', async (req, res, next) => {
       return res.json({ artists: [], albums: [], tracks: [], source: 'musicbrainz', message: 'Próximamente...' })
     }
 
-    const artists = mbArtists.map(a => ({
-      external_mb_id: a.id,
-      name: a.name,
-      slug: slugify(a.name),
-      country: a.country || null,
-      formed_year: a['life-span']?.begin
-        ? parseInt(a['life-span'].begin.substring(0, 4), 10)
-        : null,
-    }))
+    // Un artista oculto por el admin no vuelve a aparecer, aunque MusicBrainz
+    // lo siga devolviendo.
+    const hidden = await db.getHiddenMbIds()
+
+    const artists = mbArtists
+      .filter(a => !hidden.has(a.id))
+      .map(a => ({
+        external_mb_id: a.id,
+        name: a.name,
+        slug: slugify(a.name),
+        country: a.country || null,
+        formed_year: a['life-span']?.begin
+          ? parseInt(a['life-span'].begin.substring(0, 4), 10)
+          : null,
+      }))
 
     res.json({ artists, albums: [], tracks: [], source: 'musicbrainz' })
   } catch (err) {
