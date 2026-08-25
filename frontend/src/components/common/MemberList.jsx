@@ -1,70 +1,90 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatPeriod, roleLabel } from '../../hooks/useArtistMembers'
-
-function Roles({ roles }) {
-  if (!roles?.length) return null
-  return (
-    <span className="text-gray-500 text-xs">
-      {roles.map(roleLabel).join(' · ')}
-    </span>
-  )
-}
+import { roleLabel } from '../../hooks/useArtistMembers'
 
 /**
- * Un músico y su etapa en la banda.
+ * Un músico y todo su paso por la banda en una sola fila.
  *
- * El nombre enlaza a la trayectoria salvo que no haya con qué identificarlo:
- * las filas cargadas a mano pueden no tener id de MusicBrainz, y sin eso no se
- * puede agrupar el paso de esa persona por otras bandas.
+ * En la base cada etapa es su propia fila, pero leídas de corrido separan a la
+ * misma persona en lugares lejanos de la lista: Charly García aparecía tres
+ * veces con quince nombres en el medio, y así no se lee que entró, se fue y
+ * volvió. Wikipedia resuelve lo mismo juntando los tramos entre paréntesis.
  */
-function MemberRow({ member }) {
-  // La ficha del catálogo gana cuando existe: tiene bio, discos y reseñas. La
-  // trayectoria es el destino de los que sólo figuran como integrantes.
-  const target = member.member?.slug && !member.member.hidden
-    ? `/artist/${member.member.slug}`
-    : member.member_mb_id
-      ? `/musico/${member.member_mb_id}`
+function PersonRow({ person }) {
+  const target = person.slug
+    ? `/artist/${person.slug}`
+    : person.memberMbId
+      ? `/musico/${person.memberMbId}`
       : null
 
   return (
-    <div className="flex items-baseline gap-3 py-2 flex-wrap">
-      <span className="text-gray-500 text-xs font-mono w-28 flex-shrink-0">
-        {formatPeriod(member)}
-      </span>
-
-      <span className="flex items-baseline gap-2 flex-wrap">
+    <div className="flex items-baseline gap-x-3 gap-y-1 py-2 flex-wrap">
+      <span className="flex items-baseline gap-2">
         {target ? (
           <Link to={target} className="text-rock-text font-medium hover:text-rock-accent">
-            {member.member_name}
+            {person.name}
           </Link>
         ) : (
-          <span className="text-rock-text font-medium">{member.member_name}</span>
+          <span className="text-rock-text font-medium">{person.name}</span>
         )}
-
-        {member.is_original && (
+        {person.isOriginal && (
           <span className="text-[10px] uppercase tracking-wide text-rock-accent border border-rock-accent rounded px-1">
             original
           </span>
         )}
-        <Roles roles={member.roles} />
+      </span>
+
+      {person.roles.length > 0 && (
+        <span className="text-gray-500 text-xs">{person.roles.map(roleLabel).join(' · ')}</span>
+      )}
+
+      <span className="text-gray-500 text-xs font-mono ml-auto">
+        {person.periods.map(p => `(${p})`).join(' ')}
       </span>
     </div>
   )
 }
 
 /**
- * La formación de una banda a lo largo del tiempo.
+ * Quién entra en la vista corta.
  *
- * Un mismo músico aparece una vez por etapa, no una sola vez con el rango
- * entero: Charly García estuvo en Sui Generis entre 1968 y 1975, volvió en 1981
- * y otra vez en 2000, y juntarlo en "1968 – 2001" diría algo que no pasó.
+ * Los de la formación original y los que ya tienen ficha en el catálogo: son
+ * los dos casos en que el nombre significa algo para quien llega a la página.
+ * Los músicos de sesión de una reunión de 2001 son dato de archivo, no lo
+ * primero que hay que leer.
+ *
+ * La lista crece sola a medida que se cargan artistas: cuando Nito Mestre
+ * tenga ficha, sube sin tocar nada.
  */
-export default function MemberList({ members }) {
-  if (!members?.length) return null
+const isFeatured = (person) => person.isOriginal || Boolean(person.slug)
+
+export default function MemberList({ people }) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!people?.length) return null
+
+  const featured = people.filter(isFeatured)
+  // Si el criterio no destaca a nadie, no tiene sentido esconder la lista
+  // entera detrás de un "ver más".
+  const visible = expanded || featured.length === 0 ? people : featured
+  const rest = people.length - visible.length
 
   return (
-    <div className="divide-y divide-rock-border">
-      {members.map(m => <MemberRow key={m.id} member={m} />)}
+    <div>
+      <div className="divide-y divide-rock-border">
+        {visible.map(p => <PersonRow key={p.key} person={p} />)}
+      </div>
+
+      {(rest > 0 || expanded) && featured.length > 0 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-gray-500 hover:text-rock-accent text-xs py-2"
+        >
+          {expanded
+            ? 'Ver menos'
+            : `Ver los otros ${rest} ${rest === 1 ? 'músico' : 'músicos'}`}
+        </button>
+      )}
     </div>
   )
 }

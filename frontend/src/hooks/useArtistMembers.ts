@@ -104,6 +104,140 @@ function sortStages(rows: Member[]) {
   })
 }
 
+export type Person = {
+  key: string
+  name: string
+  slug: string | null
+  memberMbId: string | null
+  image?: string | null
+  roles: string[]
+  periods: string[]
+  /** Tramos con años resueltos, para dibujar la línea de tiempo. */
+  segments: { from: number; to: number }[]
+  isOriginal: boolean
+  active: boolean
+  firstYear: number | null
+  years: number
+  /** Las filas originales, para el panel de edición, que trabaja por etapa. */
+  stages: Member[]
+}
+
+/** Años que estuvo, sumando todas sus etapas. Una etapa sin fecha cuenta 1. */
+function tenureOf(stage: Member) {
+  if (stage.year_from === null) return 1
+  const end = stage.year_to ?? (stage.ended ? stage.year_from : new Date().getFullYear())
+  return Math.max(1, end - stage.year_from + 1)
+}
+
+function periodOf(stage: Member) {
+  const { year_from: from, year_to: to, ended } = stage
+  if (from && to) return from === to ? String(from) : `${from}–${to}`
+  if (from) return ended ? String(from) : `${from}–hoy`
+  if (to) return `→${to}`
+  return 's/f'
+}
+
+/**
+ * Junta las etapas de cada músico en una sola entrada, como las lista
+ * Wikipedia: «Charly García – voz, piano, teclados, guitarra (1968–1975)
+ * (1981) (2000–2001)».
+ *
+ * En la base cada etapa es su propia fila, que es lo correcto para editarlas y
+ * para saber quién se solapó con quién. Pero leídas de corrido separan a una
+ * misma persona en filas lejanas y la formación se vuelve ilegible.
+ *
+ * El orden imita al de Wikipedia: primero por año de entrada, y entre los que
+ * entraron el mismo año primero el que más tiempo estuvo. Así el núcleo de la
+ * banda queda arriba sin tener que marcarlo a mano.
+ */
+export function groupByPerson(stages: (Member & { member?: any })[]): Person[] {
+  return groupStages(stages, stage => ({
+    key: stage.member_mb_id || `name:${stage.member_name}`,
+    name: stage.member_name,
+    slug: stage.member?.hidden ? null : stage.member?.slug || null,
+    memberMbId: stage.member_mb_id,
+  }))
+}
+
+/**
+ * La otra dirección: las bandas por las que pasó un músico, una fila por banda.
+ *
+ * Mismo problema que del lado de la formación: Charly García estuvo tres veces
+ * en Sui Generis y sin agrupar la trayectoria lo repite tres veces.
+ */
+export function groupByBand(stages: (Member & { group?: any })[]): Person[] {
+  return groupStages(stages, stage => ({
+    key: stage.group?.id || `name:${stage.group?.name}`,
+    name: stage.group?.name || '—',
+    slug: stage.group?.slug || null,
+    memberMbId: null,
+    image: stage.group?.image_url || null,
+  }))
+}
+
+function groupStages(
+  stages: Member[],
+  identify: (stage: any) => { key: string; name: string; slug: string | null; memberMbId: string | null; image?: string | null }
+): Person[] {
+  const people = new Map<string, Person>()
+
+  for (const stage of stages) {
+    const id = identify(stage)
+    let person = people.get(id.key)
+
+    if (!person) {
+      person = {
+        ...id,
+        roles: [],
+        periods: [],
+        segments: [],
+        isOriginal: false,
+        active: false,
+        firstYear: null,
+        years: 0,
+        stages: [],
+      }
+      people.set(id.key, person)
+    }
+
+    person.stages.push(stage)
+    for (const role of stage.roles || []) {
+      if (!person.roles.includes(role)) person.roles.push(role)
+    }
+    person.isOriginal = person.isOriginal || stage.is_original
+    person.active = person.active || !stage.ended
+    person.years += tenureOf(stage)
+    if (stage.year_from !== null && (person.firstYear === null || stage.year_from < person.firstYear)) {
+      person.firstYear = stage.year_from
+    }
+  }
+
+  for (const person of people.values()) {
+    const ordered = sortStages(person.stages)
+    person.stages = ordered
+    person.periods = ordered.map(periodOf)
+    // Sólo los tramos con año de entrada se pueden dibujar. Los que
+    // MusicBrainz no fechó quedan fuera del gráfico y se listan aparte.
+    person.segments = ordered
+      .filter(s => s.year_from !== null)
+      .map(s => ({
+        from: s.year_from as number,
+        to: s.year_to ?? (s.ended ? (s.year_from as number) : new Date().getFullYear()),
+      }))
+  }
+
+  return [...people.values()]
+    .sort((a, b) => {
+      if (a.firstYear !== b.firstYear) {
+        if (a.firstYear === null) return 1
+        if (b.firstYear === null) return -1
+        return a.firstYear - b.firstYear
+      }
+      if (a.years !== b.years) return b.years - a.years
+      return a.name.localeCompare(b.name)
+    })
+}
+
 /** Formación de una banda. */
 export function useBandMembers(groupId?: string) {
   return useQuery({
@@ -175,6 +309,24 @@ export function useUpdateMember() {
         .from('artist_members')
         .update({ ...patch, manual_fields: nextManualFields(manual_fields, patch) })
         .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: invalidate,
+  })
+}
+
+/**
+ * Saca a un músico de la banda entera, con todas sus etapas.
+ *
+ * Sin esto, quitar a alguien que entró, se fue y volvió obliga a borrar tres
+ * filas de a una, y entre borrado y borrado la formación queda a medias.
+ */
+export function useDeletePerson() {
+  const invalidate = useInvalidateMembers()
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('artist_members').delete().in('id', ids)
       if (error) throw error
     },
     onSuccess: invalidate,

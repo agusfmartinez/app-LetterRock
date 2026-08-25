@@ -4,10 +4,11 @@ import { useQuery } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
 import FavoriteButton from '../components/common/FavoriteButton'
 import MemberList from '../components/common/MemberList'
+import MemberTimeline from '../components/common/MemberTimeline'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getArtist } from '../services/api'
-import { formatPeriod, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
+import { groupByBand, groupByPerson, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
 import { useReviews } from '../hooks/useReviews'
 
 export default function ArtistDetail() {
@@ -32,6 +33,13 @@ export default function ArtistDetail() {
   // migración, así que se piden las dos y se muestra la que traiga algo.
   const { data: members = [] } = useBandMembers(artist?.id)
   const { data: trajectory = [] } = useMemberTrajectory(artist?.external_mb_id)
+
+  // Las etapas se guardan sueltas porque así se editan y así se sabe quién se
+  // solapó con quién, pero se leen juntas por músico.
+  const people = groupByPerson(members)
+  const current = people.filter(p => p.active)
+  const former = people.filter(p => !p.active)
+  const bandsPlayedIn = groupByBand(trajectory)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (error) return <p className="text-red-400">Artista no encontrado.</p>
@@ -105,43 +113,67 @@ export default function ArtistDetail() {
         })()}
       </section>
 
-      {members.length > 0 && (
+      {people.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold text-rock-text mb-1">Formación</h2>
-          <p className="text-gray-500 text-sm mb-3">
-            Una fila por etapa: quien entró, se fue y volvió aparece una vez por
-            cada paso.
-          </p>
-          <div className="max-w-2xl bg-rock-card border border-rock-border rounded-lg px-4 py-1">
-            <MemberList members={members} />
+          <h2 className="text-xl font-bold text-rock-text mb-3">Formación</h2>
+
+          {/*
+            En desktop van al lado: el gráfico necesita ancho para que los años
+            se separen, y la lista es angosta por naturaleza. Apilados dejaban
+            media pantalla vacía a la derecha del gráfico. Abajo de lg vuelven a
+            apilarse, que es la única forma de que el gráfico entre.
+          */}
+          <div className="grid gap-4 lg:grid-cols-5 max-w-6xl">
+            <div className="bg-rock-card border border-rock-border rounded-lg p-4 lg:col-span-3">
+              <MemberTimeline people={people} />
+            </div>
+
+            <div className="space-y-4 lg:col-span-2">
+              {current.length > 0 && former.length > 0 ? (
+                <>
+                  <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
+                    <p className="text-gray-500 text-xs pt-2">Integrantes</p>
+                    <MemberList people={current} />
+                  </div>
+                  <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
+                    <p className="text-gray-500 text-xs pt-2">Pasaron por la banda</p>
+                    <MemberList people={former} />
+                  </div>
+                </>
+              ) : (
+                <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
+                  <MemberList people={people} />
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}
 
-      {trajectory.length > 0 && (
+      {bandsPlayedIn.length > 0 && (
         <section>
           <h2 className="text-xl font-bold text-rock-text mb-3">Bandas</h2>
           <div className="max-w-2xl bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
-            {trajectory.map(stage => (
-              <div key={stage.id} className="flex items-baseline gap-3 p-3 flex-wrap">
-                <span className="text-gray-500 text-xs font-mono w-28 flex-shrink-0">
-                  {formatPeriod(stage)}
-                </span>
-                {stage.group?.slug ? (
+            {bandsPlayedIn.map(band => (
+              <div key={band.key} className="flex items-baseline gap-3 p-3 flex-wrap">
+                {band.slug ? (
                   <Link
-                    to={`/artist/${stage.group.slug}`}
+                    to={`/artist/${band.slug}`}
                     className="text-rock-text font-medium hover:text-rock-accent"
                   >
-                    {stage.group.name}
+                    {band.name}
                   </Link>
                 ) : (
-                  <span className="text-rock-text font-medium">—</span>
+                  <span className="text-rock-text font-medium">{band.name}</span>
                 )}
-                {stage.roles.length > 0 && (
+                {band.roles.length > 0 && (
                   <span className="text-gray-500 text-xs">
-                    {stage.roles.map(roleLabel).join(' · ')}
+                    {band.roles.map(roleLabel).join(' · ')}
                   </span>
                 )}
+                <span className="text-gray-500 text-xs font-mono ml-auto">
+                  {band.periods.map(p => `(${p})`).join(' ')}
+                </span>
               </div>
             ))}
           </div>

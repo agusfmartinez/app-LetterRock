@@ -4,10 +4,13 @@ import ManualFieldMark from './ManualFieldMark'
 import {
   describeError,
   formatPeriod,
+  groupByBand,
+  groupByPerson,
   roleLabel,
   useBandMembers,
   useCreateMember,
   useDeleteMember,
+  useDeletePerson,
   useMemberTrajectory,
   useUpdateMember,
 } from '../../hooks/useArtistMembers'
@@ -17,10 +20,9 @@ const INPUT = 'bg-rock-dark border border-rock-border rounded px-2 py-1 text-sm 
 
 /** Los roles se editan como texto separado por comas: es un array en la base. */
 const rolesToText = (roles) => (roles || []).join(', ')
-const textToRoles = (text) =>
-  text.split(',').map(r => r.trim()).filter(Boolean)
+const textToRoles = (text) => text.split(',').map(r => r.trim()).filter(Boolean)
 
-function MemberEditor({ member, onClose }) {
+function StageEditor({ member, onClose }) {
   const update = useUpdateMember()
   const remove = useDeleteMember()
   const [form, setForm] = useState({
@@ -62,7 +64,7 @@ function MemberEditor({ member, onClose }) {
   }
 
   return (
-    <div className="bg-rock-dark border border-rock-accent rounded p-3 space-y-2">
+    <div className="bg-rock-dark border border-rock-accent rounded p-3 space-y-2 my-1">
       <div className="flex items-center gap-2">
         <input
           value={form.member_name}
@@ -126,58 +128,110 @@ function MemberEditor({ member, onClose }) {
         {saved && <span className="text-xs text-gray-500">Guardado</span>}
         <button
           onClick={() => {
-            if (!window.confirm(`¿Quitar a "${member.member_name}" de la formación?`)) return
+            if (!window.confirm(`¿Quitar la etapa de "${member.member_name}"?`)) return
             remove.mutate(member.id, { onSuccess: onClose, onError: e => setError(describeError(e)) })
           }}
           className="ml-auto text-xs text-gray-500 hover:text-red-400"
         >
-          Quitar
+          Quitar etapa
         </button>
       </div>
     </div>
   )
 }
 
-function MemberRow({ member, editingId, setEditingId }) {
-  if (editingId === member.id) {
-    return <MemberEditor key={member.id} member={member} onClose={() => setEditingId(null)} />
+function StageRow({ stage, editingId, setEditingId }) {
+  if (editingId === stage.id) {
+    return <StageEditor key={stage.id} member={stage} onClose={() => setEditingId(null)} />
   }
 
   return (
-    <div className="flex items-center gap-3 py-2 flex-wrap">
-      <span className="text-gray-500 text-xs font-mono w-28 flex-shrink-0">
-        {formatPeriod(member)}
+    <div className="flex items-baseline gap-3 py-1 pl-4 flex-wrap text-xs">
+      <span className="text-gray-500 font-mono w-24 flex-shrink-0">{formatPeriod(stage)}</span>
+      <span className="text-gray-400 flex-1 min-w-0">
+        {stage.roles?.length > 0 ? stage.roles.map(roleLabel).join(' · ') : 'sin instrumentos'}
       </span>
-      <div className="flex-1 min-w-0">
-        <span className="text-rock-text text-sm">{member.member_name}</span>
-        {member.is_original && <span className="text-rock-accent text-xs"> · original</span>}
-        {member.source === 'manual' && <span className="text-gray-600 text-xs"> · a mano</span>}
-        {member.manual_fields?.length > 0 && (
-          <span className="text-rock-accent text-xs"> · editado</span>
-        )}
-        {member.roles?.length > 0 && (
-          <p className="text-gray-500 text-xs">{member.roles.map(roleLabel).join(' · ')}</p>
-        )}
-      </div>
-      {member.member?.slug && (
-        <Link
-          to={`/artist/${member.member.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-500 hover:text-rock-accent text-xs"
-        >
-          ficha →
-        </Link>
-      )}
+      {stage.is_original && <span className="text-rock-accent">original</span>}
+      {stage.source === 'manual' && <span className="text-gray-600">a mano</span>}
+      {stage.manual_fields?.length > 0 && <span className="text-rock-accent">editado</span>}
       <button
-        onClick={() => setEditingId(member.id)}
-        className="text-xs border border-rock-border rounded px-2 py-0.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+        onClick={() => setEditingId(stage.id)}
+        className="border border-rock-border rounded px-2 py-0.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
       >
         Editar
       </button>
     </div>
   )
 }
+
+/**
+ * Un músico con sus etapas anidadas.
+ *
+ * La edición trabaja por etapa —es la fila que existe en la base— pero la
+ * lectura no: veintisiete filas planas dejaban los tres pasos de Charly García
+ * separados por quince nombres.
+ */
+function PersonBlock({ person, editingId, setEditingId }) {
+  const removePerson = useDeletePerson()
+  const [error, setError] = useState('')
+
+  const remove = () => {
+    const label = person.stages.length === 1
+      ? `¿Quitar a "${person.name}" de la formación?`
+      : `¿Quitar a "${person.name}" y sus ${person.stages.length} etapas?`
+    if (!window.confirm(label)) return
+    removePerson.mutate(
+      person.stages.map(s => s.id),
+      { onError: e => setError(describeError(e)) }
+    )
+  }
+
+  return (
+    <div className="py-2">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="text-rock-text text-sm font-medium">{person.name}</span>
+        <span className="text-gray-600 text-xs font-mono">
+          {person.periods.map(p => `(${p})`).join(' ')}
+        </span>
+        {person.slug ? (
+          <Link
+            to={`/artist/${person.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-rock-accent text-xs ml-auto"
+          >
+            ficha →
+          </Link>
+        ) : (
+          <span className="text-gray-700 text-xs ml-auto">sin ficha</span>
+        )}
+        <button
+          onClick={remove}
+          disabled={removePerson.isPending}
+          title="Quitar al músico con todas sus etapas"
+          className="text-gray-600 hover:text-red-400 text-xs disabled:opacity-50"
+        >
+          ✕
+        </button>
+      </div>
+
+      {error && <p className="text-red-400 text-xs pl-4">{error}</p>}
+
+      {person.stages.map(stage => (
+        <StageRow key={stage.id} stage={stage} editingId={editingId} setEditingId={setEditingId} />
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Cuántos músicos se listan sin desplegar.
+ *
+ * Corte por cantidad y no por importancia como en la página pública: acá el
+ * trabajo suele ser justamente corregir a los oscuros, así que esconderlos por
+ * criterio sería trabajar en contra.
+ */
+const ADMIN_PREVIEW = 8
 
 function NewMemberForm({ groupId }) {
   const create = useCreateMember()
@@ -273,9 +327,15 @@ export default function MembersPanel({ artist }) {
   const { data: members = [] } = useBandMembers(artist.id)
   const { data: trajectory = [] } = useMemberTrajectory(artist.external_mb_id)
   const [editingId, setEditingId] = useState(null)
+  const [showHelp, setShowHelp] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const people = groupByPerson(members)
+  const bandsPlayedIn = groupByBand(trajectory)
+  const visiblePeople = expanded ? people : people.slice(0, ADMIN_PREVIEW)
 
   const runImport = async () => {
     setBusy(true)
@@ -292,28 +352,46 @@ export default function MembersPanel({ artist }) {
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <div>
-        <h2 className="font-bold text-rock-text text-sm">Formación ({members.length})</h2>
-        <p className="text-gray-600 text-xs mt-1">
-          Una fila por músico y etapa. Importar se puede repetir: actualiza lo que
-          ya está en vez de duplicarlo, y respeta lo que hayas corregido a mano.
-        </p>
-        <p className="text-gray-600 text-xs mt-1">
-          No crea fichas: los músicos que no están en el catálogo quedan como
-          nombre y se pueden ver igual en su trayectoria.
-        </p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="font-bold text-rock-text text-sm">Formación</h2>
+        {people.length > 0 && (
+          <span className="text-gray-600 text-xs">
+            {people.length} músicos · {members.length} etapas
+          </span>
+        )}
+        <button
+          onClick={runImport}
+          disabled={busy || !artist.external_mb_id}
+          title={artist.external_mb_id ? '' : 'Este artista no está vinculado a MusicBrainz'}
+          className="ml-auto text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+        >
+          {busy ? 'Consultando...' : 'Importar de MusicBrainz'}
+        </button>
+        <button
+          onClick={() => setShowHelp(!showHelp)}
+          className="text-gray-600 hover:text-rock-accent text-xs"
+        >
+          ?
+        </button>
       </div>
 
-      <button
-        onClick={runImport}
-        disabled={busy || !artist.external_mb_id}
-        title={artist.external_mb_id ? '' : 'Este artista no está vinculado a MusicBrainz'}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
-      >
-        Importar de MusicBrainz
-      </button>
+      {showHelp && (
+        <div className="text-gray-600 text-xs space-y-1 border-l-2 border-rock-border pl-3">
+          <p>
+            Una fila por músico y etapa: quien entró, se fue y volvió tiene una
+            etapa por cada paso.
+          </p>
+          <p>
+            Importar se puede repetir. Actualiza lo que ya está en vez de
+            duplicarlo, y no toca los campos que hayas corregido a mano.
+          </p>
+          <p>
+            No crea fichas de artista: los músicos que no están en el catálogo
+            quedan como nombre y se ven igual en su trayectoria.
+          </p>
+        </div>
+      )}
 
-      {busy && <p className="text-gray-500 text-xs">Consultando MusicBrainz...</p>}
       {error && <p className="text-red-400 text-xs">{error}</p>}
       {status && (
         <div className="text-xs space-y-1">
@@ -324,18 +402,30 @@ export default function MembersPanel({ artist }) {
           </p>
           {status.skipped > 0 && (
             <p className="text-gray-600">
-              {status.skipped} etapas salteadas: son bandas que todavía no están
-              en el catálogo. Cargalas y volvé a importar.
+              {status.skipped} salteadas: son bandas que todavía no están en el
+              catálogo. Cargalas y volvé a importar.
             </p>
           )}
         </div>
       )}
 
-      {members.length > 0 && (
-        <div className="divide-y divide-rock-border">
-          {members.map(m => (
-            <MemberRow key={m.id} member={m} editingId={editingId} setEditingId={setEditingId} />
-          ))}
+      {people.length > 0 && (
+        <div>
+          <div className="divide-y divide-rock-border border-y border-rock-border">
+            {visiblePeople.map(p => (
+              <PersonBlock key={p.key} person={p} editingId={editingId} setEditingId={setEditingId} />
+            ))}
+          </div>
+          {people.length > ADMIN_PREVIEW && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-gray-500 hover:text-rock-accent text-xs py-2"
+            >
+              {expanded
+                ? 'Ver menos'
+                : `Ver los otros ${people.length - ADMIN_PREVIEW} músicos`}
+            </button>
+          )}
         </div>
       )}
 
@@ -345,25 +435,22 @@ export default function MembersPanel({ artist }) {
         La otra dirección: en qué bandas tocó este artista. Se edita desde la
         ficha de cada banda, que es donde vive la fila.
       */}
-      {trajectory.length > 0 && (
-        <div className="pt-2 border-t border-rock-border">
+      {bandsPlayedIn.length > 0 && (
+        <div className="pt-3 border-t border-rock-border">
           <h3 className="text-gray-400 text-xs font-semibold mb-1">
-            Tocó en ({trajectory.length})
+            Tocó en ({bandsPlayedIn.length})
           </h3>
-          {trajectory.map(stage => (
-            <div key={stage.id} className="flex items-baseline gap-3 py-1 flex-wrap text-xs">
-              <span className="text-gray-500 font-mono w-28 flex-shrink-0">
-                {formatPeriod(stage)}
-              </span>
-              <Link
-                to={`/admin/artista/${stage.group?.id}`}
-                className="text-gray-300 hover:text-rock-accent"
-              >
-                {stage.group?.name}
+          {bandsPlayedIn.map(band => (
+            <div key={band.key} className="flex items-baseline gap-3 py-1 flex-wrap text-xs">
+              <Link to={`/admin/artista/${band.key}`} className="text-gray-300 hover:text-rock-accent">
+                {band.name}
               </Link>
-              {stage.roles?.length > 0 && (
-                <span className="text-gray-600">{stage.roles.map(roleLabel).join(' · ')}</span>
+              {band.roles.length > 0 && (
+                <span className="text-gray-600">{band.roles.map(roleLabel).join(' · ')}</span>
               )}
+              <span className="text-gray-600 font-mono ml-auto">
+                {band.periods.map(p => `(${p})`).join(' ')}
+              </span>
             </div>
           ))}
         </div>
