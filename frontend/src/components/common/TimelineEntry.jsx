@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import FavoriteButton from './FavoriteButton'
-import SpotifyEmbed from './SpotifyEmbed'
+import MediaEmbed from './MediaEmbed'
+import PlatformBadges, { youtubeMusicSearch } from './PlatformBadges'
 import { effectivePrecision, formatReleaseDate } from '../../services/dates'
 import { formatPlayCount } from '../../hooks/useTopTracks'
 
@@ -44,6 +45,8 @@ function TopTracks({ tracks }) {
           <span className="text-gray-600 text-xs w-4 flex-shrink-0">{i + 1}</span>
           <Link
             to={`/track/${track.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 min-w-0 text-sm text-rock-text hover:text-rock-accent truncate"
           >
             {track.title}
@@ -82,7 +85,7 @@ function NarrativeEntry({ entry }) {
   )
 }
 
-function AlbumEntry({ entry, topTracks }) {
+function AlbumEntry({ entry, media }) {
   const album = entry.album
   const artist = album?.artist
 
@@ -92,6 +95,8 @@ function AlbumEntry({ entry, topTracks }) {
         {/* Portada */}
         <Link
           to={`/album/${album.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="w-full md:w-56 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block group"
         >
           {album.cover_url ? (
@@ -112,6 +117,8 @@ function AlbumEntry({ entry, topTracks }) {
             <PreciseDate album={album} />
             <Link
               to={`/album/${album.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
             >
               {album.title}
@@ -128,13 +135,37 @@ function AlbumEntry({ entry, topTracks }) {
 
           <Paragraphs text={entry.body_text} />
 
-          <FavoriteButton entityType="album" entityId={album.id} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <FavoriteButton entityType="album" entityId={album.id} />
+            <PlatformBadges
+              links={{ spotify: album.external_spotify_id
+                ? { url: `https://open.spotify.com/album/${album.external_spotify_id}` }
+                : null }}
+              fallbacks={{
+                youtube: youtubeMusicSearch(`${artist?.name || ''} ${album.title}`),
+              }}
+            />
+          </div>
 
-          <TopTracks tracks={topTracks} />
+          <TopTracks tracks={media?.top} />
 
-          {album.external_spotify_id && (
-            <SpotifyEmbed spotifyId={album.external_spotify_id} compact />
-          )}
+          {/*
+            Suena el tema más escuchado del disco, no el álbum entero: el embed
+            de track llena sus 152px, mientras que el de álbum reserva lugar para
+            una lista que en modo "Muestra" no puede mostrar y deja un hueco.
+            De paso, las dos plataformas quedan en la misma canción.
+          */}
+          <MediaEmbed
+            compact
+            spotify={
+              media?.feature?.spotifyId
+                ? { type: 'track', id: media.feature.spotifyId }
+                : album.external_spotify_id
+                  ? { type: 'album', id: album.external_spotify_id }
+                  : null
+            }
+            youtube={media?.feature?.youtubeId ? { videoId: media.feature.youtubeId } : null}
+          />
         </div>
       </div>
     </article>
@@ -171,16 +202,21 @@ function ArtistEntry({ entry }) {
             {artist.name}
           </Link>
           <Paragraphs text={entry.body_text} />
-          <FavoriteButton entityType="artist" entityId={artist.id} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <FavoriteButton entityType="artist" entityId={artist.id} />
+            <PlatformBadges
+              fallbacks={{ youtube: youtubeMusicSearch(artist.name) }}
+            />
+          </div>
         </div>
       </div>
     </article>
   )
 }
 
-export default function TimelineEntry({ entry, topTracks }) {
+export default function TimelineEntry({ entry, media }) {
   if (entry.entry_type === 'album' && entry.album) {
-    return <AlbumEntry entry={entry} topTracks={topTracks} />
+    return <AlbumEntry entry={entry} media={media} />
   }
   if (entry.entry_type === 'artist' && entry.artist) return <ArtistEntry entry={entry} />
   return <NarrativeEntry entry={entry} />

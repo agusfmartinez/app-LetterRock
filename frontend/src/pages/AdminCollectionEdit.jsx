@@ -202,7 +202,15 @@ function SectionRow({ collection, section }) {
         </p>
       </div>
       <Link
+        to={`/admin/coleccion/${collection.slug}/${section.slug}`}
+        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+      >
+        Editar
+      </Link>
+      <Link
         to={`/coleccion/${collection.slug}/${section.slug}`}
+        target="_blank"
+        rel="noopener noreferrer"
         className="text-gray-500 hover:text-rock-accent text-sm"
       >
         Ver →

@@ -590,6 +590,8 @@ export default function AdminSectionEdit() {
             </Link>
             <Link
               to={`/coleccion/${data.collection.slug}/${data.section.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
             >
               Ver la página →

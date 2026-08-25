@@ -104,7 +104,12 @@ export default function AdminCollections() {
                     Borrador
                   </span>
                 )}
-                <Link to={`/coleccion/${c.slug}`} className="text-gray-500 hover:text-rock-accent text-sm">
+                <Link
+                  to={`/coleccion/${c.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-500 hover:text-rock-accent text-sm"
+                >
                   Ver →
                 </Link>
               </div>

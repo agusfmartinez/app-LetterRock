@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
+import MediaEmbed from '../components/common/MediaEmbed'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
 import { formatPlayCount } from '../hooks/useTopTracks'
 import CommentThread from '../components/common/CommentThread'
@@ -162,6 +163,21 @@ export default function TrackDetail() {
               />
             </div>
           </div>
+
+          {/* Reproductor: acá suena el tema, no el álbum entero */}
+          <MediaEmbed
+            compact
+            spotify={
+              track.links?.spotify?.external_id
+                ? { type: 'track', id: track.links.spotify.external_id }
+                : null
+            }
+            youtube={
+              track.links?.youtube?.external_id
+                ? { videoId: track.links.youtube.external_id }
+                : null
+            }
+          />
 
           {/* Lyrics */}
           <section>

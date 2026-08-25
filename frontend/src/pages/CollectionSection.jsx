@@ -4,7 +4,7 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
-import { useTopTracksByAlbum } from '../hooks/useTopTracks'
+import { useAlbumMedia } from '../hooks/useTopTracks'
 
 function SectionNav({ collectionSlug, prev, next }) {
   return (
@@ -43,7 +43,7 @@ export default function CollectionSection() {
     () => (data?.entries || []).map(e => e.album?.id).filter(Boolean),
     [data?.entries]
   )
-  const { data: topTracks = {} } = useTopTracksByAlbum(albumIds)
+  const { data: albumMedia = {} } = useAlbumMedia(albumIds)
 
   const [activeLabel, setActiveLabel] = useState(null)
   const yearRefs = useRef({})
@@ -134,7 +134,7 @@ export default function CollectionSection() {
                   <TimelineEntry
                     key={e.id}
                     entry={e}
-                    topTracks={e.album?.id ? topTracks[e.album.id] : null}
+                    media={e.album?.id ? albumMedia[e.album.id] : null}
                   />
                 ))}
               </section>
