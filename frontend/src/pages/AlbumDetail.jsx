@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
+import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getAlbum } from '../services/api'
@@ -22,6 +23,7 @@ export default function AlbumDetail() {
   const album = data?.album
   const tracks = data?.tracks || []
   const artist = data?.artist
+  const links = data?.links || {}
   const { reviews, createReview, deleteReview } = useReviews('album', id)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
@@ -61,8 +63,14 @@ export default function AlbumDetail() {
               ★ {parseFloat(album.avg_rating).toFixed(1)}
             </p>
           )}
-          <div className="mt-3">
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
             <FavoriteButton entityType="album" entityId={id} />
+            <PlatformBadges
+              links={links}
+              fallbacks={{
+                youtube: youtubeMusicSearch(`${artist?.name || ''} ${album.title}`),
+              }}
+            />
           </div>
         </div>
       </div>

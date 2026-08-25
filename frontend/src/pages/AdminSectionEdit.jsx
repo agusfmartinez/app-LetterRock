@@ -9,6 +9,7 @@ import {
 } from '../hooks/useCollectionAdmin'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { formatReleaseDate } from '../services/dates'
+import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
 
 const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
 
@@ -253,6 +254,118 @@ function EntryEditor({ entry, onClose }) {
           Quitar de la sección
         </button>
       </div>
+
+      {album && <YoutubePanel albumId={album.id} artist={album.artist} />}
+    </div>
+  )
+}
+
+/**
+ * Vinculación con YouTube Music. Se dispara a mano porque la búsqueda cuesta
+ * 100 de las 10.000 unidades diarias de cuota; el refresco de reproducciones
+ * cuesta 1 cada 50 temas y se puede repetir sin problema.
+ */
+function YoutubePanel({ albumId, artist }) {
+  const [status, setStatus] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const run = async (action, label) => {
+    setBusy(true)
+    setError('')
+    setStatus(null)
+    try {
+      setStatus({ ...(await action(albumId)), label })
+    } catch (err) {
+      const data = err.response?.data
+      const albums = data?.availableAlbums
+      setError(
+        (data?.error || err.message || 'No se pudo conectar con YouTube') +
+        (albums?.length ? ` — el canal sí tiene: ${albums.slice(0, 12).join(', ')}` : '')
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="border-t border-rock-border pt-3 space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={() => run(linkAlbumToYoutube, 'link')}
+          disabled={busy}
+          className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+        >
+          Vincular con YouTube
+        </button>
+        {artist?.id && (
+          <button
+            onClick={() => run(() => linkArtistDiscography(artist.id), 'discography')}
+            disabled={busy}
+            className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+          >
+            Vincular discografía completa
+          </button>
+        )}
+        <button
+          onClick={() => run(refreshYoutubeViews, 'refresh')}
+          disabled={busy}
+          className="text-xs text-gray-500 hover:text-rock-accent disabled:opacity-50"
+        >
+          Refrescar reproducciones
+        </button>
+      </div>
+
+      {busy && <p className="text-gray-500 text-xs">Consultando YouTube...</p>}
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+
+      {status?.label === 'link' && (
+        <div className="text-xs space-y-1">
+          <p className="text-gray-400">
+            {status.matched} de {status.total} temas vinculados
+            {!status.channelWasCached && ' (canal del artista resuelto y guardado)'}
+          </p>
+          {status.partial > 0 && (
+            <p className="text-gray-600">{status.partial} por coincidencia parcial de título</p>
+          )}
+          {status.unmatched?.length > 0 && (
+            <p className="text-gray-600">Sin match: {status.unmatched.join(', ')}</p>
+          )}
+          {status.top?.length > 0 && (
+            <div className="pt-1">
+              <p className="text-gray-500">Más escuchados:</p>
+              {status.top.map(t => (
+                <p key={t.title} className="text-gray-400">
+                  {t.title} — {t.views?.toLocaleString('es-AR')}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {status?.label === 'discography' && (
+        <div className="text-xs space-y-1">
+          {status.skipped ? (
+            <p className="text-gray-400">No se pudo: {status.skipped}</p>
+          ) : (
+            <>
+              <p className="text-gray-400">
+                {status.albums?.filter(a => a.matched).length} de {status.albums?.length} álbumes vinculados
+                {status.albums?.some(a => a.ingested) &&
+                  ` · ${status.albums.filter(a => a.ingested).length} con tracks recién traídos de Spotify`}
+              </p>
+              {status.albums?.filter(a => a.skipped).map(a => (
+                <p key={a.album} className="text-gray-600">{a.album}: {a.skipped}</p>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {status?.label === 'refresh' && (
+        <p className="text-gray-400 text-xs">{status.updated} temas actualizados</p>
+      )}
     </div>
   )
 }

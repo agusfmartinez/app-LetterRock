@@ -14,6 +14,37 @@ function dbLog(label) {
   console.log(`[DB] ${new Date().toISOString()} ${label}`)
 }
 
+const SPOTIFY_BASE = {
+  artist: 'https://open.spotify.com/artist/',
+  album: 'https://open.spotify.com/album/',
+  track: 'https://open.spotify.com/track/',
+}
+
+/**
+ * Registra los links a plataformas. `external_spotify_id` sigue siendo la clave
+ * de upsert de la ingesta; media_links es lo que lee la app, y es donde después
+ * entran YouTube y las demás.
+ */
+async function saveMediaLinks(rows) {
+  const clean = (rows || []).filter(r => r.entity_id && r.external_id)
+  if (!clean.length) return
+  dbLog(`saveMediaLinks count=${clean.length}`)
+  const { error } = await supabase
+    .from('media_links')
+    .upsert(clean, { onConflict: 'entity_type,entity_id,provider' })
+  if (error) throw error
+}
+
+function spotifyLinkRow(entityType, entityId, externalId) {
+  return {
+    entity_type: entityType,
+    entity_id: entityId,
+    provider: 'spotify',
+    external_id: externalId,
+    url: SPOTIFY_BASE[entityType] + externalId,
+  }
+}
+
 async function searchInDatabase(query) {
   dbLog(`searchInDatabase query="${query}"`)
   const { data } = await supabase
@@ -76,6 +107,8 @@ async function saveAlbum(spotifyAlbum, artistId) {
     .select()
     .single()
   if (error) throw error
+
+  await saveMediaLinks([spotifyLinkRow('album', data.id, spotifyAlbum.id)])
   return data
 }
 
@@ -97,6 +130,8 @@ async function updateArtistSpotifyId(artistId, spotifyId, imageUrl) {
     .update(update)
     .eq('id', artistId)
   if (error) throw error
+
+  await saveMediaLinks([spotifyLinkRow('artist', artistId, spotifyId)])
 }
 
 async function saveTracks(spotifyTracks, albumId) {
@@ -115,6 +150,24 @@ async function saveTracks(spotifyTracks, albumId) {
     .upsert(payload, { onConflict: 'external_spotify_id' })
     .select()
   if (error) throw error
+
+  const saved = data || []
+  await saveMediaLinks(
+    saved.map(t => spotifyLinkRow('track', t.id, t.external_spotify_id))
+  )
+  return saved
+}
+
+/** Links de una entidad o de varias, agrupados por id. */
+async function getMediaLinks(entityType, entityIds) {
+  const ids = (entityIds || []).filter(Boolean)
+  if (!ids.length) return []
+  dbLog(`getMediaLinks entityType="${entityType}" count=${ids.length}`)
+  const { data } = await supabase
+    .from('media_links')
+    .select('*')
+    .eq('entity_type', entityType)
+    .in('entity_id', ids)
   return data || []
 }
 
@@ -175,6 +228,8 @@ module.exports = {
   saveBio,
   updateArtistSpotifyId,
   saveTracks,
+  saveMediaLinks,
+  getMediaLinks,
   getArtistBySlug,
   getArtistByMbId,
   getArtistById,

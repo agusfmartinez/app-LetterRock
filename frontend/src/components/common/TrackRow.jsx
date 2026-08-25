@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom'
+import { formatPlayCountCompact } from '../../hooks/useTopTracks'
 
 function formatDuration(ms) {
   if (!ms) return '—'
-  const secs = Math.floor(ms / 1000)
-  const m = Math.floor(secs / 60)
-  const s = secs % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  const rest = s % 60
+  return `${m}:${rest.toString().padStart(2, '0')}`
 }
 
 export default function TrackRow({ track, index, selected }) {
   const navigate = useNavigate()
+  const views = track.view_count
 
   return (
     <div
@@ -30,6 +32,14 @@ export default function TrackRow({ track, index, selected }) {
       }`}>
         {track.title}
       </span>
+      {views != null && (
+        <span
+          className="text-gray-500 text-xs flex-shrink-0 tabular-nums"
+          title={`${views.toLocaleString('es-AR')} reproducciones en YouTube Music`}
+        >
+          ▶ {formatPlayCountCompact(views)}
+        </span>
+      )}
       <span className="text-gray-500 text-sm flex-shrink-0">
         {formatDuration(track.duration_ms)}
       </span>

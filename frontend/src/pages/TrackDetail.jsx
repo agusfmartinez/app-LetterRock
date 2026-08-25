@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
+import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
+import { formatPlayCount } from '../hooks/useTopTracks'
 import CommentThread from '../components/common/CommentThread'
 import CommentForm from '../components/forms/CommentForm'
 import { getAlbum } from '../services/api'
@@ -145,8 +147,19 @@ export default function TrackDetail() {
               {track.track_number ? `Pista ${track.track_number} · ` : ''}
               {formatDuration(track.duration_ms)}
             </p>
-            <div className="mt-3">
+            {track.view_count != null && (
+              <p className="text-gray-400 text-sm mt-2">
+                {formatPlayCount(track.view_count)} reproducciones en YouTube Music
+              </p>
+            )}
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
               <FavoriteButton entityType="track" entityId={id} />
+              <PlatformBadges
+                links={track.links || {}}
+                fallbacks={{
+                  youtube: youtubeMusicSearch(`${artist?.name || ''} ${track.title}`),
+                }}
+              />
             </div>
           </div>
 

@@ -4,6 +4,8 @@ const mb = require('../services/musicbrainz')
 const spotify = require('../services/spotifyService')
 const wiki = require('../services/wikipediaService')
 const db = require('../services/supabaseService')
+const ytLinker = require('../services/youtubeLinker')
+const { requireEditor } = require('../middleware/requireEditor')
 
 const ingestingNow = new Set()
 const ingestFailed = new Set()
@@ -109,7 +111,28 @@ router.get('/:slugOrMbId', async (req, res, next) => {
     if (albums.length === 0 && artist.external_mb_id) {
       ingestAlbumsInBackground(artist)
     }
+
   } catch (err) {
+    next(err)
+  }
+})
+
+/**
+ * Vincula toda la discografía con YouTube Music en una sola bajada del catálogo
+ * del canal, que es lo mismo que cuesta vincular un disco suelto.
+ *
+ * No se dispara al entrar a la página del artista: esa ruta es pública y la
+ * cuota de YouTube es un recurso agotable, así que la gasta un editor a
+ * propósito y no el tráfico anónimo.
+ */
+router.post('/:id/youtube', requireEditor, async (req, res, next) => {
+  try {
+    const artist = await db.getArtistById(req.params.id)
+    if (!artist) return res.status(404).json({ error: 'Artista no encontrado' })
+
+    res.json(await ytLinker.linkArtistDiscography(artist, { auto: false }))
+  } catch (err) {
+    if (err.status === 429) return res.status(429).json({ error: err.message })
     next(err)
   }
 })
