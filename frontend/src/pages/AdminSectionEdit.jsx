@@ -230,11 +230,24 @@ function EntryEditor({ entry, onClose }) {
         className={`w-full ${INPUT}`}
       />
 
+      {/*
+        No se precarga la descripción sola: mientras el campo esté vacío la
+        timeline la muestra igual, y así sigue en sincronía si después se edita
+        el disco. Copiarla es un acto explícito, para partir de ese texto.
+      */}
       {!form.body_text.trim() && album?.description && (
-        <p className="text-gray-600 text-xs">
-          Vacío: la timeline muestra la descripción del disco. Escribí acá para
-          contar qué significa en esta colección.
-        </p>
+        <div className="text-gray-600 text-xs space-y-1">
+          <p>
+            Vacío: la timeline muestra la descripción del disco. Escribí acá para
+            contar qué significa en esta colección.
+          </p>
+          <button
+            onClick={() => { setSaved(false); setForm({ ...form, body_text: album.description }) }}
+            className="text-rock-accent hover:underline"
+          >
+            Copiar la descripción para editarla acá
+          </button>
+        </div>
       )}
 
       {isNarrative && (
