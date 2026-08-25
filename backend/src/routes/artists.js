@@ -9,6 +9,12 @@ const { requireEditor } = require('../middleware/requireEditor')
 
 const ingestingNow = new Set()
 const ingestFailed = new Set()
+
+// Artistas sin artículo en Wikipedia. Sin esto, cada visita vuelve a consultar
+// y suma ~1s a la respuesta: el enriquecimiento corre antes de responder.
+// Se pierde al reiniciar, que es justo lo que se quiere para reintentar cuando
+// Wikipedia sume el artículo.
+const bioNotFound = new Set()
 const ingestAttempts = new Map()
 const MAX_INGEST_ATTEMPTS = 2
 
@@ -76,8 +82,8 @@ router.get('/:slugOrMbId', async (req, res, next) => {
     }
 
     // Imagen y bio: buscar inline si faltan (calls rápidos, solo 1 vez)
-    const needsImage = !artist.image_url && artist.external_spotify_id
-    const needsBio = !artist.bio
+    const needsImage = Boolean(!artist.image_url && artist.external_spotify_id)
+    const needsBio = !artist.bio && !bioNotFound.has(artist.id)
     console.log(`[artist enrich] ${artist.name}: needsImage=${needsImage} needsBio=${needsBio} bio=${artist.bio?.slice(0,30) ?? 'null'}`)
 
     const [imageResult, bioResult] = await Promise.allSettled([
@@ -97,6 +103,8 @@ router.get('/:slugOrMbId', async (req, res, next) => {
     if (needsBio && bioResult.status === 'fulfilled' && bioResult.value) {
       await db.saveBio(artist.id, bioResult.value)
       artist = { ...artist, bio: bioResult.value }
+    } else if (needsBio) {
+      bioNotFound.add(artist.id)
     }
 
     const albums = await db.getAlbumsByArtist(artist.id)
@@ -133,6 +141,49 @@ router.post('/:id/youtube', requireEditor, async (req, res, next) => {
     res.json(await ytLinker.linkArtistDiscography(artist, { auto: false }))
   } catch (err) {
     if (err.status === 429) return res.status(429).json({ error: err.message })
+    next(err)
+  }
+})
+
+/**
+ * Vuelve a traer los metadatos de los discos desde Spotify.
+ *
+ * La ingesta automática sólo corre cuando el artista no tiene ningún álbum, así
+ * que los discos ya cargados nunca se actualizan: los que entraron antes de que
+ * existiera `release_date_precision`, por ejemplo, quedaron con la columna vacía.
+ *
+ * `saveAlbum` respeta `manual_fields`, así que las correcciones del admin
+ * sobreviven al refresco.
+ */
+router.post('/:id/refresh-spotify', requireEditor, async (req, res, next) => {
+  try {
+    const artist = await db.getArtistById(req.params.id)
+    if (!artist) return res.status(404).json({ error: 'Artista no encontrado' })
+
+    let spotifyId = artist.external_spotify_id
+    if (!spotifyId) {
+      const found = await spotify.searchArtist(artist.name)
+      if (!found) return res.status(404).json({ error: 'No se encontró el artista en Spotify' })
+      spotifyId = found.id
+      await db.updateArtistSpotifyId(artist.id, spotifyId, found.images?.[0]?.url || null)
+    }
+
+    const albums = await spotify.getArtistAlbums(spotifyId)
+    let saved = 0
+    const errors = []
+
+    for (const album of albums) {
+      try {
+        await db.saveAlbum(album, artist.id)
+        saved++
+      } catch (err) {
+        errors.push(`${album.name}: ${err.message}`)
+      }
+    }
+
+    console.log(`[refresh spotify] ${artist.name}: ${saved}/${albums.length} álbumes actualizados`)
+    res.json({ total: albums.length, saved, errors: errors.slice(0, 5) })
+  } catch (err) {
     next(err)
   }
 })

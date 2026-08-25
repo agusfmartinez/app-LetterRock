@@ -230,6 +230,13 @@ function EntryEditor({ entry, onClose }) {
         className={`w-full ${INPUT}`}
       />
 
+      {!form.body_text.trim() && album?.description && (
+        <p className="text-gray-600 text-xs">
+          Vacío: la timeline muestra la descripción del disco. Escribí acá para
+          contar qué significa en esta colección.
+        </p>
+      )}
+
       {isNarrative && (
         <>
           <input value={form.image_url} onChange={set('image_url')} placeholder="URL de imagen (opcional)" className={`w-full ${INPUT}`} />

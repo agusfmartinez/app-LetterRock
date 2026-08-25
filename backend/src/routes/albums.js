@@ -61,15 +61,23 @@ router.get('/:id', async (req, res, next) => {
     const tracks = await withMediaLinks(rawTracks)
     const links = Object.fromEntries(albumLinks.map(l => [l.provider, l]))
 
+    // `ingestingTracks` hace que el front consulte cada segundo esperando el
+    // tracklist. Sólo vale decir que sí cuando la ingesta puede llegar a traer
+    // algo: un disco cargado a mano no tiene id de Spotify y nunca va a tener
+    // tracks por esa vía, así que sin este chequeo el front quedaba consultando
+    // para siempre.
+    const canIngest = Boolean(album.external_spotify_id) && !ingestTracksFailed.has(album.id)
+    const pending = rawTracks.length === 0 && canIngest
+
     res.json({
       album,
       tracks,
       artist: artist || null,
       links,
-      ingestingTracks: rawTracks.length === 0,
+      ingestingTracks: pending,
     })
 
-    if (rawTracks.length === 0) {
+    if (pending) {
       ingestTracksInBackground(album)
     }
   } catch (err) {

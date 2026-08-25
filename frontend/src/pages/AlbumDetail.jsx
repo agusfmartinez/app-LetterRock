@@ -75,6 +75,15 @@ export default function AlbumDetail() {
         </div>
       </div>
 
+      {/* Descripción */}
+      {album.description && (
+        <div className="max-w-2xl space-y-3">
+          {album.description.split(/\n+/).filter(Boolean).map((p, i) => (
+            <p key={i} className="text-gray-300 leading-relaxed">{p}</p>
+          ))}
+        </div>
+      )}
+
       {/* Tracklist */}
       <section>
         <h2 className="text-xl font-bold text-rock-text mb-2">

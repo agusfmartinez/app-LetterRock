@@ -51,8 +51,23 @@ async function searchInDatabase(query) {
     .from('artists')
     .select('*')
     .ilike('name', `%${query}%`)
+    .eq('hidden', false)
     .limit(20)
   return data || []
+}
+
+/**
+ * Saca del payload los campos que el admin corrigió a mano.
+ *
+ * La ingesta corre cada vez que alguien entra a un artista, así que sin esto
+ * una fecha o un título arreglados desde el CRUD volverían al valor de Spotify
+ * sin que nadie se entere.
+ */
+function stripManualFields(payload, manualFields) {
+  if (!manualFields || manualFields.length === 0) return payload
+  const clean = { ...payload }
+  for (const field of manualFields) delete clean[field]
+  return clean
 }
 
 async function saveArtist(mbArtist) {
@@ -101,9 +116,20 @@ async function saveAlbum(spotifyAlbum, artistId) {
     album_type: spotifyAlbum.album_type,
     cover_url: coverUrl,
   }
+  const { data: existing } = await supabase
+    .from('albums')
+    .select('manual_fields')
+    .eq('external_spotify_id', spotifyAlbum.id)
+    .maybeSingle()
+
+  const protectedFields = existing?.manual_fields || []
+  if (protectedFields.length) {
+    dbLog(`saveAlbum respeta campos manuales: ${protectedFields.join(', ')}`)
+  }
+
   const { data, error } = await supabase
     .from('albums')
-    .upsert(payload, { onConflict: 'external_spotify_id' })
+    .upsert(stripManualFields(payload, protectedFields), { onConflict: 'external_spotify_id' })
     .select()
     .single()
   if (error) throw error
@@ -112,8 +138,21 @@ async function saveAlbum(spotifyAlbum, artistId) {
   return data
 }
 
+async function artistManualFields(artistId) {
+  const { data } = await supabase
+    .from('artists')
+    .select('manual_fields')
+    .eq('id', artistId)
+    .maybeSingle()
+  return data?.manual_fields || []
+}
+
 async function saveBio(artistId, bio) {
   dbLog(`saveBio artistId="${artistId}"`)
+  if ((await artistManualFields(artistId)).includes('bio')) {
+    dbLog('saveBio omitido: la bio fue editada a mano')
+    return
+  }
   const { error } = await supabase
     .from('artists')
     .update({ bio })
@@ -124,7 +163,9 @@ async function saveBio(artistId, bio) {
 async function updateArtistSpotifyId(artistId, spotifyId, imageUrl) {
   dbLog(`updateArtistSpotifyId artistId="${artistId}"`)
   const update = { external_spotify_id: spotifyId }
-  if (imageUrl) update.image_url = imageUrl
+  if (imageUrl && !(await artistManualFields(artistId)).includes('image_url')) {
+    update.image_url = imageUrl
+  }
   const { error } = await supabase
     .from('artists')
     .update(update)
@@ -145,9 +186,21 @@ async function saveTracks(spotifyTracks, albumId) {
     track_number: t.track_number,
     disc_number: t.disc_number || 1,
   }))
+  const { data: existingTracks } = await supabase
+    .from('tracks')
+    .select('external_spotify_id, manual_fields')
+    .eq('album_id', albumId)
+
+  const protectedByTrack = new Map(
+    (existingTracks || []).map(t => [t.external_spotify_id, t.manual_fields || []])
+  )
+
   const { data, error } = await supabase
     .from('tracks')
-    .upsert(payload, { onConflict: 'external_spotify_id' })
+    .upsert(
+      payload.map(row => stripManualFields(row, protectedByTrack.get(row.external_spotify_id))),
+      { onConflict: 'external_spotify_id' }
+    )
     .select()
   if (error) throw error
 
@@ -178,6 +231,15 @@ async function getArtistBySlug(slug) {
   return data
 }
 
+/** external_mb_id de los artistas ocultos, para filtrar los resultados de MusicBrainz. */
+async function getHiddenMbIds() {
+  const { data } = await supabase
+    .from('artists')
+    .select('external_mb_id')
+    .eq('hidden', true)
+  return new Set((data || []).map(a => a.external_mb_id).filter(Boolean))
+}
+
 async function getArtistByMbId(mbId) {
   dbLog(`getArtistByMbId mbId="${mbId}"`)
 
@@ -198,6 +260,7 @@ async function getAlbumsByArtist(artistId) {
     .from('albums')
     .select('*')
     .eq('artist_id', artistId)
+    .eq('hidden', false)
     .order('release_date', { ascending: true })
   return data || []
 }
@@ -233,6 +296,7 @@ module.exports = {
   getArtistBySlug,
   getArtistByMbId,
   getArtistById,
+  getHiddenMbIds,
   getAlbumsByArtist,
   getAlbumById,
   getTracksByAlbum,

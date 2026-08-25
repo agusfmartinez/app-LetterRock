@@ -133,7 +133,12 @@ function AlbumEntry({ entry, media }) {
             )}
           </div>
 
-          <Paragraphs text={entry.body_text} />
+          {/*
+            El texto de la entrada pisa al del disco, no lo duplica: `body_text`
+            es lo que este disco significa EN ESTA colección, y `description` es
+            qué es el disco en general. Sin texto propio, se muestra el general.
+          */}
+          <Paragraphs text={entry.body_text || album.description} />
 
           <div className="flex items-center gap-3 flex-wrap">
             <FavoriteButton entityType="album" entityId={album.id} />

@@ -42,9 +42,14 @@ export default function Navbar() {
           {user ? (
             <>
               {isEditor && (
-                <Link to="/admin/colecciones" className="text-sm text-gray-500 hover:text-rock-accent">
-                  Editor
-                </Link>
+                <>
+                  <Link to="/admin/colecciones" className="text-sm text-gray-500 hover:text-rock-accent">
+                    Editor
+                  </Link>
+                  <Link to="/admin/catalogo" className="text-sm text-gray-500 hover:text-rock-accent">
+                    Catálogo
+                  </Link>
+                </>
               )}
               {isAdmin && (
                 <Link to="/admin/users" className="text-sm text-gray-500 hover:text-rock-accent">

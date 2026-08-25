@@ -154,6 +154,7 @@ export function useAlbumSearch(section: any, filters: AlbumFilters, enabled: boo
       let query = supabase
         .from('albums')
         .select('id, title, cover_url, release_date, release_date_precision, album_type, artist:artists(id, name, slug)')
+        .eq('hidden', false)
         .order('release_date', { ascending: true })
         .limit(100)
 

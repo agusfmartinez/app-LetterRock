@@ -12,6 +12,7 @@ export default function Home() {
       const { data } = await supabase
         .from('artists')
         .select('*')
+        .eq('hidden', false)
         .order('created_at', { ascending: false })
         .limit(12)
       return data || []

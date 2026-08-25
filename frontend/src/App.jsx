@@ -15,6 +15,9 @@ import CollectionSection from './pages/CollectionSection'
 import AdminCollections from './pages/AdminCollections'
 import AdminCollectionEdit from './pages/AdminCollectionEdit'
 import AdminSectionEdit from './pages/AdminSectionEdit'
+import AdminArtists from './pages/AdminArtists'
+import AdminArtistEdit from './pages/AdminArtistEdit'
+import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -47,6 +50,9 @@ export default function App() {
           <Route path="/admin/colecciones" element={<AdminCollections />} />
           <Route path="/admin/coleccion/:slug" element={<AdminCollectionEdit />} />
           <Route path="/admin/coleccion/:slug/:sectionSlug" element={<AdminSectionEdit />} />
+          <Route path="/admin/catalogo" element={<AdminArtists />} />
+          <Route path="/admin/artista/:id" element={<AdminArtistEdit />} />
+          <Route path="/admin/album/:id" element={<AdminAlbumEdit />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />
           <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
         </Routes>
