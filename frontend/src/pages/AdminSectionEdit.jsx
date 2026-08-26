@@ -7,8 +7,8 @@ import {
   useAlbumSearch,
   useCollectionAdmin,
 } from '../hooks/useCollectionAdmin'
-import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
-import { formatReleaseDate } from '../services/dates'
+import { groupEntriesByYear, nextPositionInYear, useCollectionSection } from '../hooks/useCollections'
+import { albumYear, formatReleaseDate } from '../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
 
 const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
@@ -85,47 +85,80 @@ function SectionFields({ section }) {
 }
 
 /** Fila de una línea. No despliega nada: al elegirla se edita en el panel derecho. */
-function EntryRow({ entry, selected, onSelect }) {
+function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMoveDown, moving }) {
   const album = entry.album
   const artist = entry.artist || album?.artist
   const label = album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
   const dateLabel = album ? formatReleaseDate(album) : entry.year ? String(entry.year) : null
 
   return (
-    <button
-      onClick={onSelect}
-      className={`w-full text-left flex items-center gap-3 px-3 py-2 transition-colors ${
+    <div
+      className={`flex items-center transition-colors ${
         selected ? 'bg-rock-accent/10 border-l-2 border-rock-accent' : 'hover:bg-rock-dark'
       }`}
     >
-      <div className="w-9 h-9 rounded overflow-hidden bg-rock-dark flex-shrink-0">
-        {album?.cover_url ? (
-          <img src={album.cover_url} alt="" className="w-full h-full object-cover" />
-        ) : entry.artist?.image_url ? (
-          <img src={entry.artist.image_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">📝</div>
-        )}
+      {/* Las flechas van fuera del botón de selección: un botón adentro de otro
+          no es HTML válido y el click se lo comería el de afuera. */}
+      <div className="flex flex-col pl-2 flex-shrink-0">
+        {[
+          { dir: -1, label: '▲', can: canMoveUp, title: 'Subir dentro del año' },
+          { dir: 1, label: '▼', can: canMoveDown, title: 'Bajar dentro del año' },
+        ].map(({ dir, label: arrow, can, title }) => (
+          <button
+            key={dir}
+            onClick={() => onMove(dir)}
+            disabled={!can || moving}
+            title={title}
+            className="text-[10px] leading-none text-gray-600 hover:text-rock-accent disabled:opacity-20 disabled:hover:text-gray-600 py-0.5"
+          >
+            {arrow}
+          </button>
+        ))}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm truncate ${selected ? 'text-rock-accent font-semibold' : 'text-rock-text'}`}>
-          {label}
-        </p>
-        <p className="text-gray-500 text-xs truncate">
-          {artist?.name}
-          {artist?.name && dateLabel ? ' · ' : ''}
-          {dateLabel}
-        </p>
-      </div>
+      <button
+        onClick={onSelect}
+        className="flex-1 min-w-0 text-left flex items-center gap-3 px-3 py-2"
+      >
+        <div className="w-9 h-9 rounded overflow-hidden bg-rock-dark flex-shrink-0">
+          {album?.cover_url ? (
+            <img src={album.cover_url} alt="" className="w-full h-full object-cover" />
+          ) : entry.artist?.image_url ? (
+            <img src={entry.artist.image_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm">📝</div>
+          )}
+        </div>
 
-      {!entry.body_text && <span className="text-xs text-gray-600 flex-shrink-0">sin texto</span>}
-    </button>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm truncate ${selected ? 'text-rock-accent font-semibold' : 'text-rock-text'}`}>
+            {label}
+          </p>
+          <p className="text-gray-500 text-xs truncate">
+            {artist?.name}
+            {artist?.name && dateLabel ? ' · ' : ''}
+            {dateLabel}
+          </p>
+        </div>
+
+        {!entry.body_text && <span className="text-xs text-gray-600 flex-shrink-0">sin texto</span>}
+      </button>
+    </div>
   )
 }
 
 function EntriesByYear({ entries, selectedId, onSelect }) {
   const groups = useMemo(() => groupEntriesByYear(entries), [entries])
+  const { reorderEntries } = useCollectionAdmin()
+
+  // Intercambia dos entradas del año y guarda el orden completo del año.
+  const move = (group, index, delta) => {
+    const target = index + delta
+    if (target < 0 || target >= group.entries.length) return
+    const next = [...group.entries]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    reorderEntries.mutate(next)
+  }
 
   return (
     <div className="space-y-4">
@@ -136,14 +169,26 @@ function EntriesByYear({ entries, selectedId, onSelect }) {
             <span className="text-gray-600 text-xs">
               {group.entries.length} {group.entries.length === 1 ? 'entrada' : 'entradas'}
             </span>
+            {group.entries.some(e => e.position > 0) && (
+              <span
+                className="text-gray-600 text-xs"
+                title="Este año quedó en el orden que elegiste; las entradas nuevas se agregan al final"
+              >
+                · orden manual
+              </span>
+            )}
           </div>
           <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border overflow-hidden">
-            {group.entries.map(e => (
+            {group.entries.map((e, i) => (
               <EntryRow
                 key={e.id}
                 entry={e}
                 selected={selectedId === e.id}
                 onSelect={() => onSelect(e.id)}
+                onMove={delta => move(group, i, delta)}
+                canMoveUp={i > 0}
+                canMoveDown={i < group.entries.length - 1}
+                moving={reorderEntries.isPending}
               />
             ))}
           </div>
@@ -391,7 +436,7 @@ function YoutubePanel({ albumId, artist }) {
 }
 
 /** Buscador de discos. Arranca vacío: muestra resultados recién al ejecutar la consulta. */
-function AlbumSearchPanel({ collection, section }) {
+function AlbumSearchPanel({ collection, section, entries }) {
   const [form, setForm] = useState({
     ...EMPTY_ALBUM_FILTERS,
     yearFrom: section.year_from ?? '',
@@ -421,6 +466,7 @@ function AlbumSearchPanel({ collection, section }) {
         section_id: section.id,
         entry_type: 'album',
         album_id: album.id,
+        position: nextPositionInYear(entries, albumYear(album)),
       },
       {
         onSuccess: () => setAddError(''),
@@ -511,7 +557,7 @@ function AlbumSearchPanel({ collection, section }) {
   )
 }
 
-function NewNarrativeForm({ collection, section }) {
+function NewNarrativeForm({ collection, section, entries }) {
   const { createEntry } = useCollectionAdmin()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ title: '', year: '', body: '', image_url: '' })
@@ -522,15 +568,17 @@ function NewNarrativeForm({ collection, section }) {
   const submit = (e) => {
     e.preventDefault()
     if (!form.body.trim()) return
+    const year = form.year ? Number(form.year) : null
     createEntry.mutate(
       {
         collection_id: collection.id,
         section_id: section.id,
         entry_type: 'narrative',
         title: form.title.trim() || null,
-        year: form.year ? Number(form.year) : null,
+        year,
         image_url: form.image_url.trim() || null,
         body_text: form.body.trim(),
+        position: nextPositionInYear(entries, year),
       },
       {
         onSuccess: () => {
@@ -630,7 +678,9 @@ export default function AdminSectionEdit() {
                   Entradas ({entries.length})
                 </h2>
                 <p className="text-gray-500 text-sm mb-3">
-                  Agrupadas por año. Elegí una para editarla en el panel de la derecha.
+                  Agrupadas por año, en orden cronológico. Elegí una para editarla
+                  en el panel de la derecha, o movela con las flechas para fijar
+                  el orden dentro de su año.
                 </p>
                 {entries.length === 0 ? (
                   <p className="text-gray-500 text-sm">Todavía no hay entradas.</p>
@@ -643,7 +693,7 @@ export default function AdminSectionEdit() {
                 )}
               </div>
 
-              <NewNarrativeForm collection={data.collection} section={data.section} />
+              <NewNarrativeForm collection={data.collection} section={data.section} entries={entries} />
             </div>
 
             {/* Panel lateral: edición + búsqueda */}
@@ -655,7 +705,7 @@ export default function AdminSectionEdit() {
                   onClose={() => setSelectedId(null)}
                 />
               )}
-              <AlbumSearchPanel collection={data.collection} section={data.section} />
+              <AlbumSearchPanel collection={data.collection} section={data.section} entries={entries} />
             </aside>
           </div>
         </div>

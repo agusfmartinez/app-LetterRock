@@ -103,6 +103,27 @@ export function useCollectionAdmin() {
       mutationFn: (id: string) => run(supabase.from('collection_entries').delete().eq('id', id)),
       ...opts,
     }),
+
+    /**
+     * Fija el orden de las entradas de un año, en el orden en que vienen.
+     *
+     * Escribe 1..n y no 0..n-1 a propósito: el 0 es la marca de "este año nunca
+     * se tocó" y sigue significando orden cronológico automático.
+     *
+     * Van de a una en vez de un `upsert` en lote porque el upsert de PostgREST
+     * es un INSERT ... ON CONFLICT y exigiría mandar todas las columnas NOT NULL
+     * de la fila. Un año tiene unas pocas entradas.
+     */
+    reorderEntries: useMutation({
+      mutationFn: async (entries: any[]) => {
+        for (let i = 0; i < entries.length; i++) {
+          await run(
+            supabase.from('collection_entries').update({ position: i + 1 }).eq('id', entries[i].id)
+          )
+        }
+      },
+      ...opts,
+    }),
   }
 }
 

@@ -10,16 +10,48 @@ const ENTRY_SELECT = `
 `
 
 /**
- * Orden dentro de una sección: cronológico ascendente, `position` como desempate.
- * Así el editor no carga números a mano salvo que quiera forzar una excepción.
+ * Orden dentro de una sección: por año, después por `position`, después por fecha.
+ *
+ * Los años nunca se mezclan. Dentro de uno manda `position`, que arranca en 0
+ * para todos —o sea, no desempata— y entonces cae al orden cronológico fino: el
+ * disco de marzo antes que el de septiembre.
+ *
+ * Ese 0 es el que hace que el año siga siendo automático. Cuando el editor
+ * mueve algo, la reordenación escribe 1..n en *todas* las entradas de ese año, y
+ * a partir de ahí ese año queda como lo dejó. Es lo que permite intercalar un
+ * bloque de texto entre dos discos: por fecha sola no hay forma, porque un
+ * bloque sólo tiene año y siempre caería antes que un disco con fecha completa.
  */
 export function sortEntries(entries: any[]): any[] {
   return [...entries].sort((a, b) => {
+    const ya = entryYear(a) ?? 9999
+    const yb = entryYear(b) ?? 9999
+    if (ya !== yb) return ya - yb
+
+    const pa = a.position || 0
+    const pb = b.position || 0
+    if (pa !== pb) return pa - pb
+
     const ka = entrySortKey(a)
     const kb = entrySortKey(b)
-    if (ka !== kb) return ka < kb ? -1 : 1
-    return a.position - b.position
+    return ka < kb ? -1 : ka > kb ? 1 : 0
   })
+}
+
+/**
+ * Posición para una entrada nueva en un año ya ordenado a mano.
+ *
+ * Sin esto, entrar con `position` 0 la mandaría al principio del año pisando el
+ * orden que el editor eligió. En un año que nadie tocó devuelve 0 y todo sigue
+ * saliendo por fecha.
+ */
+export function nextPositionInYear(entries: any[], year: number | null): number {
+  const positions = entries
+    .filter(e => (entryYear(e) ?? null) === year)
+    .map(e => e.position || 0)
+
+  const max = Math.max(0, ...positions)
+  return max > 0 ? max + 1 : 0
 }
 
 export type YearGroup = { year: number | null; label: string; entries: any[] }
