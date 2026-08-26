@@ -3,6 +3,32 @@ import { Link } from 'react-router-dom'
 import { isFeatured, roleLabel } from '../../hooks/useArtistMembers'
 
 /**
+ * La foto del músico, o su inicial.
+ *
+ * Sólo tienen imagen los que están en el catálogo, que son minoría: la inicial
+ * evita que la columna quede con huecos y mantiene todas las filas del mismo
+ * alto, que es lo que hace legible una lista de veinte nombres.
+ */
+function Avatar({ person }) {
+  if (person.image) {
+    return (
+      <img
+        src={person.image}
+        alt=""
+        loading="lazy"
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+      />
+    )
+  }
+
+  return (
+    <span className="w-8 h-8 rounded-full bg-rock-dark border border-rock-border flex items-center justify-center flex-shrink-0 text-gray-600 text-xs">
+      {person.name.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
+/**
  * Un músico y todo su paso por la banda en una sola fila.
  *
  * En la base cada etapa es su propia fila, pero leídas de corrido separan a la
@@ -18,29 +44,34 @@ function PersonRow({ person }) {
       : null
 
   return (
-    <div className="flex items-baseline gap-x-3 gap-y-1 py-2 flex-wrap">
-      <span className="flex items-baseline gap-2">
-        {target ? (
-          <Link to={target} className="text-rock-text font-medium hover:text-rock-accent">
-            {person.name}
-          </Link>
-        ) : (
-          <span className="text-rock-text font-medium">{person.name}</span>
-        )}
-        {person.isOriginal && (
-          <span className="text-[10px] uppercase tracking-wide text-rock-accent border border-rock-accent rounded px-1">
-            original
-          </span>
-        )}
-      </span>
+    <div className="flex items-center gap-3 py-2">
+      <Avatar person={person} />
 
-      {person.roles.length > 0 && (
-        <span className="text-gray-500 text-xs">{person.roles.map(roleLabel).join(' · ')}</span>
-      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-x-2 gap-y-1 flex-wrap">
+          {target ? (
+            <Link to={target} className="text-rock-text font-medium hover:text-rock-accent">
+              {person.name}
+            </Link>
+          ) : (
+            <span className="text-rock-text font-medium">{person.name}</span>
+          )}
 
-      <span className="text-gray-500 text-xs font-mono ml-auto">
-        {person.periods.map(p => `(${p})`).join(' ')}
-      </span>
+          {person.isOriginal && (
+            <span className="text-[10px] uppercase tracking-wide text-rock-accent border border-rock-accent rounded px-1">
+              original
+            </span>
+          )}
+
+          {person.roles.length > 0 && (
+            <span className="text-gray-500 text-xs">{person.roles.map(roleLabel).join(' · ')}</span>
+          )}
+        </div>
+
+        <p className="text-gray-500 text-xs font-mono">
+          {person.periods.map(p => `(${p})`).join(' ')}
+        </p>
+      </div>
     </div>
   )
 }

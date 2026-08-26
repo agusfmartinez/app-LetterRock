@@ -172,6 +172,7 @@ export function groupByPerson(stages: (Member & { member?: any })[]): Person[] {
     name: stage.member_name,
     slug: stage.member?.hidden ? null : stage.member?.slug || null,
     memberMbId: stage.member_mb_id,
+    image: stage.member?.hidden ? null : stage.member?.image_url || null,
   }))
 }
 
@@ -262,7 +263,7 @@ export function useBandMembers(groupId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('artist_members')
-        .select(`${COLUMNS}, member:artists!artist_members_member_id_fkey (id, slug, hidden)`)
+        .select(`${COLUMNS}, member:artists!artist_members_member_id_fkey (id, slug, image_url, hidden)`)
         .eq('group_id', groupId)
       if (error) throw error
       return sortStages((data || []) as Member[]) as (Member & { member: any })[]
@@ -289,7 +290,7 @@ export function useBandMembersMany(artistIds: (string | undefined)[]) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('artist_members')
-        .select(`${COLUMNS}, member:artists!artist_members_member_id_fkey (id, slug, hidden)`)
+        .select(`${COLUMNS}, member:artists!artist_members_member_id_fkey (id, slug, image_url, hidden)`)
         .in('group_id', ids)
       if (error) throw error
 

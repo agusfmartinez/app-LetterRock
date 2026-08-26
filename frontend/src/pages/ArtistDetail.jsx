@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
@@ -10,6 +10,62 @@ import ReviewForm from '../components/forms/ReviewForm'
 import { getArtist } from '../services/api'
 import { groupByBand, groupByPerson, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
 import { useReviews } from '../hooks/useReviews'
+
+/**
+ * Biografía plegada, con transición.
+ *
+ * Las de Wikipedia van de tres líneas a veinte párrafos —la de Charly García
+ * ocupa dos pantallas— y empujaban la discografía tan abajo que había que
+ * scrollear a ciegas para llegar a los discos.
+ *
+ * El botón sólo aparece si el texto realmente desborda: se mide una vez
+ * plegado, en vez de adivinar por cantidad de caracteres, porque cuántas líneas
+ * entran depende del ancho de la pantalla.
+ */
+function Bio({ text }) {
+  const [open, setOpen] = useState(false)
+  const [overflows, setOverflows] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setOverflows(el.scrollHeight > el.clientHeight + 4)
+  }, [text])
+
+  const paragraphs = text.split(/\n+/).filter(Boolean)
+
+  return (
+    <div className="mt-3 max-w-2xl">
+      <div
+        ref={ref}
+        className={`relative overflow-hidden transition-[max-height] duration-500 ease-in-out ${
+          open ? 'max-h-[3000px]' : 'max-h-28'
+        }`}
+      >
+        <div className="space-y-2">
+          {paragraphs.map((para, i) => (
+            <p key={i} className="text-gray-300 text-sm leading-relaxed">{para}</p>
+          ))}
+        </div>
+
+        {/* Desvanece el corte para que no parezca texto cortado por un bug. */}
+        {!open && overflows && (
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-rock-dark to-transparent pointer-events-none" />
+        )}
+      </div>
+
+      {overflows && (
+        <button
+          onClick={() => setOpen(!open)}
+          className="text-rock-accent hover:underline text-xs mt-2"
+        >
+          {open ? 'Ver menos' : 'Ver más'}
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function ArtistDetail() {
   const { slug } = useParams()
@@ -49,11 +105,11 @@ export default function ArtistDetail() {
     <div className="space-y-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-32 h-32 rounded-lg overflow-hidden bg-rock-card flex-shrink-0">
+        <div className="w-40 h-40 md:w-52 md:h-52 rounded-lg overflow-hidden bg-rock-card flex-shrink-0">
           {artist.image_url ? (
             <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl">🎸</div>
+            <div className="w-full h-full flex items-center justify-center text-6xl">🎸</div>
           )}
         </div>
         <div>
@@ -66,13 +122,7 @@ export default function ArtistDetail() {
             {artist.country && artist.formed_year && ' · '}
             {artist.formed_year && `Formado en ${artist.formed_year}`}
           </p>
-          {artist.bio && (
-            <div className="mt-3 max-w-2xl space-y-2">
-              {artist.bio.split(/\n+/).filter(Boolean).map((para, i) => (
-                <p key={i} className="text-gray-300 text-sm leading-relaxed">{para}</p>
-              ))}
-            </div>
-          )}
+          {artist.bio && <Bio text={artist.bio} />}
         </div>
       </div>
 
@@ -123,7 +173,7 @@ export default function ArtistDetail() {
             media pantalla vacía a la derecha del gráfico. Abajo de lg vuelven a
             apilarse, que es la única forma de que el gráfico entre.
           */}
-          <div className="grid gap-4 lg:grid-cols-5 max-w-6xl">
+          <div className="grid gap-4 lg:grid-cols-5">
             <div className="bg-rock-card border border-rock-border rounded-lg p-4 lg:col-span-3">
               <MemberTimeline people={people} />
             </div>
