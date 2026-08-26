@@ -158,6 +158,25 @@ async function markArtistRun(artistId, kind) {
   if (error) throw error
 }
 
+/**
+ * Cuáles de estos ids de MusicBrainz ya están en el catálogo.
+ *
+ * El descubridor los necesita para no ofrecer de nuevo lo que ya cargaste, y
+ * para avisar cuando algo está pero oculto: ahí volver a agregarlo no haría
+ * nada visible y conviene decirlo.
+ */
+async function getArtistsByMbIds(mbIds) {
+  const ids = [...new Set((mbIds || []).filter(Boolean))]
+  if (ids.length === 0) return new Map()
+
+  const { data } = await supabase
+    .from('artists')
+    .select('id, slug, external_mb_id, hidden')
+    .in('external_mb_id', ids)
+
+  return new Map((data || []).map(a => [a.external_mb_id, a]))
+}
+
 async function artistsByMbId(mbIds) {
   const ids = [...new Set(mbIds.filter(Boolean))]
   if (ids.length === 0) return new Map()
@@ -460,6 +479,7 @@ module.exports = {
   getMediaLinks,
   getArtistBySlug,
   getArtistByMbId,
+  getArtistsByMbIds,
   getArtistById,
   getHiddenMbIds,
   getAlbumsByArtist,

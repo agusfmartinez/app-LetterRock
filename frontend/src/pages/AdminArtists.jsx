@@ -101,6 +101,15 @@ export default function AdminArtists({ hidden = false }) {
           )}
         </div>
 
+        {!hidden && (
+          <Link
+            to="/admin/descubrir"
+            className="inline-block text-sm border border-rock-border rounded px-3 py-1.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+          >
+            + Descubrir bandas por década
+          </Link>
+        )}
+
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}

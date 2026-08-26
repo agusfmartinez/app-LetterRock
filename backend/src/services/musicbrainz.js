@@ -86,10 +86,24 @@ function isFromRegion(artist) {
   return ALLOWED_AREAS.has(area)
 }
 
+/**
+ * Si el artista puede pasar por rock nacional.
+ *
+ * Una sola etiqueta bloqueada no alcanza para descartar. Luis Alberto Spinetta
+ * tiene veintiún tags en MusicBrainz —latin rock, progressive rock, folk rock,
+ * rock— y entre ellas `pop`: con la regla anterior quedaba afuera el artista más
+ * central del catálogo.
+ *
+ * Cualquier etiqueta que mencione rock manda. Recién si no hay ninguna se mira
+ * si lo que tiene es de un género que no queremos.
+ */
 function isRockCandidate(artist) {
   const tags = artist.tags || []
   if (tags.length === 0) return true // sin tags → beneficio de la duda
+
   const tagNames = tags.map(t => t.name.toLowerCase())
+  if (tagNames.some(t => t.includes('rock'))) return true
+
   return !tagNames.some(t => BLOCKED_GENRES.has(t))
 }
 
@@ -105,6 +119,106 @@ async function searchArtist(query) {
   // wasFiltered = había resultados de AR/UY pero todos bloqueados por género
   const wasFiltered = artists.length === 0 && fromRegion.length > 0
   return { artists, wasFiltered }
+}
+
+/**
+ * Artistas de una región formados dentro de un período.
+ *
+ * El país y el género viven en el artista, no en el disco: el índice de
+ * release-group no tiene país, y filtrar por `country:AR` ahí lo ignora en
+ * silencio —devuelve bandas galesas por matchear "AR" como texto—. Por eso
+ * poblar una década se hace trayendo los artistas y dejando que sus discos
+ * entren después por la ingesta de Spotify.
+ *
+ * Verificado: `country:AR AND tag:rock AND begin:[1970 TO 1979]` devuelve 33
+ * artistas, todos legítimos (Redondos, Serú Girán, Pappo's Blues, El Reloj).
+ */
+const COUNTRY_CLAUSE = [...ALLOWED_COUNTRIES].map(c => `country:${c.toUpperCase()}`).join(' OR ')
+
+/** Escapa lo que Lucene interpreta como sintaxis dentro de una frase entre comillas. */
+function luceneTerm(value) {
+  return String(value).trim().replace(/["\\]/g, '\\$&')
+}
+
+/**
+ * Artistas cuyo disco se llama así.
+ *
+ * El índice de discos de MusicBrainz no tiene país, así que "Vida" a secas
+ * devuelve 1195 release-groups de todo el mundo y ninguno argentino entra en la
+ * primera página. Con `tag:rock` y un rango de años baja a siete, con Sui
+ * Generis primero: el ranking pone arriba la coincidencia exacta de título.
+ *
+ * Después hace falta un segundo pedido para saber de dónde es cada artista: el
+ * crédito del disco trae nombre e id, no país ni tags.
+ */
+async function findArtistsByAlbum({ album, artist, from, to, limit = 25 }) {
+  const clauses = [`releasegroup:"${luceneTerm(album)}"`, 'primarytype:album', 'tag:rock']
+  if (artist) clauses.push(`artist:"${luceneTerm(artist)}"`)
+  if (from && to) clauses.push(`firstreleasedate:[${from} TO ${to}]`)
+
+  const data = await rateLimitedRequest(`${BASE_URL}/release-group`, {
+    query: clauses.join(' AND '),
+    limit: Math.min(limit, 100),
+  })
+
+  const groups = data['release-groups'] || []
+
+  // Un artista puede tener más de un disco que matchee: se queda el primero,
+  // que es el mejor rankeado, y sirve de contexto en la lista.
+  const albumByArtist = new Map()
+  for (const rg of groups) {
+    for (const credit of rg['artist-credit'] || []) {
+      const id = credit.artist?.id
+      if (!id || albumByArtist.has(id)) continue
+      albumByArtist.set(id, { title: rg.title, date: rg['first-release-date'] || null })
+    }
+  }
+
+  if (albumByArtist.size === 0) return { artists: [], total: 0, received: 0, filtered: 0, albumByArtist }
+
+  const arids = [...albumByArtist.keys()].map(id => `arid:${id}`).join(' OR ')
+  const hydrated = await rateLimitedRequest(`${BASE_URL}/artist`, {
+    query: `(${arids})`,
+    limit: 100,
+  })
+
+  const received = (hydrated.artists || []).length
+  const artists = (hydrated.artists || []).filter(isRockCandidate)
+
+  // Los de la región primero. No se filtran: un disco puede estar acreditado a
+  // un artista sin país cargado en MusicBrainz, y descartarlo escondería
+  // justamente lo que el editor vino a buscar.
+  artists.sort((a, b) => Number(isFromRegion(b)) - Number(isFromRegion(a)))
+
+  return { artists, total: artists.length, received, filtered: received - artists.length, albumByArtist }
+}
+
+async function discoverArtists({ artist, from, to, limit = 100, offset = 0 }) {
+  const clauses = [`(${COUNTRY_CLAUSE})`, 'tag:rock']
+  if (artist) clauses.push(`artist:"${luceneTerm(artist)}"`)
+  if (from && to) clauses.push(`begin:[${from} TO ${to}]`)
+
+  const data = await rateLimitedRequest(`${BASE_URL}/artist`, {
+    query: clauses.join(' AND '),
+    limit: Math.min(limit, 100),
+    offset,
+  })
+
+  // El tag `rock` de MusicBrainz es generoso: una banda puede tenerlo junto a
+  // `cumbia` o `trap`. El mismo filtro de géneros de la búsqueda por nombre.
+  const received = (data.artists || []).length
+  const artists = (data.artists || []).filter(isRockCandidate)
+
+  return {
+    artists,
+    total: data.count || 0,
+    // Cuántos mandó MusicBrainz antes de filtrar. El `offset` de la próxima
+    // página se cuenta sobre esto y no sobre los que sobrevivieron: si se
+    // usaran los filtrados, la página siguiente arrancaría antes de donde
+    // terminó la anterior y repetiría artistas.
+    received,
+    filtered: received - artists.length,
+  }
 }
 
 async function getArtistById(artistId) {
@@ -280,6 +394,8 @@ async function getFirstOfficialRelease(releaseGroupId) {
 module.exports = {
   searchArtist,
   getArtistById,
+  discoverArtists,
+  findArtistsByAlbum,
   getArtistReleaseGroups,
   getReleaseGroupReleases,
   getFirstOfficialRelease,

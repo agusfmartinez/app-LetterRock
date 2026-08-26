@@ -16,6 +16,7 @@ import AdminCollections from './pages/AdminCollections'
 import AdminCollectionEdit from './pages/AdminCollectionEdit'
 import AdminSectionEdit from './pages/AdminSectionEdit'
 import AdminArtists from './pages/AdminArtists'
+import AdminDiscover from './pages/AdminDiscover'
 import AdminArtistEdit from './pages/AdminArtistEdit'
 import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import MemberDetail from './pages/MemberDetail'
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/admin/coleccion/:slug/:sectionSlug" element={<AdminSectionEdit />} />
           <Route path="/admin/catalogo" element={<AdminArtists />} />
           <Route path="/admin/catalogo/ocultos" element={<AdminArtists hidden />} />
+          <Route path="/admin/descubrir" element={<AdminDiscover />} />
           <Route path="/admin/artista/:id" element={<AdminArtistEdit />} />
           <Route path="/admin/album/:id" element={<AdminAlbumEdit />} />
           <Route path="/auth/login" element={<AuthPages mode="login" />} />

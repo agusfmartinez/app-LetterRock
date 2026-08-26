@@ -22,10 +22,18 @@ async function ingestAlbumsInBackground(artist) {
   if (ingestingNow.has(artist.id)) return
   if (ingestFailed.has(artist.id)) return
   ingestingNow.add(artist.id)
+
+  // La marca de refresco dice "se consultó a Spotify", no "se trajo algo": que
+  // allá no haya discos es un resultado, y sin marcarlo el panel sigue diciendo
+  // "nunca importado" después de haber corrido la ingesta. Va en `finally` para
+  // que valga por cualquiera de las tres salidas, y se pone recién cuando
+  // Spotify contestó: si el pedido falla no se consultó nada.
+  let consulted = false
   try {
     let spotifyId = artist.external_spotify_id
     if (!spotifyId) {
       const spotifyArtist = await spotify.searchArtist(artist.name)
+      consulted = true
       if (!spotifyArtist) {
         console.log(`[ingest] ${artist.name}: no encontrado en Spotify`)
         const attempts = (ingestAttempts.get(artist.id) || 0) + 1
@@ -39,6 +47,19 @@ async function ingestAlbumsInBackground(artist) {
     }
 
     const albums = await spotify.getArtistAlbums(spotifyId)
+    consulted = true
+
+    // Spotify puede tener al artista pero sin un solo disco. La página del
+    // artista se refresca sola mientras crea que la ingesta sigue corriendo, y
+    // sin marcarlo se queda pidiendo cada dos segundos para siempre.
+    if (albums.length === 0) {
+      console.log(`[ingest] ${artist.name}: Spotify no tiene discos de este artista`)
+      const attempts = (ingestAttempts.get(artist.id) || 0) + 1
+      ingestAttempts.set(artist.id, attempts)
+      if (attempts >= MAX_INGEST_ATTEMPTS) ingestFailed.add(artist.id)
+      return
+    }
+
     let saved = 0
     let firstError = null
     for (const album of albums) {
@@ -56,8 +77,165 @@ async function ingestAlbumsInBackground(artist) {
     ingestFailed.add(artist.id)
   } finally {
     ingestingNow.delete(artist.id)
+    if (consulted) {
+      try {
+        await db.markArtistRun(artist.id, 'spotify')
+      } catch (err) {
+        // Que falle la marca no invalida los discos que ya se guardaron.
+        console.error('[ingest] marca de refresco', artist.name, err.message)
+      }
+    }
   }
 }
+
+/**
+ * Candidatos para poblar el catálogo: artistas de AR/UY con tag de rock
+ * formados dentro de un período.
+ *
+ * Va antes que `/:slugOrMbId` a propósito: esa ruta matchea cualquier cosa y se
+ * quedaría con "discover".
+ *
+ * Los resultados se guardan en memoria para que el alta no tenga que volver a
+ * preguntarle a MusicBrainz por cada artista elegido —serían treinta pedidos a
+ * uno por segundo— y para no confiar en datos que mande el cliente.
+ */
+const discovered = new Map()
+const DISCOVER_TTL_MS = 20 * 60 * 1000
+
+function rememberCandidates(artists) {
+  const expiresAt = Date.now() + DISCOVER_TTL_MS
+  for (const artist of artists) discovered.set(artist.id, { artist, expiresAt })
+
+  for (const [id, entry] of discovered) {
+    if (entry.expiresAt < Date.now()) discovered.delete(id)
+  }
+}
+
+router.get('/discover', requireEditor, async (req, res, next) => {
+  try {
+    const artistName = (req.query.artist || '').trim()
+    const albumTitle = (req.query.album || '').trim()
+    const from = parseInt(req.query.from, 10)
+    const to = parseInt(req.query.to, 10)
+    const offset = parseInt(req.query.offset, 10) || 0
+
+    const hasRange = Number.isFinite(from) && Number.isFinite(to)
+    if ((req.query.from || req.query.to) && !hasRange) {
+      return res.status(400).json({ error: 'Completá los dos años del rango' })
+    }
+    if (hasRange && from > to) {
+      return res.status(400).json({ error: 'El año inicial es mayor que el final' })
+    }
+    if (!artistName && !albumTitle && !hasRange) {
+      return res.status(400).json({ error: 'Completá al menos un campo' })
+    }
+
+    // Buscar por disco es otra consulta: el título vive en release-group, no en
+    // el artista. Devuelve a quién pertenece cada disco que matcheó.
+    const search = albumTitle
+      ? await mb.findArtistsByAlbum({
+          album: albumTitle,
+          artist: artistName || null,
+          from: hasRange ? from : null,
+          to: hasRange ? to : null,
+        })
+      : await mb.discoverArtists({
+          artist: artistName || null,
+          from: hasRange ? from : null,
+          to: hasRange ? to : null,
+          offset,
+        })
+
+    const { artists, total, received, filtered, albumByArtist } = search
+    rememberCandidates(artists)
+
+    // Marcar los que ya están: el editor tiene que ver de un vistazo qué le
+    // falta, no una lista donde la mitad ya la cargó.
+    const known = await db.getArtistsByMbIds(artists.map(a => a.id))
+
+    const nextOffset = offset + received
+
+    res.json({
+      total,
+      filtered,
+      offset,
+      // Dónde sigue la próxima página y si queda algo. El cliente no puede
+      // deducirlo de los artistas que recibe: el filtro de género ya los
+      // recortó. La búsqueda por disco no pagina: son pocos y ya vienen
+      // ordenados por relevancia.
+      nextOffset,
+      hasMore: !albumTitle && nextOffset < total,
+      artists: artists.map(a => {
+        const existing = known.get(a.id)
+        return {
+          mbId: a.id,
+          name: a.name,
+          type: mb.normalizeArtistType(a.type),
+          country: a.country || a.area?.name || null,
+          beginYear: a['life-span']?.begin
+            ? parseInt(a['life-span'].begin.substring(0, 4), 10)
+            : null,
+          endYear: a['life-span']?.end
+            ? parseInt(a['life-span'].end.substring(0, 4), 10)
+            : null,
+          tags: (a.tags || []).map(t => t.name).slice(0, 4),
+          matchedAlbum: albumByArtist?.get(a.id) || null,
+          inCatalog: Boolean(existing),
+          hidden: Boolean(existing?.hidden),
+          slug: existing?.slug || null,
+        }
+      }),
+    })
+  } catch (err) {
+    if (err.status === 503) return res.status(503).json({ error: err.message })
+    next(err)
+  }
+})
+
+/**
+ * Guarda los artistas elegidos y les trae los discos de Spotify.
+ *
+ * La ingesta corre en segundo plano y de a uno: son varios artistas por vez y
+ * dispararlas todas juntas contra Spotify no acelera nada. La respuesta vuelve
+ * apenas están los artistas, que es lo que el editor necesita ver.
+ */
+router.post('/discover', requireEditor, async (req, res, next) => {
+  try {
+    const mbIds = Array.isArray(req.body?.mbIds) ? req.body.mbIds : []
+    if (mbIds.length === 0) {
+      return res.status(400).json({ error: 'No seleccionaste ningún artista' })
+    }
+
+    const saved = []
+    const missing = []
+
+    for (const mbId of mbIds) {
+      const entry = discovered.get(mbId)
+      if (!entry) {
+        missing.push(mbId)
+        continue
+      }
+      saved.push(await db.saveArtist(entry.artist))
+    }
+
+    console.log(`[discover] ${saved.length} artistas guardados, ${missing.length} vencidos`)
+    res.json({
+      saved: saved.length,
+      expired: missing.length,
+      artists: saved.map(a => ({ id: a.id, name: a.name, slug: a.slug })),
+    })
+
+    // Después de responder: los discos tardan y nadie está esperándolos.
+    ;(async () => {
+      for (const artist of saved) {
+        await ingestAlbumsInBackground(artist)
+      }
+      console.log(`[discover] ingesta de discos terminada para ${saved.length} artistas`)
+    })()
+  } catch (err) {
+    next(err)
+  }
+})
 
 router.get('/:slugOrMbId', async (req, res, next) => {
   try {
@@ -172,7 +350,24 @@ router.post('/:id/refresh-spotify', requireEditor, async (req, res, next) => {
       await db.updateArtistSpotifyId(artist.id, spotifyId, found.images?.[0]?.url || null)
     }
 
-    const albums = await spotify.getArtistAlbums(spotifyId)
+    let albums = await spotify.getArtistAlbums(spotifyId)
+
+    // El id guardado puede apuntar a un perfil vacío: Spotify tiene duplicados
+    // sin discos y las ingestas viejas se quedaban con el primero que matcheara
+    // el nombre. Si no devuelve nada, vale la pena buscar de nuevo antes de
+    // decir que el artista no tiene discografía.
+    if (albums.length === 0) {
+      const found = await spotify.searchArtist(artist.name)
+      if (found && found.id !== spotifyId) {
+        const better = await spotify.getArtistAlbums(found.id)
+        if (better.length > 0) {
+          console.log(`[refresh spotify] ${artist.name}: perfil corregido ${spotifyId} → ${found.id}`)
+          spotifyId = found.id
+          albums = better
+          await db.updateArtistSpotifyId(artist.id, spotifyId, found.images?.[0]?.url || null)
+        }
+      }
+    }
     let saved = 0
     const errors = []
 

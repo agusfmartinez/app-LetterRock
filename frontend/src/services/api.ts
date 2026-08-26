@@ -100,6 +100,68 @@ export async function importArtistMembers(artistId: string) {
   }
 }
 
+export type Candidate = {
+  mbId: string
+  name: string
+  type: 'group' | 'person' | 'other' | null
+  country: string | null
+  beginYear: number | null
+  endYear: number | null
+  tags: string[]
+  /** El disco que matcheó, cuando se buscó por título. */
+  matchedAlbum: { title: string; date: string | null } | null
+  inCatalog: boolean
+  hidden: boolean
+  slug: string | null
+}
+
+/**
+ * Artistas de rock de AR/UY formados en un período, según MusicBrainz.
+ *
+ * Es la forma de poblar una década: el índice de discos de MusicBrainz no tiene
+ * país, así que no se pueden pedir "los discos argentinos de los 80" de una.
+ * Los artistas sí se pueden, y sus discos entran después por Spotify.
+ */
+export type DiscoverFilters = {
+  artist?: string
+  album?: string
+  from?: number | null
+  to?: number | null
+}
+
+export async function discoverArtists(filters: DiscoverFilters, offset = 0) {
+  const { data } = await api.get('/api/artists/discover', {
+    params: {
+      artist: filters.artist || undefined,
+      album: filters.album || undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      offset,
+    },
+    headers: await authHeaders(),
+  })
+  return data as {
+    total: number
+    filtered: number
+    offset: number
+    nextOffset: number
+    hasMore: boolean
+    artists: Candidate[]
+  }
+}
+
+/** Guarda los elegidos y dispara la ingesta de sus discos en segundo plano. */
+export async function saveDiscovered(mbIds: string[]) {
+  const { data } = await api.post('/api/artists/discover', { mbIds }, {
+    headers: await authHeaders(),
+  })
+  return data as {
+    saved: number
+    expired: number
+    artists: { id: string; name: string; slug: string }[]
+  }
+}
+
 /** Refresca sólo las reproducciones. Cuesta 1 unidad cada 50 temas. */
 export async function refreshYoutubeViews(id: string) {
   const { data } = await api.post(`/api/albums/${id}/youtube/refresh`, null, {
