@@ -66,3 +66,32 @@ export function entrySortKey(entry: any): string {
 export function entryYear(entry: any): number | null {
   return albumYear(entry.album) ?? entry.year ?? null
 }
+
+const RELATIVE = new Intl.RelativeTimeFormat('es-AR', { numeric: 'auto' })
+
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 60 * 60 * 1000],
+  ['month', 30 * 24 * 60 * 60 * 1000],
+  ['day', 24 * 60 * 60 * 1000],
+  ['hour', 60 * 60 * 1000],
+  ['minute', 60 * 1000],
+]
+
+/**
+ * "hace 3 días", "hace 2 meses", "recién".
+ *
+ * Para las marcas de última corrida de las ingestas, donde lo que importa es si
+ * fue hoy o hace medio año, no el minuto exacto. La fecha completa queda en el
+ * `title` de quien lo use.
+ */
+export function timeAgo(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const elapsed = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(elapsed)) return null
+  if (elapsed < 60 * 1000) return 'recién'
+
+  for (const [unit, ms] of UNITS) {
+    if (elapsed >= ms) return RELATIVE.format(-Math.round(elapsed / ms), unit)
+  }
+  return 'recién'
+}

@@ -95,6 +95,8 @@ export async function importArtistMembers(artistId: string) {
     linked: number
     skipped: number
     people: number
+    /** Banda o músico, si la importación lo completó en esta corrida. */
+    artistType: 'group' | 'person' | 'other' | null
   }
 }
 

@@ -122,6 +122,22 @@ export type Person = {
   stages: Member[]
 }
 
+/**
+ * Quién entra en la vista corta de una formación.
+ *
+ * Los de la formación original y los que ya tienen ficha en el catálogo: son
+ * los dos casos en que el nombre significa algo para quien está leyendo. Los
+ * músicos de sesión de una reunión de 2001 son dato de archivo.
+ *
+ * Mismo criterio en la página y en el panel: si fueran distintos, ver a alguien
+ * en una lista y no en la otra no tendría explicación.
+ *
+ * La lista crece sola: cuando un sesionista tenga ficha, sube sin tocar nada.
+ */
+export function isFeatured(person: Person) {
+  return person.isOriginal || Boolean(person.slug)
+}
+
 /** Años que estuvo, sumando todas sus etapas. Una etapa sin fecha cuenta 1. */
 function tenureOf(stage: Member) {
   if (stage.year_from === null) return 1
@@ -389,6 +405,33 @@ export function useDeletePerson() {
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase.from('artist_members').delete().in('id', ids)
       if (error) throw error
+    },
+    onSuccess: invalidate,
+  })
+}
+
+/**
+ * Renombra a un músico en todas sus etapas de una banda.
+ *
+ * El nombre está repetido en cada fila —es el respaldo para los que no tienen
+ * ficha en el catálogo— así que corregirlo en una sola dejaría a la misma
+ * persona con dos nombres y partida en dos en la formación.
+ */
+export function useRenameMember() {
+  const invalidate = useInvalidateMembers()
+
+  return useMutation({
+    mutationFn: async ({ ids, name, manualFieldsById }: any) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from('artist_members')
+          .update({
+            member_name: name,
+            manual_fields: nextManualFields(manualFieldsById[id], { member_name: name }),
+          })
+          .eq('id', id)
+        if (error) throw error
+      }
     },
     onSuccess: invalidate,
   })

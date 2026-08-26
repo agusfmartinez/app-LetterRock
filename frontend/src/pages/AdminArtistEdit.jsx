@@ -15,9 +15,26 @@ import {
 } from '../hooks/useCatalogAdmin'
 import { slugify } from '../hooks/useCollectionAdmin'
 import { linkArtistDiscography, refreshArtistFromSpotify } from '../services/api'
-import { formatReleaseDate } from '../services/dates'
+import { formatReleaseDate, timeAgo } from '../services/dates'
 
 const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+
+/**
+ * Cuándo corrió esta ingesta por última vez.
+ *
+ * `updated_at` no servía: se mueve por cualquier escritura sobre el artista, así
+ * que no distingue "nunca vinculé YouTube" de "le edité la bio ayer".
+ */
+function LastRun({ at }) {
+  if (!at) {
+    return <span className="text-gray-600 text-xs">nunca</span>
+  }
+  return (
+    <span className="text-gray-600 text-xs" title={new Date(at).toLocaleString('es-AR')}>
+      {timeAgo(at)}
+    </span>
+  )
+}
 
 function Field({ label, field, manualFields, onRelease, children }) {
   return (
@@ -254,7 +271,7 @@ function NewAlbumForm({ artistId }) {
  * el artista no tiene discos, así que sin este botón los ya cargados nunca se
  * actualizan.
  */
-function SpotifyRefresh({ artistId }) {
+function SpotifyRefresh({ artist }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -265,7 +282,7 @@ function SpotifyRefresh({ artistId }) {
     setError('')
     setStatus(null)
     try {
-      setStatus(await refreshArtistFromSpotify(artistId))
+      setStatus(await refreshArtistFromSpotify(artist.id))
       invalidate()
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'No se pudo conectar con Spotify')
@@ -276,7 +293,10 @@ function SpotifyRefresh({ artistId }) {
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
-      <h2 className="font-bold text-rock-text text-sm">Spotify</h2>
+      <div className="flex items-baseline gap-2">
+        <h2 className="font-bold text-rock-text text-sm">Spotify</h2>
+        <LastRun at={artist.spotify_refreshed_at} />
+      </div>
       <p className="text-gray-600 text-xs">
         Vuelve a traer título, fecha, precisión de fecha, tipo y portada de todos los
         discos. Los campos que editaste a mano no se tocan.
@@ -301,21 +321,25 @@ function SpotifyRefresh({ artistId }) {
   )
 }
 
-function YoutubeDiscography({ artistId }) {
+function YoutubeDiscography({ artist }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const queryClient = useQueryClient()
+  const invalidate = useInvalidateCatalog()
 
   const run = async () => {
     setBusy(true)
     setError('')
     setStatus(null)
     try {
-      setStatus(await linkArtistDiscography(artistId))
+      setStatus(await linkArtistDiscography(artist.id))
       // Vincular reescribe `media_links`, que es de donde sale el tema
       // destacado y el ranking de reproducciones de la timeline.
       queryClient.invalidateQueries({ queryKey: ['album-media'] })
+      // Y deja la marca de última corrida en el artista, que es lo que lee
+      // esta misma card y el aviso de "sin YouTube" del catálogo.
+      invalidate()
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'No se pudo conectar con YouTube')
     } finally {
@@ -325,7 +349,10 @@ function YoutubeDiscography({ artistId }) {
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
-      <h2 className="font-bold text-rock-text text-sm">YouTube Music</h2>
+      <div className="flex items-baseline gap-2">
+        <h2 className="font-bold text-rock-text text-sm">YouTube Music</h2>
+        <LastRun at={artist.youtube_linked_at} />
+      </div>
       <p className="text-gray-600 text-xs">
         Busca el canal del artista y vincula todos sus discos de una. Los tracklists que
         falten se traen de Spotify en el momento.
@@ -453,9 +480,9 @@ export default function AdminArtistEdit() {
 
           <HiddenToggle artist={data.artist} />
 
-          <SpotifyRefresh artistId={data.artist.id} />
+          <SpotifyRefresh artist={data.artist} />
 
-          <YoutubeDiscography artistId={data.artist.id} />
+          <YoutubeDiscography artist={data.artist} />
 
           <MembersPanel artist={data.artist} />
 

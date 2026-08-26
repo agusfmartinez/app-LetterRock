@@ -5,6 +5,7 @@ import {
   useAdminArtists,
   useHiddenArtistCount,
   useToggleHidden,
+  useUnlinkedArtistCount,
 } from '../hooks/useCatalogAdmin'
 
 function ArtistRow({ artist, hidden }) {
@@ -31,6 +32,9 @@ function ArtistRow({ artist, hidden }) {
           {[artist.country, artist.formed_year].filter(Boolean).join(' · ') || 'sin datos'}
           {artist.manual_fields?.length > 0 && (
             <span className="text-rock-accent"> · {artist.manual_fields.length} campo(s) editado(s)</span>
+          )}
+          {!hidden && !artist.youtube_linked_at && (
+            <span className="text-gray-600" title="Sin esto la timeline no puede destacar un tema"> · sin YouTube</span>
           )}
         </p>
       </div>
@@ -70,6 +74,7 @@ export default function AdminArtists({ hidden = false }) {
   const [search, setSearch] = useState('')
   const { data: artists = [], isLoading } = useAdminArtists(search, hidden)
   const { data: hiddenCount = 0 } = useHiddenArtistCount()
+  const { data: unlinkedCount = 0 } = useUnlinkedArtistCount()
 
   return (
     <RequireEditor>
@@ -88,6 +93,12 @@ export default function AdminArtists({ hidden = false }) {
               ? 'No aparecen en búsquedas ni en la home, tampoco entre los resultados de MusicBrainz. Restaurarlos los devuelve al catálogo.'
               : 'Corregir datos de artistas, discos y canciones. Lo que edites acá queda protegido de la próxima ingesta de Spotify.'}
           </p>
+          {!hidden && unlinkedCount > 0 && (
+            <p className="text-gray-600 text-xs mt-1">
+              {unlinkedCount} {unlinkedCount === 1 ? 'artista' : 'artistas'} sin vincular a
+              YouTube Music: sus discos muestran la playlist entera en vez del tema destacado.
+            </p>
+          )}
         </div>
 
         <input

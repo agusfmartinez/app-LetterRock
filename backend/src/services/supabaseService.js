@@ -104,6 +104,60 @@ async function saveArtist(mbArtist) {
   return data
 }
 
+/**
+ * Completa el tipo de artista sin pisar al editor.
+ *
+ * Se llama al importar la formación, que es el único momento en que se vuelve a
+ * consultar MusicBrainz por un artista ya cargado. Si el editor lo corrigió a
+ * mano queda como está: MusicBrainz clasifica mal a más de uno.
+ */
+async function saveArtistType(artistId, artistType) {
+  if (!artistType) return false
+
+  const { data: artist } = await supabase
+    .from('artists')
+    .select('artist_type, manual_fields')
+    .eq('id', artistId)
+    .single()
+
+  if (!artist) return false
+  if (artist.artist_type === artistType) return false
+  if ((artist.manual_fields || []).includes('artist_type')) return false
+
+  dbLog(`saveArtistType id="${artistId}" type="${artistType}"`)
+  const { error } = await supabase
+    .from('artists')
+    .update({ artist_type: artistType })
+    .eq('id', artistId)
+  if (error) throw error
+  return true
+}
+
+/**
+ * Deja constancia de que una ingesta corrió para este artista.
+ *
+ * Las columnas van por nombre fijo y no por parámetro libre: son parte del
+ * código, no dato del usuario, y así no hay forma de escribir en otra columna
+ * pasando un string raro.
+ */
+const RUN_COLUMNS = {
+  spotify: 'spotify_refreshed_at',
+  youtube: 'youtube_linked_at',
+  members: 'members_imported_at',
+}
+
+async function markArtistRun(artistId, kind) {
+  const column = RUN_COLUMNS[kind]
+  if (!column) throw new Error(`Ingesta desconocida: ${kind}`)
+
+  dbLog(`markArtistRun ${kind} id="${artistId}"`)
+  const { error } = await supabase
+    .from('artists')
+    .update({ [column]: new Date().toISOString() })
+    .eq('id', artistId)
+  if (error) throw error
+}
+
 async function artistsByMbId(mbIds) {
   const ids = [...new Set(mbIds.filter(Boolean))]
   if (ids.length === 0) return new Map()
@@ -400,6 +454,8 @@ module.exports = {
   updateArtistSpotifyId,
   saveTracks,
   saveMembers,
+  saveArtistType,
+  markArtistRun,
   saveMediaLinks,
   getMediaLinks,
   getArtistBySlug,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { roleLabel } from '../../hooks/useArtistMembers'
+import { isFeatured, roleLabel } from '../../hooks/useArtistMembers'
 
 /**
  * Un músico y todo su paso por la banda en una sola fila.
@@ -44,19 +44,6 @@ function PersonRow({ person }) {
     </div>
   )
 }
-
-/**
- * Quién entra en la vista corta.
- *
- * Los de la formación original y los que ya tienen ficha en el catálogo: son
- * los dos casos en que el nombre significa algo para quien llega a la página.
- * Los músicos de sesión de una reunión de 2001 son dato de archivo, no lo
- * primero que hay que leer.
- *
- * La lista crece sola a medida que se cargan artistas: cuando Nito Mestre
- * tenga ficha, sube sin tocar nada.
- */
-const isFeatured = (person) => person.isOriginal || Boolean(person.slug)
 
 export default function MemberList({ people }) {
   const [expanded, setExpanded] = useState(false)

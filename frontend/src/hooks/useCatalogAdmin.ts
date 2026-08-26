@@ -38,7 +38,8 @@ export function useInvalidateCatalog() {
   const queryClient = useQueryClient()
   return () => {
     for (const key of [
-      'admin-artists', 'admin-artists-hidden-count', 'admin-artist',
+      'admin-artists', 'admin-artists-hidden-count',
+      'admin-artists-unlinked-count', 'admin-artist',
       'admin-album', 'artist', 'album', 'collection-section',
     ]) {
       queryClient.invalidateQueries({ queryKey: [key] })
@@ -166,7 +167,7 @@ export function useAdminArtists(search: string, hidden = false) {
     queryFn: async () => {
       let query = supabase
         .from('artists')
-        .select('id, name, slug, image_url, country, formed_year, manual_fields, hidden')
+        .select('id, name, slug, image_url, country, formed_year, manual_fields, hidden, artist_type, youtube_linked_at')
         .eq('hidden', hidden)
         .order('name', { ascending: true })
         .limit(100)
@@ -175,6 +176,27 @@ export function useAdminArtists(search: string, hidden = false) {
 
       const { data } = await query
       return data || []
+    },
+  })
+}
+
+/**
+ * Cuántos artistas visibles nunca se vincularon a YouTube Music.
+ *
+ * Sin ese vínculo no hay reproducciones, y sin reproducciones la timeline no
+ * puede elegir el tema destacado y cae al reproductor del álbum entero. Es la
+ * pregunta que no se podía contestar mirando `updated_at`.
+ */
+export function useUnlinkedArtistCount() {
+  return useQuery({
+    queryKey: ['admin-artists-unlinked-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('artists')
+        .select('id', { count: 'exact', head: true })
+        .eq('hidden', false)
+        .is('youtube_linked_at', null)
+      return count || 0
     },
   })
 }

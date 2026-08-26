@@ -1,26 +1,61 @@
 const axios = require('axios')
+const { translateRole } = require('./roles')
 
 const BASE_URL = 'https://musicbrainz.org/ws/2'
 const USER_AGENT = process.env.MUSICBRAINZ_USER_AGENT || 'LetterRockApp/1.0 (contact@example.com)'
 
 let lastRequestTime = 0
 
-async function rateLimitedRequest(url, params = {}) {
-  const now = Date.now()
-  const elapsed = now - lastRequestTime
-  if (elapsed < 1100) {
-    await new Promise(r => setTimeout(r, 1100 - elapsed))
-  }
-  lastRequestTime = Date.now()
+// MusicBrainz no es rápido con las consultas grandes: las relaciones de un
+// artista con décadas de carrera pasan de diez segundos. Y cuando está cargado
+// contesta 503 pidiendo que reintentes, no es un error definitivo.
+const TIMEOUT_MS = 25000
+const MAX_ATTEMPTS = 3
 
+function isWorthRetrying(err) {
+  if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') return true
+  const status = err.response?.status
+  return status === 503 || status === 429 || status === 502 || status === 504
+}
+
+async function rateLimitedRequest(url, params = {}) {
   const shortUrl = url.replace(BASE_URL, '')
-  console.log(`[MB API] ${new Date().toISOString()} ${shortUrl} ${JSON.stringify(params)}`)
-  const response = await axios.get(url, {
-    params: { ...params, fmt: 'json' },
-    headers: { 'User-Agent': USER_AGENT },
-    timeout: 10000,
-  })
-  return response.data
+  let lastError
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // El límite de un pedido por segundo es de la API entera, así que la espera
+    // va acá y no por reintento: dos llamadas seguidas de distinto origen
+    // también tienen que separarse.
+    const elapsed = Date.now() - lastRequestTime
+    if (elapsed < 1100) {
+      await new Promise(r => setTimeout(r, 1100 - elapsed))
+    }
+    lastRequestTime = Date.now()
+
+    console.log(`[MB API] ${new Date().toISOString()} ${shortUrl} ${JSON.stringify(params)}`)
+    try {
+      const response = await axios.get(url, {
+        params: { ...params, fmt: 'json' },
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: TIMEOUT_MS,
+      })
+      return response.data
+    } catch (err) {
+      lastError = err
+      if (attempt === MAX_ATTEMPTS || !isWorthRetrying(err)) break
+
+      const waitMs = 2000 * attempt
+      console.log(`[MB API] ${shortUrl} falló (${err.code || err.response?.status}), reintento ${attempt + 1} en ${waitMs}ms`)
+      await new Promise(r => setTimeout(r, waitMs))
+    }
+  }
+
+  if (isWorthRetrying(lastError)) {
+    const err = new Error('MusicBrainz no respondió a tiempo. Probá de nuevo en un momento.')
+    err.status = 503
+    throw err
+  }
+  throw lastError
 }
 
 const BLOCKED_GENRES = new Set([
@@ -129,13 +164,22 @@ function collapseMemberRelations(relations, direction, selfMbId) {
     const personMbId = direction === 'backward' ? other.id : selfMbId
     const bandMbId = direction === 'backward' ? selfMbId : other.id
 
-    // La clave se arma siempre desde el músico, no desde quien se esté mirando:
-    // así importar Sui Generis y después Charly García cae en la misma fila en
+    // La clave nombra los dos extremos y el tramo, siempre en el mismo orden.
+    //
+    // Que estén los dos no es redundante: mirando la ficha de una persona el
+    // músico es siempre el mismo, así que sin la banda dos etapas sin fecha
+    // —Charly en Serú Girán y en La Máquina de Hacer Pájaros— colapsarían en
+    // una y una de las dos se perdería.
+    //
+    // Y que el orden no dependa de qué ficha se esté mirando es lo que hace que
+    // importar Sui Generis y después Charly García caiga en la misma fila en
     // vez de crear dos versiones de la misma etapa.
-    const key = `${personMbId}:${rel.begin || ''}:${rel.end || ''}`
+    const key = `${personMbId}:${bandMbId}:${rel.begin || ''}:${rel.end || ''}`
 
     const attributes = rel.attributes || []
-    const roles = attributes.filter(a => a.toLowerCase() !== ORIGINAL_ATTRIBUTE)
+    const roles = attributes
+      .filter(a => a.toLowerCase() !== ORIGINAL_ATTRIBUTE)
+      .map(translateRole)
     const isOriginal = attributes.some(a => a.toLowerCase() === ORIGINAL_ATTRIBUTE)
 
     const existing = stages.get(key)
@@ -186,6 +230,11 @@ async function getMemberRelations(artistId) {
   })
   const relations = data?.relations || []
   return {
+    // Viene en la misma respuesta y decide si la ficha muestra "Formación" o
+    // "Bandas", así que se aprovecha: los artistas cargados antes de que la
+    // columna existiera lo tienen en NULL y no hay otro momento en que se les
+    // vuelva a preguntar a MusicBrainz.
+    artistType: normalizeArtistType(data?.type),
     members: collapseMemberRelations(relations, 'backward', artistId),
     bands: collapseMemberRelations(relations, 'forward', artistId),
   }

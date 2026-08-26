@@ -138,7 +138,11 @@ router.post('/:id/youtube', requireEditor, async (req, res, next) => {
     const artist = await db.getArtistById(req.params.id)
     if (!artist) return res.status(404).json({ error: 'Artista no encontrado' })
 
-    res.json(await ytLinker.linkArtistDiscography(artist, { auto: false }))
+    const result = await ytLinker.linkArtistDiscography(artist, { auto: false })
+    // Sólo si encontró el canal: sin eso no vinculó nada y marcarlo haría creer
+    // que el artista ya está resuelto.
+    if (!result.skipped) await db.markArtistRun(artist.id, 'youtube')
+    res.json(result)
   } catch (err) {
     if (err.status === 429) return res.status(429).json({ error: err.message })
     next(err)
@@ -181,6 +185,7 @@ router.post('/:id/refresh-spotify', requireEditor, async (req, res, next) => {
       }
     }
 
+    await db.markArtistRun(artist.id, 'spotify')
     console.log(`[refresh spotify] ${artist.name}: ${saved}/${albums.length} álbumes actualizados`)
     res.json({ total: albums.length, saved, errors: errors.slice(0, 5) })
   } catch (err) {
@@ -208,11 +213,20 @@ router.post('/:id/members', requireEditor, async (req, res, next) => {
     // Las dos lecturas del mismo pedido: una banda trae sus integrantes, un
     // solista trae las bandas por las que pasó. No hay que saber de antemano
     // cuál es cuál, y un artista que sea las dos cosas se resuelve igual.
-    const { members, bands } = await mb.getMemberRelations(artist.external_mb_id)
+    const { artistType, members, bands } = await mb.getMemberRelations(artist.external_mb_id)
     const stages = [...members, ...bands]
 
+    // Aprovecha el mismo pedido para completar banda/músico en los artistas que
+    // se cargaron antes de que la columna existiera.
+    const typeSaved = await db.saveArtistType(artist.id, artistType)
+
+    // La marca dice "se consultó a MusicBrainz", no "se encontró algo": que no
+    // haya relaciones cargadas allá es un resultado, y sin marcarlo el panel
+    // seguiría diciendo "nunca importado" después de haberlo intentado.
+    await db.markArtistRun(artist.id, 'members')
+
     if (stages.length === 0) {
-      return res.json({ total: 0, saved: 0, linked: 0, skipped: 0, people: 0 })
+      return res.json({ total: 0, saved: 0, linked: 0, skipped: 0, people: 0, artistType: typeSaved ? artistType : null })
     }
 
     const { saved, linked, skipped } = await db.saveMembers(stages)
@@ -222,8 +236,11 @@ router.post('/:id/members', requireEditor, async (req, res, next) => {
       `[members] ${artist.name}: ${saved} etapas guardadas, ${people} músicos, ` +
       `${linked} con ficha, ${skipped} salteadas por banda fuera del catálogo`
     )
-    res.json({ total: stages.length, saved, linked, skipped, people })
+    res.json({ total: stages.length, saved, linked, skipped, people, artistType: typeSaved ? artistType : null })
   } catch (err) {
+    // MusicBrainz caído o lento no es un error de la app: el editor tiene que
+    // leer "probá de nuevo", no un 500 sin explicación.
+    if (err.status === 503) return res.status(503).json({ error: err.message })
     next(err)
   }
 })
