@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AlbumLineup from '../components/common/AlbumLineup'
+import ImageField from '../components/common/ImageField'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import RequireEditor from '../components/common/RequireEditor'
 import {
@@ -53,6 +54,12 @@ function AlbumForm({ album }) {
   const set = (key) => (e) => {
     setSaved(false)
     setForm({ ...form, [key]: e.target.value })
+  }
+
+  // Para los campos que avisan el valor y no el evento, como ImageField.
+  const setValue = (key) => (value) => {
+    setSaved(false)
+    setForm(f => ({ ...f, [key]: value }))
   }
 
   const patch = {}
@@ -115,8 +122,13 @@ function AlbumForm({ album }) {
         </Field>
       </div>
 
-      <Field label="URL de portada" field="cover_url" {...marks}>
-        <input value={form.cover_url} onChange={set('cover_url')} className={`w-full ${INPUT}`} />
+      <Field label="Portada" field="cover_url" {...marks}>
+        <ImageField
+          value={form.cover_url}
+          onChange={setValue('cover_url')}
+          folder="albums"
+          placeholder="URL de portada"
+        />
       </Field>
 
       <Field

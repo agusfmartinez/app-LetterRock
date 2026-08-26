@@ -95,6 +95,19 @@ export default function CollectionSection() {
         ← {collection.title}
       </Link>
 
+      {/* La misma portada que identifica a la época en la tarjeta de la
+          colección. Sin esto sólo se veía en la grilla de la que venís. */}
+      {section.cover_url && (
+        <div className="relative -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden aspect-[16/6] bg-rock-dark">
+          <img
+            src={section.cover_url}
+            alt={section.title}
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-rock-dark to-transparent" />
+        </div>
+      )}
+
       <header className="max-w-2xl">
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-5xl font-black text-rock-text">{section.title}</h1>

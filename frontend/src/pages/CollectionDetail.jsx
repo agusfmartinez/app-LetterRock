@@ -53,6 +53,19 @@ export default function CollectionDetail() {
 
   return (
     <div className="space-y-10">
+      {/* La portada de la colección abre la página. Es el único lugar donde se
+          ve: la de las secciones vive en su tarjeta, más abajo. */}
+      {collection.cover_url && (
+        <div className="relative -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden aspect-[16/6] bg-rock-dark">
+          <img
+            src={collection.cover_url}
+            alt={collection.title}
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-rock-dark to-transparent" />
+        </div>
+      )}
+
       <header className="max-w-2xl">
         {!collection.is_published && (
           <span className="text-xs uppercase tracking-widest text-rock-accent border border-rock-accent rounded px-2 py-0.5">

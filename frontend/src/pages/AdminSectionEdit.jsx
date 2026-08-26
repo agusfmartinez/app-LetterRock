@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ImageField from '../components/common/ImageField'
 import RequireEditor from '../components/common/RequireEditor'
 import {
   describeError,
@@ -66,7 +67,12 @@ function SectionFields({ section }) {
         rows={4}
         className={`w-full ${INPUT}`}
       />
-      <input value={form.cover_url} onChange={set('cover_url')} placeholder="URL de portada de la sección (opcional)" className={`w-full ${INPUT}`} />
+      <ImageField
+        value={form.cover_url}
+        onChange={url => setForm(f => ({ ...f, cover_url: url }))}
+        folder="collections"
+        placeholder="URL de portada de la sección (opcional)"
+      />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
@@ -296,12 +302,11 @@ function EntryEditor({ entry, onClose }) {
       )}
 
       {isNarrative && (
-        <>
-          <input value={form.image_url} onChange={set('image_url')} placeholder="URL de imagen (opcional)" className={`w-full ${INPUT}`} />
-          {form.image_url && (
-            <img src={form.image_url} alt="" className="max-h-32 rounded border border-rock-border" />
-          )}
-        </>
+        <ImageField
+          value={form.image_url}
+          onChange={url => { setSaved(false); setForm(f => ({ ...f, image_url: url })) }}
+          folder="entries"
+        />
       )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -610,7 +615,11 @@ function NewNarrativeForm({ collection, section, entries }) {
         <input value={form.year} onChange={set('year')} placeholder="Año" type="number" className={`w-24 ${INPUT}`} />
       </div>
       <textarea value={form.body} onChange={set('body')} placeholder="Texto" rows={3} className={`w-full ${INPUT}`} />
-      <input value={form.image_url} onChange={set('image_url')} placeholder="URL de imagen (opcional)" className={`w-full ${INPUT}`} />
+      <ImageField
+        value={form.image_url}
+        onChange={url => setForm(f => ({ ...f, image_url: url }))}
+        folder="entries"
+      />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button

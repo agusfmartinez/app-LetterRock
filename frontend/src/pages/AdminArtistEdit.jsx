@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
+import ImageField from '../components/common/ImageField'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import MembersPanel from '../components/common/MembersPanel'
 import RequireEditor from '../components/common/RequireEditor'
@@ -67,6 +68,12 @@ function ArtistForm({ artist }) {
     setForm({ ...form, [key]: e.target.value })
   }
 
+  // Para los campos que avisan el valor y no el evento, como ImageField.
+  const setValue = (key) => (value) => {
+    setSaved(false)
+    setForm(f => ({ ...f, [key]: value }))
+  }
+
   const changed = () => {
     const patch = {}
     if (form.name.trim() !== (artist.name || '')) patch.name = form.name.trim()
@@ -124,8 +131,13 @@ function ArtistForm({ artist }) {
         </Field>
       </div>
 
-      <Field label="URL de imagen" field="image_url" {...marks}>
-        <input value={form.image_url} onChange={set('image_url')} className={`w-full ${INPUT}`} />
+      <Field label="Imagen" field="image_url" {...marks}>
+        <ImageField
+          value={form.image_url}
+          onChange={setValue('image_url')}
+          folder="artists"
+          placeholder="URL de imagen"
+        />
       </Field>
 
       <Field label="Biografía" field="bio" {...marks}>
@@ -254,7 +266,12 @@ function NewAlbumForm({ artistId }) {
           <option value="compilation">Recopilado</option>
         </select>
       </div>
-      <input value={form.cover_url} onChange={set('cover_url')} placeholder="URL de portada (opcional)" className={`w-full ${INPUT}`} />
+      <ImageField
+        value={form.cover_url}
+        onChange={url => setForm(f => ({ ...f, cover_url: url }))}
+        folder="albums"
+        placeholder="URL de portada (opcional)"
+      />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button

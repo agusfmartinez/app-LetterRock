@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import ImageField from '../components/common/ImageField'
 import RequireEditor from '../components/common/RequireEditor'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollection } from '../hooks/useCollections'
@@ -61,11 +62,11 @@ function CollectionFields({ collection }) {
         rows={3}
         className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
       />
-      <input
+      <ImageField
         value={coverUrl}
-        onChange={e => setCoverUrl(e.target.value)}
+        onChange={setCoverUrl}
+        folder="collections"
         placeholder="URL de portada (opcional)"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
       />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}

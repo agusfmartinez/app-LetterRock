@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { useUserFavorites } from '../hooks/useFavorite'
 import { ROLE_LABEL } from '../hooks/useRole'
+import { ACCEPTED_IMAGE_TYPES, avatarFolder, uploadImage } from '../services/storage'
 import { supabase } from '../services/supabaseClient'
+import { useAuthStore } from '../store/authStore'
 
 const FAV_FILTERS = [
   { value: 'all', label: 'Todo' },
@@ -45,10 +47,113 @@ function FavoriteTrackRow({ track }) {
   )
 }
 
+/**
+ * Foto de perfil. Sólo la ve como editable el dueño del perfil.
+ *
+ * La subida va a `avatars/<uid>/`: la policy de Storage compara ese segmento con
+ * `auth.uid()`, así que el path no es cosmético, es lo que impide que alguien
+ * pise la foto de otro.
+ */
+function Avatar({ profile, isOwn }) {
+  const queryClient = useQueryClient()
+  const setUser = useAuthStore(s => s.setUser)
+  const user = useAuthStore(s => s.user)
+  const [error, setError] = useState('')
+
+  const save = async (url) => {
+    setError('')
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ avatar_url: url || null })
+      .eq('id', profile.id)
+
+    if (dbError) {
+      setError(dbError.message)
+      return
+    }
+
+    // El avatar viaja en el store de sesión y embebido en cada review y cada
+    // ítem del feed, así que no alcanza con refrescar el perfil.
+    // Las reviews de artista/álbum no están en React Query (useReviews maneja su
+    // propio estado) y se rearman solas al volver a entrar.
+    if (user?.id === profile.id) setUser({ ...user, avatar_url: url || null })
+    for (const key of ['profile', 'profile-reviews', 'activity-feed']) {
+      queryClient.invalidateQueries({ queryKey: [key] })
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+      <div className="w-16 h-16 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white text-2xl font-bold">
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+        ) : (
+          profile.username[0].toUpperCase()
+        )}
+      </div>
+
+      {isOwn && (
+        <>
+          <AvatarUpload onUploaded={save} hasAvatar={!!profile.avatar_url} onClear={() => save('')} />
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+        </>
+      )}
+    </div>
+  )
+}
+
+function AvatarUpload({ onUploaded, hasAvatar, onClear }) {
+  const inputRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const user = useAuthStore(s => s.user)
+
+  const pick = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    setError('')
+    try {
+      await onUploaded(await uploadImage(file, avatarFolder(user.id)))
+    } catch (err) {
+      setError(err.message || 'No se pudo subir la imagen.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 text-xs">
+      <button
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        className="border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+      >
+        {busy ? 'Subiendo...' : hasAvatar ? 'Cambiar foto' : 'Subir foto'}
+      </button>
+      {hasAvatar && (
+        <button onClick={onClear} className="text-gray-500 hover:text-red-400">
+          Quitar
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES}
+        onChange={pick}
+        className="hidden"
+      />
+      {error && <span className="text-red-400">{error}</span>}
+    </div>
+  )
+}
+
 export default function Profile() {
   const { username } = useParams()
   const [tab, setTab] = useState('reviews')
   const [favFilter, setFavFilter] = useState('all')
+  const sessionUser = useAuthStore(s => s.user)
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', username],
@@ -91,10 +196,8 @@ export default function Profile() {
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Avatar + info */}
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-rock-accent flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-          {profile.username[0].toUpperCase()}
-        </div>
+      <div className="flex items-start gap-4">
+        <Avatar profile={profile} isOwn={sessionUser?.id === profile.id} />
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
