@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { describeError } from './useCollectionAdmin'
 import { supabase } from '../services/supabaseClient'
 
@@ -155,27 +155,70 @@ export function useToggleHidden(table: 'artists' | 'albums') {
   })
 }
 
+export type ArtistSort = 'name-asc' | 'name-desc' | 'recent' | 'oldest'
+
+/**
+ * Los órdenes van por nombre fijo y no armando el `order()` con lo que llegue:
+ * la columna es parte del código, no dato de la pantalla.
+ */
+const ARTIST_SORTS: Record<ArtistSort, { column: string; ascending: boolean }> = {
+  'name-asc': { column: 'name', ascending: true },
+  'name-desc': { column: 'name', ascending: false },
+  recent: { column: 'created_at', ascending: false },
+  oldest: { column: 'created_at', ascending: true },
+}
+
+export const ARTISTS_PAGE_SIZE = 25
+
 /**
  * Listado de artistas para el panel, con búsqueda por nombre.
  * Los ocultos viven en su propia pantalla para no ensuciar el catálogo.
+ *
+ * Pagina en el servidor con `range`: antes traía las primeras 100 filas y
+ * cortaba sin avisar, así que a partir del artista 101 el catálogo mentía —no
+ * había forma de notar que faltaban salvo buscándolos por nombre.
+ *
+ * Devuelve también el total (`count: 'exact'`), que es lo que permite decir en
+ * qué página está y cuántas hay. Cuesta un COUNT por consulta; con un catálogo
+ * de este tamaño es gratis, y es la única forma de que "siguiente" sepa cuándo
+ * dejar de estar habilitado.
  */
-export function useAdminArtists(search: string, hidden = false) {
+export function useAdminArtists(
+  search: string,
+  hidden = false,
+  page = 0,
+  sort: ArtistSort = 'name-asc'
+) {
   const term = search.trim()
+  const { column, ascending } = ARTIST_SORTS[sort] || ARTIST_SORTS['name-asc']
 
   return useQuery({
-    queryKey: ['admin-artists', term, hidden],
+    queryKey: ['admin-artists', term, hidden, page, sort],
+    // Sin esto la lista parpadea a "Cargando..." en cada página. Mantener la
+    // anterior mientras llega la nueva deja el scroll y la altura quietos.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
+      const from = page * ARTISTS_PAGE_SIZE
+
       let query = supabase
         .from('artists')
-        .select('id, name, slug, image_url, country, formed_year, manual_fields, hidden, artist_type, youtube_linked_at')
+        .select(
+          'id, name, slug, image_url, country, formed_year, manual_fields, hidden, artist_type, youtube_linked_at',
+          { count: 'exact' }
+        )
         .eq('hidden', hidden)
-        .order('name', { ascending: true })
-        .limit(100)
+        .order(column, { ascending })
+        // Desempate estable: dos artistas cargados en el mismo segundo, o dos
+        // homónimos, saldrían en orden distinto en cada consulta y uno podría
+        // aparecer en dos páginas y otro en ninguna.
+        .order('id', { ascending: true })
+        .range(from, from + ARTISTS_PAGE_SIZE - 1)
 
       if (term) query = query.ilike('name', `%${term}%`)
 
-      const { data } = await query
-      return data || []
+      const { data, count, error } = await query
+      if (error) throw error
+      return { artists: data || [], total: count || 0 }
     },
   })
 }

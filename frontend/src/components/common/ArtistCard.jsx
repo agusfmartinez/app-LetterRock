@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { isPerson, originLabel } from '../../services/artists'
 
 export default function ArtistCard({ artist }) {
   const navigate = useNavigate()
@@ -25,8 +26,10 @@ export default function ArtistCard({ artist }) {
       </div>
       <div className="p-3">
         <h3 className="font-semibold text-rock-text truncate">{artist.name}</h3>
-        {artist.formed_year && (
-          <p className="text-xs text-gray-500 mt-0.5">Formado en {artist.formed_year}</p>
+        {/* El año de formación ubica a una banda; la fecha de nacimiento de un
+            músico no dice nada de su obra y queda para su ficha. */}
+        {!isPerson(artist) && originLabel(artist) && (
+          <p className="text-xs text-gray-500 mt-0.5">{originLabel(artist)}</p>
         )}
         {artist.avg_rating && (
           <p className="text-xs text-rock-accent mt-1">★ {parseFloat(artist.avg_rating).toFixed(1)}</p>

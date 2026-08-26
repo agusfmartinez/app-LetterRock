@@ -8,6 +8,7 @@ import MemberTimeline from '../components/common/MemberTimeline'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getArtist } from '../services/api'
+import { originLabel } from '../services/artists'
 import { groupByBand, groupByPerson, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
 import { useReviews } from '../hooks/useReviews'
 
@@ -118,9 +119,7 @@ export default function ArtistDetail() {
             <FavoriteButton entityType="artist" entityId={artist.id} />
           </div>
           <p className="text-gray-500 mt-1 text-sm">
-            {artist.country && `${artist.country}`}
-            {artist.country && artist.formed_year && ' · '}
-            {artist.formed_year && `Formado en ${artist.formed_year}`}
+            {[artist.country, originLabel(artist)].filter(Boolean).join(' · ')}
           </p>
           {artist.bio && <Bio text={artist.bio} />}
         </div>

@@ -1,12 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
 import {
+  ARTISTS_PAGE_SIZE,
   useAdminArtists,
   useHiddenArtistCount,
   useToggleHidden,
   useUnlinkedArtistCount,
 } from '../hooks/useCatalogAdmin'
+
+const SORT_LABELS = {
+  'name-asc': 'Nombre A → Z',
+  'name-desc': 'Nombre Z → A',
+  recent: 'Agregados hace poco',
+  oldest: 'Agregados primero',
+}
 
 function ArtistRow({ artist, hidden }) {
   const toggle = useToggleHidden('artists')
@@ -72,9 +80,33 @@ function ArtistRow({ artist, hidden }) {
 /** Sirve al catálogo y a la pantalla de ocultos: cambia sólo el filtro. */
 export default function AdminArtists({ hidden = false }) {
   const [search, setSearch] = useState('')
-  const { data: artists = [], isLoading } = useAdminArtists(search, hidden)
+  const [sort, setSort] = useState('name-asc')
+  const [page, setPage] = useState(0)
+
+  const { data, isLoading, isFetching } = useAdminArtists(search, hidden, page, sort)
+  const artists = data?.artists || []
+  const total = data?.total || 0
   const { data: hiddenCount = 0 } = useHiddenArtistCount()
   const { data: unlinkedCount = 0 } = useUnlinkedArtistCount()
+
+  const lastPage = Math.max(0, Math.ceil(total / ARTISTS_PAGE_SIZE) - 1)
+
+  // Ocultar los últimos de la última página deja la página fuera de rango y la
+  // lista en blanco. Volver atrás sola es menos raro que mostrar el vacío.
+  useEffect(() => {
+    if (!isFetching && page > lastPage) setPage(lastPage)
+  }, [isFetching, page, lastPage])
+
+  // Cualquier cambio de filtro rearma el listado: quedarse en la página 4 de un
+  // resultado que ahora tiene una sola página muestra vacío.
+  const changeSearch = (value) => {
+    setSearch(value)
+    setPage(0)
+  }
+  const changeSort = (value) => {
+    setSort(value)
+    setPage(0)
+  }
 
   return (
     <RequireEditor>
@@ -106,16 +138,27 @@ export default function AdminArtists({ hidden = false }) {
             to="/admin/descubrir"
             className="inline-block text-sm border border-rock-border rounded px-3 py-1.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
           >
-            + Descubrir bandas por década
+            Descubrir bandas
           </Link>
         )}
 
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar artista..."
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-        />
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={search}
+            onChange={e => changeSearch(e.target.value)}
+            placeholder="Buscar artista..."
+            className="flex-1 min-w-[12rem] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          />
+          <select
+            value={sort}
+            onChange={e => changeSort(e.target.value)}
+            className="bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+          >
+            {Object.entries(SORT_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
 
         {isLoading ? (
           <p className="text-gray-500">Cargando...</p>
@@ -128,8 +171,36 @@ export default function AdminArtists({ hidden = false }) {
                 : 'Todavía no hay artistas en la base.'}
           </p>
         ) : (
-          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
-            {artists.map(a => <ArtistRow key={a.id} artist={a} hidden={hidden} />)}
+          <div className="space-y-3">
+            <div className={`bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border ${isFetching ? 'opacity-60' : ''}`}>
+              {artists.map(a => <ArtistRow key={a.id} artist={a} hidden={hidden} />)}
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-500">
+                {page * ARTISTS_PAGE_SIZE + 1}–{page * ARTISTS_PAGE_SIZE + artists.length} de {total}
+              </span>
+
+              {total > ARTISTS_PAGE_SIZE && (
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(p => p - 1)}
+                    disabled={page === 0}
+                    className="border border-rock-border rounded px-2 py-1 text-xs text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-30 disabled:hover:text-gray-400 disabled:hover:border-rock-border"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-gray-500 text-xs">{page + 1} / {lastPage + 1}</span>
+                  <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= lastPage}
+                    className="border border-rock-border rounded px-2 py-1 text-xs text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-30 disabled:hover:text-gray-400 disabled:hover:border-rock-border"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

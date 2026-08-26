@@ -36,6 +36,9 @@ router.get('/', async (req, res, next) => {
         name: a.name,
         slug: slugify(a.name),
         country: a.country || null,
+        // Sin el tipo, la tarjeta trata a un solista como banda y le pone
+        // "Formado en" a su año de nacimiento.
+        artist_type: mb.normalizeArtistType(a.type),
         formed_year: a['life-span']?.begin
           ? parseInt(a['life-span'].begin.substring(0, 4), 10)
           : null,

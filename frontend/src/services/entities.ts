@@ -22,7 +22,7 @@ export async function fetchEntities(refs: EntityRef[]): Promise<Map<string, any>
 
   const [artists, albums, tracks] = await Promise.all([
     artistIds.length
-      ? supabase.from('artists').select('id, name, slug, image_url, formed_year').in('id', artistIds)
+      ? supabase.from('artists').select('id, name, slug, image_url, formed_year, artist_type').in('id', artistIds)
       : Promise.resolve({ data: [] }),
     albumIds.length
       ? supabase.from('albums').select('id, title, cover_url, release_date, album_type').in('id', albumIds)

@@ -105,7 +105,13 @@ function ArtistForm({ artist }) {
         <Field label="País" field="country" {...marks}>
           <input value={form.country} onChange={set('country')} placeholder="AR" className={`w-20 ${INPUT}`} />
         </Field>
-        <Field label="Año de formación" field="formed_year" {...marks}>
+        {/* Sigue el selector de al lado: es la misma columna, y llamarla
+            "formación" cuando el tipo dice músico confunde al que edita. */}
+        <Field
+          label={form.artist_type === 'person' ? 'Año de nacimiento' : 'Año de formación'}
+          field="formed_year"
+          {...marks}
+        >
           <input value={form.formed_year} onChange={set('formed_year')} type="number" className={`w-28 ${INPUT}`} />
         </Field>
         <Field label="Tipo" field="artist_type" {...marks}>
