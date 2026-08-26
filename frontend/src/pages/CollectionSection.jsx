@@ -4,6 +4,7 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
+import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useAlbumMedia } from '../hooks/useTopTracks'
 
 function SectionNav({ collectionSlug, prev, next }) {
@@ -44,6 +45,14 @@ export default function CollectionSection() {
     [data?.entries]
   )
   const { data: albumMedia = {} } = useAlbumMedia(albumIds)
+
+  // La formación de todas las bandas de la página en una sola consulta. Pedirla
+  // por disco eran veinte idas y vueltas al abrir una década.
+  const artistIds = useMemo(
+    () => (data?.entries || []).map(e => e.album?.artist?.id).filter(Boolean),
+    [data?.entries]
+  )
+  const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
 
   const [activeLabel, setActiveLabel] = useState(null)
   const yearRefs = useRef({})
@@ -135,6 +144,7 @@ export default function CollectionSection() {
                     key={e.id}
                     entry={e}
                     media={e.album?.id ? albumMedia[e.album.id] : null}
+                    people={e.album?.artist?.id ? membersByArtist[e.album.artist.id] : null}
                   />
                 ))}
               </section>

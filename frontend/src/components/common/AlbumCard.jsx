@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
+import { albumYear } from '../../services/dates'
 
 export default function AlbumCard({ album }) {
   const navigate = useNavigate()
-  const year = album.release_date ? new Date(album.release_date).getFullYear() : null
+  const year = albumYear(album)
 
   return (
     <div

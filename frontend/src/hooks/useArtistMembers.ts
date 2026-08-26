@@ -255,6 +255,42 @@ export function useBandMembers(groupId?: string) {
 }
 
 /**
+ * La formación de varias bandas de una sola vez.
+ *
+ * La timeline de una década muestra treinta discos, y cada uno necesita saber
+ * quiénes estaban en la banda ese año. Pidiéndolo por disco son veinte idas y
+ * vueltas al abrir la página; así es una.
+ *
+ * Devuelve lo mismo que `useBandMembers` pero indexado por banda, y ya agrupado
+ * por músico para que cada entrada no repita el trabajo.
+ */
+export function useBandMembersMany(artistIds: (string | undefined)[]) {
+  const ids = [...new Set(artistIds.filter(Boolean) as string[])].sort()
+
+  return useQuery({
+    queryKey: ['band-members-many', ids.join(',')],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('artist_members')
+        .select(`${COLUMNS}, member:artists!artist_members_member_id_fkey (id, slug, hidden)`)
+        .in('group_id', ids)
+      if (error) throw error
+
+      const byGroup = new Map<string, Member[]>()
+      for (const row of (data || []) as Member[]) {
+        if (!byGroup.has(row.group_id)) byGroup.set(row.group_id, [])
+        byGroup.get(row.group_id)!.push(row)
+      }
+
+      const grouped: Record<string, Person[]> = {}
+      for (const [groupId, rows] of byGroup) grouped[groupId] = groupByPerson(rows)
+      return grouped
+    },
+  })
+}
+
+/**
  * Las bandas por las que pasó un músico.
  *
  * Se busca por `member_mb_id` y no por `member_id` porque la mayoría de los
@@ -277,10 +313,35 @@ export function useMemberTrajectory(memberMbId?: string | null) {
   })
 }
 
-function useInvalidateMembers() {
+/**
+ * Quiénes estaban en la banda en un año dado.
+ *
+ * Se deriva de las fechas de cada etapa en vez de guardarse por disco. Con una
+ * tabla por álbum, corregir la fecha de salida de un baterista obligaría a
+ * arreglar disco por disco; así se arregla una vez y se acomodan todos los años
+ * que toca.
+ *
+ * Las etapas sin año de entrada quedan afuera: no se puede afirmar que alguien
+ * estaba en 1972 cuando lo único que se sabe es que se fue en 1974.
+ */
+export function lineupAt(people: Person[], year: number | null) {
+  if (!year) return []
+  return people.filter(person =>
+    person.segments.some(seg => seg.from <= year && year <= seg.to)
+  )
+}
+
+/**
+ * Refresca la formación en pantalla.
+ *
+ * Las mutaciones la llaman solas, pero la importación de MusicBrainz va por
+ * REST contra el backend y React Query no se entera: sin esto la card queda
+ * como estaba hasta recargar la página.
+ */
+export function useInvalidateMembers() {
   const queryClient = useQueryClient()
   return () => {
-    for (const key of ['band-members', 'member-trajectory']) {
+    for (const key of ['band-members', 'band-members-many', 'member-trajectory']) {
       queryClient.invalidateQueries({ queryKey: [key] })
     }
   }

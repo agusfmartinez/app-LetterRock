@@ -27,7 +27,14 @@ function nextManualFields(table: Table, current: string[] | null, patch: Record<
   return [...protectedNow]
 }
 
-function useInvalidateCatalog() {
+/**
+ * Refresca el catálogo en pantalla.
+ *
+ * Lo usan las mutaciones, pero también hace falta después de los botones que
+ * hablan con el backend por REST —refrescar Spotify, vincular YouTube—, porque
+ * ahí React Query no ve el cambio y la pantalla queda vieja.
+ */
+export function useInvalidateCatalog() {
   const queryClient = useQueryClient()
   return () => {
     for (const key of [

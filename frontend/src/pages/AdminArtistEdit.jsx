@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import MembersPanel from '../components/common/MembersPanel'
@@ -8,6 +9,7 @@ import {
   useAdminArtist,
   useCatalogUpdate,
   useCreateAlbum,
+  useInvalidateCatalog,
   useReleaseManualField,
   useToggleHidden,
 } from '../hooks/useCatalogAdmin'
@@ -256,6 +258,7 @@ function SpotifyRefresh({ artistId }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const invalidate = useInvalidateCatalog()
 
   const run = async () => {
     setBusy(true)
@@ -263,6 +266,7 @@ function SpotifyRefresh({ artistId }) {
     setStatus(null)
     try {
       setStatus(await refreshArtistFromSpotify(artistId))
+      invalidate()
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'No se pudo conectar con Spotify')
     } finally {
@@ -301,6 +305,7 @@ function YoutubeDiscography({ artistId }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const queryClient = useQueryClient()
 
   const run = async () => {
     setBusy(true)
@@ -308,6 +313,9 @@ function YoutubeDiscography({ artistId }) {
     setStatus(null)
     try {
       setStatus(await linkArtistDiscography(artistId))
+      // Vincular reescribe `media_links`, que es de donde sale el tema
+      // destacado y el ranking de reproducciones de la timeline.
+      queryClient.invalidateQueries({ queryKey: ['album-media'] })
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'No se pudo conectar con YouTube')
     } finally {

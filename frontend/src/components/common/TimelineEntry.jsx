@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import AlbumLineup from './AlbumLineup'
 import FavoriteButton from './FavoriteButton'
 import MediaEmbed from './MediaEmbed'
 import PlatformBadges, { youtubeMusicSearch } from './PlatformBadges'
-import { effectivePrecision, formatReleaseDate } from '../../services/dates'
+import { albumYear, effectivePrecision, formatReleaseDate } from '../../services/dates'
 import { formatPlayCount } from '../../hooks/useTopTracks'
 
 function Paragraphs({ text }) {
@@ -85,31 +86,40 @@ function NarrativeEntry({ entry }) {
   )
 }
 
-function AlbumEntry({ entry, media }) {
+function AlbumEntry({ entry, media, people }) {
   const album = entry.album
   const artist = album?.artist
 
   return (
     <article className="py-10 border-b border-rock-border last:border-0">
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Portada */}
-        <Link
-          to={`/album/${album.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full md:w-56 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block group"
-        >
-          {album.cover_url ? (
-            <img
-              src={album.cover_url}
-              alt={album.title}
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-7xl">💿</div>
-          )}
-        </Link>
+        {/* Portada y formación */}
+        <div className="w-full md:w-56 flex-shrink-0 space-y-3">
+          <Link
+            to={`/album/${album.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full aspect-square rounded-lg overflow-hidden bg-rock-card block group"
+          >
+            {album.cover_url ? (
+              <img
+                src={album.cover_url}
+                alt={album.title}
+                loading="lazy"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-7xl">💿</div>
+            )}
+          </Link>
+
+          {/*
+            Quiénes estaban en la banda el año del disco. Va debajo de la
+            portada y no en la columna de texto: es contexto de la ficha, no
+            parte de lo que la colección tiene para decir sobre el disco.
+          */}
+          <AlbumLineup year={albumYear(album)} variant="badges" people={people} />
+        </div>
 
         {/* Texto */}
         <div className="flex-1 min-w-0 space-y-4">
@@ -219,9 +229,9 @@ function ArtistEntry({ entry }) {
   )
 }
 
-export default function TimelineEntry({ entry, media }) {
+export default function TimelineEntry({ entry, media, people }) {
   if (entry.entry_type === 'album' && entry.album) {
-    return <AlbumEntry entry={entry} media={media} />
+    return <AlbumEntry entry={entry} media={media} people={people} />
   }
   if (entry.entry_type === 'artist' && entry.artist) return <ArtistEntry entry={entry} />
   return <NarrativeEntry entry={entry} />

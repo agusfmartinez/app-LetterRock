@@ -11,6 +11,7 @@ import {
   useCreateMember,
   useDeleteMember,
   useDeletePerson,
+  useInvalidateMembers,
   useMemberTrajectory,
   useUpdateMember,
 } from '../../hooks/useArtistMembers'
@@ -332,6 +333,7 @@ export default function MembersPanel({ artist }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const invalidate = useInvalidateMembers()
 
   const people = groupByPerson(members)
   const bandsPlayedIn = groupByBand(trajectory)
@@ -343,6 +345,7 @@ export default function MembersPanel({ artist }) {
     setStatus(null)
     try {
       setStatus(await importArtistMembers(artist.id))
+      invalidate()
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'No se pudo conectar con MusicBrainz')
     } finally {
@@ -398,7 +401,7 @@ export default function MembersPanel({ artist }) {
           <p className="text-gray-400">
             {status.saved === 0
               ? 'MusicBrainz no tiene formaciones cargadas para este artista.'
-              : `${status.saved} etapas de ${status.people} músicos · ${status.linked} con ficha en el catálogo`}
+              : `${status.saved} ${status.saved === 1 ? 'etapa' : 'etapas'} de ${status.people} ${status.people === 1 ? 'músico' : 'músicos'} · ${status.linked} con ficha en el catálogo`}
           </p>
           {status.skipped > 0 && (
             <p className="text-gray-600">

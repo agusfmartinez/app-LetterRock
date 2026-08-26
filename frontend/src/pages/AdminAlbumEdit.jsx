@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import AlbumLineup from '../components/common/AlbumLineup'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import RequireEditor from '../components/common/RequireEditor'
 import {
@@ -314,6 +315,30 @@ export default function AdminAlbumEdit() {
           <h1 className="text-2xl font-bold text-rock-text">{data.album.title}</h1>
 
           <AlbumForm key={data.album.id} album={data.album} />
+
+          {/*
+            Formación del año del disco. Está acá para poder chequear que las
+            fechas de las etapas den la alineación correcta: si falta o sobra
+            alguien, el error está en el artista, no en el álbum.
+          */}
+          {(() => {
+            const year = data.album.release_date
+              ? Number(data.album.release_date.slice(0, 4))
+              : null
+            if (!year) return null
+            return (
+              <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
+                <h2 className="font-bold text-rock-text text-sm">
+                  Formación en {year}
+                </h2>
+                <AlbumLineup
+                  artistId={data.album.artist?.id}
+                  year={year}
+                  editHref={`/admin/artista/${data.album.artist?.id}`}
+                />
+              </div>
+            )
+          })()}
 
           <div>
             <h2 className="text-lg font-bold text-rock-text mb-1">

@@ -9,6 +9,7 @@ import { formatPlayCount } from '../hooks/useTopTracks'
 import CommentThread from '../components/common/CommentThread'
 import CommentForm from '../components/forms/CommentForm'
 import { getAlbum } from '../services/api'
+import { albumYear } from '../services/dates'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 
@@ -83,7 +84,7 @@ export default function TrackDetail() {
   if (isLoading || (!track && resolvedAlbumId)) return <p className="text-gray-500">Cargando...</p>
   if (!track) return <p className="text-red-400">Canción no encontrada.</p>
 
-  const year = album?.release_date ? new Date(album.release_date).getFullYear() : null
+  const year = albumYear(album)
 
   return (
     <div className="space-y-10">

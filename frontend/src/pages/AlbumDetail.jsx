@@ -1,11 +1,13 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import AlbumLineup from '../components/common/AlbumLineup'
 import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getAlbum } from '../services/api'
+import { albumYear } from '../services/dates'
 import { useReviews } from '../hooks/useReviews'
 
 export default function AlbumDetail() {
@@ -29,7 +31,7 @@ export default function AlbumDetail() {
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!album) return <p className="text-red-400">Álbum no encontrado.</p>
 
-  const year = album.release_date ? new Date(album.release_date).getFullYear() : null
+  const year = albumYear(album)
 
   return (
     <div className="space-y-10">
@@ -74,6 +76,9 @@ export default function AlbumDetail() {
           </div>
         </div>
       </div>
+
+      {/* Formación del año del disco. Derivada de las fechas del artista. */}
+      <AlbumLineup artistId={artist?.id} year={year} variant="badges" />
 
       {/* Descripción */}
       {album.description && (
