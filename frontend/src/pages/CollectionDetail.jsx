@@ -53,6 +53,13 @@ export default function CollectionDetail() {
 
   return (
     <div className="space-y-10">
+      <Link
+        to="/colecciones"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-rock-accent text-sm transition-colors"
+      >
+        ← Colecciones
+      </Link>
+
       {/* La portada de la colección abre la página. Es el único lugar donde se
           ve: la de las secciones vive en su tarjeta, más abajo. */}
       {collection.cover_url && (

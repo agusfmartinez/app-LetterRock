@@ -155,7 +155,17 @@ export function useCollectionSection(slug: string | undefined, sectionSlug: stri
   })
 }
 
-/** Todas las colecciones publicadas (los editores ven también los borradores). */
+/**
+ * Todas las colecciones publicadas (los editores ven también los borradores).
+ *
+ * Quién ve qué lo decide RLS (`is_published OR is_editor()`), no esta consulta:
+ * filtrar acá además sería una segunda regla que puede quedar desincronizada de
+ * la de la base.
+ *
+ * Trae de paso cuántas secciones tiene cada una, en una sola consulta más. Es
+ * lo que la portada de la colección necesita para no prometer una timeline
+ * vacía.
+ */
 export function useCollections() {
   return useQuery({
     queryKey: ['collections'],
@@ -164,7 +174,21 @@ export function useCollections() {
         .from('collections')
         .select('*')
         .order('created_at', { ascending: true })
-      return data || []
+
+      const list = data || []
+      if (list.length === 0) return []
+
+      const { data: sections } = await supabase
+        .from('collection_sections')
+        .select('collection_id')
+        .in('collection_id', list.map(c => c.id))
+
+      const counts = new Map<string, number>()
+      for (const s of sections || []) {
+        counts.set(s.collection_id, (counts.get(s.collection_id) || 0) + 1)
+      }
+
+      return list.map(c => ({ ...c, section_count: counts.get(c.id) || 0 }))
     },
   })
 }

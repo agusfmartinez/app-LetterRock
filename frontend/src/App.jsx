@@ -10,6 +10,7 @@ import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
+import Collections from './pages/Collections'
 import CollectionDetail from './pages/CollectionDetail'
 import CollectionSection from './pages/CollectionSection'
 import AdminCollections from './pages/AdminCollections'
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/album/:id" element={<AlbumDetail />} />
           <Route path="/musico/:mbId" element={<MemberDetail />} />
           <Route path="/track/:id" element={<TrackDetail />} />
+          <Route path="/colecciones" element={<Collections />} />
           <Route path="/coleccion/:slug" element={<CollectionDetail />} />
           <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
           <Route path="/user/:username" element={<Profile />} />

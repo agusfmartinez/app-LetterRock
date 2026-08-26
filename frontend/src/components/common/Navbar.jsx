@@ -21,11 +21,13 @@ export default function Navbar() {
           🎸 LetterRock
         </Link>
 
+        {/* Al índice y no a una colección con el slug escrito acá: con dos
+            colecciones cargadas, a la segunda no se llegaba desde ningún lado. */}
         <Link
-          to="/coleccion/historia-del-rock-argentino"
+          to="/colecciones"
           className="hidden sm:block text-sm text-gray-300 hover:text-rock-accent flex-shrink-0"
         >
-          Historia
+          Colecciones
         </Link>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-md">
