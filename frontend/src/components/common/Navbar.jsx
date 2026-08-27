@@ -30,12 +30,23 @@ export default function Navbar() {
           Colecciones
         </Link>
 
+        {/* Sólo con sesión: sin cuenta no se puede seguir a nadie, así que el
+            directorio no lleva a ninguna acción. */}
+        {user && (
+          <Link
+            to="/usuarios"
+            className="hidden sm:block text-sm text-gray-300 hover:text-rock-accent flex-shrink-0"
+          >
+            Usuarios
+          </Link>
+        )}
+
         <form onSubmit={handleSearch} className="flex-1 max-w-md">
           <input
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar bandas, álbumes..."
+            placeholder="Buscar bandas, artistas o usuarios..."
             className="w-full bg-rock-dark border border-rock-border rounded px-3 py-1.5 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
           />
         </form>

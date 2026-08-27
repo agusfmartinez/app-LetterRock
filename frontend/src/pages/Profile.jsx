@@ -5,6 +5,8 @@ import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { useUserFavorites } from '../hooks/useFavorite'
+import FollowButton from '../components/common/FollowButton'
+import { useFollow, useUserProfiles } from '../hooks/useFollows'
 import { ROLE_LABEL } from '../hooks/useRole'
 import { ACCEPTED_IMAGE_TYPES, avatarFolder, uploadImage } from '../services/storage'
 import { supabase } from '../services/supabaseClient'
@@ -149,6 +151,42 @@ function AvatarUpload({ onUploaded, hasAvatar, onClear }) {
   )
 }
 
+/**
+ * Seguidores o seguidos, como filas clickeables.
+ *
+ * Los ids salen de `follows` y los perfiles de una segunda consulta: la tabla
+ * tiene dos claves foráneas a `users` y PostgREST no adivina cuál embeber.
+ */
+function UserList({ ids, empty }) {
+  const { data: users = [], isLoading } = useUserProfiles(ids)
+
+  if (ids.length === 0) return <p className="text-gray-500 text-sm">{empty}</p>
+  if (isLoading) return <p className="text-gray-500 text-sm">Cargando...</p>
+
+  return (
+    <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+      {users.map(u => (
+        <div key={u.id} className="flex items-center gap-3 p-3">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white font-bold flex-shrink-0">
+            {u.avatar_url ? (
+              <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+            ) : (
+              u.username[0].toUpperCase()
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <Link to={`/user/${u.username}`} className="text-rock-text font-medium hover:text-rock-accent">
+              {u.username}
+            </Link>
+            {u.bio && <p className="text-gray-500 text-xs truncate">{u.bio}</p>}
+          </div>
+          <FollowButton userId={u.id} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Profile() {
   const { username } = useParams()
   const [tab, setTab] = useState('reviews')
@@ -182,6 +220,7 @@ export default function Profile() {
   })
 
   const { data: favorites = [], isLoading: loadingFavorites } = useUserFavorites(profile?.id)
+  const follow = useFollow(profile?.id)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!profile) return <p className="text-red-400">Usuario no encontrado.</p>
@@ -199,24 +238,35 @@ export default function Profile() {
       <div className="flex items-start gap-4">
         <Avatar profile={profile} isOwn={sessionUser?.id === profile.id} />
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
             {profile.role && profile.role !== 'user' && (
               <span className="text-xs uppercase tracking-widest px-2 py-0.5 rounded border border-rock-accent text-rock-accent">
                 {ROLE_LABEL[profile.role]}
               </span>
             )}
+            <FollowButton userId={profile.id} />
           </div>
           {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
           <p className="text-gray-500 text-xs mt-1">
-            {reviews.length} opiniones · {favorites.length} favoritos
+            {reviews.length} opiniones · {favorites.length} favoritos ·{' '}
+            <button
+              onClick={() => setTab('seguidores')}
+              className="hover:text-rock-accent"
+            >
+              {follow.followerCount} {follow.followerCount === 1 ? 'seguidor' : 'seguidores'}
+            </button>
+            {' · '}
+            <button onClick={() => setTab('siguiendo')} className="hover:text-rock-accent">
+              {follow.followingCount} siguiendo
+            </button>
           </p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-rock-border">
-        {['reviews', 'favoritos'].map(t => (
+        {['reviews', 'favoritos', 'seguidores', 'siguiendo'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -294,6 +344,20 @@ export default function Profile() {
             </>
           )}
         </div>
+      )}
+
+      {tab === 'seguidores' && (
+        <UserList
+          ids={follow.followerIds}
+          empty={follow.isSelf ? 'Todavía no te sigue nadie.' : 'Todavía no lo sigue nadie.'}
+        />
+      )}
+
+      {tab === 'siguiendo' && (
+        <UserList
+          ids={follow.followingIds}
+          empty={follow.isSelf ? 'Todavía no seguís a nadie.' : 'Todavía no sigue a nadie.'}
+        />
       )}
     </div>
   )

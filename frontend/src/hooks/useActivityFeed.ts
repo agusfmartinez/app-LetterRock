@@ -19,29 +19,44 @@ export type Activity = {
 const USER_SELECT = 'user:users(username, avatar_url)'
 
 /**
- * Feed global: últimas reviews, favoritos y comentarios de toda la comunidad,
- * mezclados por fecha. Global y no de follows porque todavía no hay red de usuarios.
+ * Últimas reviews, favoritos y comentarios, mezclados por fecha.
+ *
+ * Con `userIds` queda restringido a esas personas —el feed de a quiénes seguís—
+ * y sin él muestra a toda la comunidad. Un array vacío no es lo mismo que no
+ * pasar nada: significa "seguís a cero personas", y ahí el feed es vacío de
+ * verdad, no global.
  */
-export function useActivityFeed(limit = 20) {
+export function useActivityFeed(limit = 20, userIds?: string[]) {
   return useQuery({
-    queryKey: ['activity-feed', limit],
+    queryKey: ['activity-feed', limit, userIds ? [...userIds].sort() : null],
     queryFn: async (): Promise<Activity[]> => {
+      if (userIds && userIds.length === 0) return []
+
+      const scope = <T>(query: T): T =>
+        userIds ? ((query as any).in('user_id', userIds) as T) : query
+
       const [reviews, favorites, comments] = await Promise.all([
-        supabase
-          .from('reviews')
-          .select(`id, user_id, entity_type, entity_id, rating, text, created_at, ${USER_SELECT}`)
-          .order('created_at', { ascending: false })
-          .limit(limit),
-        supabase
-          .from('favorites')
-          .select(`id, user_id, entity_type, entity_id, created_at, ${USER_SELECT}`)
-          .order('created_at', { ascending: false })
-          .limit(limit),
-        supabase
-          .from('comments')
-          .select(`id, user_id, entity_type, entity_id, body, created_at, ${USER_SELECT}`)
-          .order('created_at', { ascending: false })
-          .limit(limit),
+        scope(
+          supabase
+            .from('reviews')
+            .select(`id, user_id, entity_type, entity_id, rating, text, created_at, ${USER_SELECT}`)
+            .order('created_at', { ascending: false })
+            .limit(limit)
+        ),
+        scope(
+          supabase
+            .from('favorites')
+            .select(`id, user_id, entity_type, entity_id, created_at, ${USER_SELECT}`)
+            .order('created_at', { ascending: false })
+            .limit(limit)
+        ),
+        scope(
+          supabase
+            .from('comments')
+            .select(`id, user_id, entity_type, entity_id, body, created_at, ${USER_SELECT}`)
+            .order('created_at', { ascending: false })
+            .limit(limit)
+        ),
       ])
 
       const events: Activity[] = [

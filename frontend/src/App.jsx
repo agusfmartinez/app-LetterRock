@@ -11,6 +11,7 @@ import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
+import Users from './pages/Users'
 import Collections from './pages/Collections'
 import CollectionDetail from './pages/CollectionDetail'
 import CollectionSection from './pages/CollectionSection'
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/colecciones" element={<Collections />} />
             <Route path="/coleccion/:slug" element={<CollectionDetail />} />
             <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
+            <Route path="/usuarios" element={<Users />} />
             <Route path="/user/:username" element={<Profile />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/colecciones" element={<AdminCollections />} />
