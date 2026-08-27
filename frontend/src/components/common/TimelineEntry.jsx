@@ -18,16 +18,23 @@ function Paragraphs({ text }) {
 }
 
 /**
- * El año ya va en el encabezado del grupo, así que acá sólo se muestra la fecha
- * cuando aporta algo más: el mes o el día exacto.
+ * La fecha de edición del disco.
+ *
+ * En una timeline el año ya está en el encabezado del grupo, así que repetirlo
+ * es ruido y sólo se muestra lo que agrega: el mes o el día exacto. En una lista
+ * o un ranking no hay encabezados —van de corrido— y sin esto el disco queda sin
+ * ninguna fecha a la vista.
  */
-function PreciseDate({ album }) {
+function PreciseDate({ album, standalone = false }) {
   const precision = effectivePrecision(album)
-  if (precision !== 'day' && precision !== 'month') return null
+  if (!standalone && precision !== 'day' && precision !== 'month') return null
+
+  const label = formatReleaseDate(album)
+  if (!label) return null
 
   return (
     <p className="text-rock-accent text-xs font-bold tracking-widest uppercase">
-      {formatReleaseDate(album)}
+      {label}
     </p>
   )
 }
@@ -65,10 +72,17 @@ function TopTracks({ tracks }) {
 }
 
 /** Bloque de texto suelto, sin disco ni banda asociada. */
-function NarrativeEntry({ entry }) {
+function NarrativeEntry({ entry, standalone = false }) {
   return (
     <article className="py-10 border-b border-rock-border last:border-0">
       <div className="max-w-2xl">
+        {/* Mismo caso que la fecha del disco: fuera de una timeline no hay
+            encabezado de año que lo diga. */}
+        {standalone && entry.year && (
+          <p className="text-rock-accent text-xs font-bold tracking-widest uppercase mb-2">
+            {entry.year}
+          </p>
+        )}
         {entry.image_url && (
           <img
             src={entry.image_url}
@@ -86,7 +100,7 @@ function NarrativeEntry({ entry }) {
   )
 }
 
-function AlbumEntry({ entry, media, people }) {
+function AlbumEntry({ entry, media, people, standalone = false }) {
   const album = entry.album
   const artist = album?.artist
 
@@ -124,7 +138,7 @@ function AlbumEntry({ entry, media, people }) {
         {/* Texto */}
         <div className="flex-1 min-w-0 space-y-4">
           <div>
-            <PreciseDate album={album} />
+            <PreciseDate album={album} standalone={standalone} />
             <Link
               to={`/album/${album.id}`}
               target="_blank"
@@ -229,10 +243,14 @@ function ArtistEntry({ entry }) {
   )
 }
 
-export default function TimelineEntry({ entry, media, people }) {
+/**
+ * `standalone` = esta entrada se lee sola, sin el encabezado de año que la
+ * timeline pone arriba de cada grupo. Lo usan las listas y los rankings.
+ */
+export default function TimelineEntry({ entry, media, people, standalone = false }) {
   if (entry.entry_type === 'album' && entry.album) {
-    return <AlbumEntry entry={entry} media={media} people={people} />
+    return <AlbumEntry entry={entry} media={media} people={people} standalone={standalone} />
   }
   if (entry.entry_type === 'artist' && entry.artist) return <ArtistEntry entry={entry} />
-  return <NarrativeEntry entry={entry} />
+  return <NarrativeEntry entry={entry} standalone={standalone} />
 }

@@ -1,6 +1,52 @@
+import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import TimelineEntry from '../components/common/TimelineEntry'
+import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useCollection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
+import { useAlbumMedia } from '../hooks/useTopTracks'
+
+/**
+ * Las entradas de una lista o un ranking, de corrido.
+ *
+ * Reusa la misma tarjeta que la timeline: el disco se lee igual, con su texto,
+ * su reproductor y su formación. Lo único que cambia es qué manda el orden, y en
+ * un ranking, el número gigante al costado.
+ */
+function FlatEntries({ entries, isRanking }) {
+  const albumIds = useMemo(() => entries.map(e => e.album?.id).filter(Boolean), [entries])
+  const { data: albumMedia = {} } = useAlbumMedia(albumIds)
+
+  const artistIds = useMemo(
+    () => entries.map(e => e.album?.artist?.id).filter(Boolean),
+    [entries]
+  )
+  const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
+
+  return (
+    <div>
+      {entries.map((entry, i) => (
+        <div key={entry.id} className="flex gap-4 md:gap-6">
+          {isRanking && (
+            <div className="pt-10 flex-shrink-0 w-12 md:w-20 text-right">
+              <span className="text-3xl md:text-5xl font-black text-rock-accent tabular-nums">
+                {entry.rank ?? i + 1}
+              </span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <TimelineEntry
+              entry={entry}
+              media={entry.album?.id ? albumMedia[entry.album.id] : null}
+              people={entry.album?.artist?.id ? membersByArtist[entry.album.artist.id] : null}
+              standalone
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function SectionCard({ collectionSlug, section }) {
   return (
@@ -49,7 +95,9 @@ export default function CollectionDetail() {
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!data) return <p className="text-red-400">Colección no encontrada.</p>
 
-  const { collection, sections } = data
+  const { collection, sections, entries } = data
+  const isTimeline = collection.type === 'timeline'
+  const isRanking = collection.type === 'ranking'
 
   return (
     <div className="space-y-10">
@@ -95,7 +143,13 @@ export default function CollectionDetail() {
         )}
       </header>
 
-      {sections.length === 0 ? (
+      {!isTimeline ? (
+        entries.length === 0 ? (
+          <p className="text-gray-500 text-sm">Esta colección todavía no tiene discos.</p>
+        ) : (
+          <FlatEntries entries={entries} isRanking={isRanking} />
+        )
+      ) : sections.length === 0 ? (
         <p className="text-gray-500 text-sm">Esta colección todavía no tiene secciones.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

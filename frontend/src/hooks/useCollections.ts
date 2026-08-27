@@ -3,7 +3,7 @@ import { entrySortKey, entryYear } from '../services/dates'
 import { supabase } from '../services/supabaseClient'
 
 const ENTRY_SELECT = `
-  id, entry_type, title, body_text, year, rank, source, position, section_id, image_url,
+  id, entry_type, title, body_text, year, rank, position, section_id, image_url,
   album:albums(id, title, cover_url, release_date, release_date_precision, album_type,
                description, external_spotify_id, artist:artists(id, name, slug)),
   artist:artists(id, name, slug, image_url, formed_year)
@@ -75,7 +75,39 @@ export function groupEntriesByYear(entries: any[]): YearGroup[] {
   return groups
 }
 
-/** Colección + sus secciones + cuántas entries tiene cada una. */
+/**
+ * Orden de una colección sin épocas.
+ *
+ * En un ranking manda el puesto y los que todavía no lo tienen van al final:
+ * un `rank` vacío es "sin puesto asignado", no "puesto cero". En una lista el
+ * orden lo pone el editor con `position`, y ahí la fecha del disco no importa
+ * —justamente esa es la diferencia con una timeline—.
+ */
+export function sortFlatEntries(entries: any[], type: string): any[] {
+  return [...entries].sort((a, b) => {
+    if (type === 'ranking') {
+      const ra = a.rank ?? Infinity
+      const rb = b.rank ?? Infinity
+      if (ra !== rb) return ra - rb
+    }
+    const pa = a.position || 0
+    const pb = b.position || 0
+    if (pa !== pb) return pa - pb
+    return String(a.created_at).localeCompare(String(b.created_at))
+  })
+}
+
+/**
+ * Una colección con lo que corresponda según su tipo.
+ *
+ * Una timeline se lee por épocas, así que trae sus secciones y cuántas entradas
+ * tiene cada una. Una lista o un ranking no tienen épocas: se leen de corrido,
+ * y ahí lo que hace falta son las entradas completas.
+ *
+ * Las entradas se piden por `collection_id` y no por "sin sección": las listas
+ * y rankings que se armaron antes de que existiera esta distinción tienen sus
+ * discos colgando de una sección, y filtrarlos los dejaría vacíos.
+ */
 export function useCollection(slug: string | undefined) {
   return useQuery({
     queryKey: ['collection', slug],
@@ -88,6 +120,8 @@ export function useCollection(slug: string | undefined) {
 
       if (!collection) return null
 
+      const isTimeline = collection.type === 'timeline'
+
       const [{ data: sections }, { data: entries }] = await Promise.all([
         supabase
           .from('collection_sections')
@@ -96,18 +130,19 @@ export function useCollection(slug: string | undefined) {
           .order('position', { ascending: true }),
         supabase
           .from('collection_entries')
-          .select('id, section_id')
+          .select(isTimeline ? 'id, section_id' : `${ENTRY_SELECT}, created_at`)
           .eq('collection_id', collection.id),
       ])
 
       const counts = new Map<string, number>()
       for (const e of entries || []) {
-        counts.set(e.section_id, (counts.get(e.section_id) || 0) + 1)
+        counts.set((e as any).section_id, (counts.get((e as any).section_id) || 0) + 1)
       }
 
       return {
         collection,
         sections: (sections || []).map(s => ({ ...s, entry_count: counts.get(s.id) || 0 })),
+        entries: isTimeline ? [] : sortFlatEntries(entries || [], collection.type),
       }
     },
     enabled: !!slug,

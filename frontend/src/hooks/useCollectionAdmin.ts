@@ -105,6 +105,51 @@ export function useCollectionAdmin() {
     }),
 
     /**
+     * Saca las entradas de sus épocas y borra las épocas vacías.
+     *
+     * Para las listas y rankings que se cargaron cuando el único editor era el
+     * de sección: sus discos quedaron colgando de una época que ya no significa
+     * nada. Primero se despega la entrada y recién después se borra la sección,
+     * porque `section_id` cascadea: borrarla con entradas adentro se las lleva
+     * puestas.
+     */
+    flattenCollection: useMutation({
+      mutationFn: async (collectionId: string) => {
+        await run(
+          supabase
+            .from('collection_entries')
+            .update({ section_id: null })
+            .eq('collection_id', collectionId)
+        )
+        await run(
+          supabase.from('collection_sections').delete().eq('collection_id', collectionId)
+        )
+      },
+      ...opts,
+    }),
+
+    /**
+     * Numera un ranking de 1 a N en el orden en que vienen las entradas.
+     *
+     * El puesto no se guarda como lo escribe el editor: se guarda la secuencia
+     * completa. Si alguien manda el segundo al séptimo lugar, los del medio
+     * suben uno; si escribe un número más grande que la cantidad de discos,
+     * queda último. Así no hay huecos ni dos discos en el mismo puesto, que es
+     * lo único que un ranking no puede permitirse.
+     */
+    setRanks: useMutation({
+      mutationFn: async (entries: any[]) => {
+        for (let i = 0; i < entries.length; i++) {
+          if (entries[i].rank === i + 1) continue // ya está en su lugar
+          await run(
+            supabase.from('collection_entries').update({ rank: i + 1 }).eq('id', entries[i].id)
+          )
+        }
+      },
+      ...opts,
+    }),
+
+    /**
      * Fija el orden de las entradas de un año, en el orden en que vienen.
      *
      * Escribe 1..n y no 0..n-1 a propósito: el 0 es la marca de "este año nunca
@@ -144,20 +189,28 @@ export const EMPTY_ALBUM_FILTERS: AlbumFilters = {
 }
 
 /**
- * Búsqueda de álbumes para cargar en una sección. No corre sola: el editor
- * arma los filtros y dispara la consulta, así la pantalla no arranca con
- * cientos de discos que nadie pidió.
+ * Búsqueda de álbumes para cargar. No corre sola: el editor arma los filtros y
+ * dispara la consulta, así la pantalla no arranca con cientos de discos que
+ * nadie pidió. Los que ya están cargados se descartan del resultado.
  *
- * Los álbumes ya cargados en la sección se descartan del resultado.
+ * `scope` es la sección cuando la colección tiene épocas, y la colección entera
+ * cuando no (una lista o un ranking cargan sus discos sin sección). Lo único que
+ * cambia es contra qué se pregunta "esto ya está cargado".
  */
-export function useAlbumSearch(section: any, filters: AlbumFilters, enabled: boolean) {
+export function useAlbumSearch(
+  scope: { sectionId?: string | null; collectionId?: string | null },
+  filters: AlbumFilters,
+  enabled: boolean
+) {
+  const { sectionId = null, collectionId = null } = scope || {}
+
   return useQuery({
-    queryKey: ['album-search', section?.id, filters],
+    queryKey: ['album-search', sectionId, collectionId, filters],
     queryFn: async () => {
-      const { data: existing } = await supabase
-        .from('collection_entries')
-        .select('album_id')
-        .eq('section_id', section.id)
+      const takenQuery = supabase.from('collection_entries').select('album_id')
+      const { data: existing } = await (sectionId
+        ? takenQuery.eq('section_id', sectionId)
+        : takenQuery.eq('collection_id', collectionId))
       const taken = new Set((existing || []).map((e: any) => e.album_id).filter(Boolean))
 
       // El filtro por banda se resuelve en dos pasos y no como filtro sobre la
@@ -189,6 +242,6 @@ export function useAlbumSearch(section: any, filters: AlbumFilters, enabled: boo
       if (error) throw error
       return (data || []).filter((a: any) => !taken.has(a.id))
     },
-    enabled: enabled && !!section?.id,
+    enabled: enabled && (!!sectionId || !!collectionId),
   })
 }

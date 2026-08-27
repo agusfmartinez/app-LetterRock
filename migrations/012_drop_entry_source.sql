@@ -1,0 +1,21 @@
+-- ============================================
+-- 012 — Se va `collection_entries.source`
+--
+-- La columna existía desde la 002, junto con `rank`, para los rankings: la idea
+-- era anotar de dónde salía cada puesto.
+--
+-- Al usarla quedó claro que el dato no es de la entrada sino de la colección
+-- entera —"los 100 mejores según Rolling Stone" es de la lista, no de cada
+-- disco—, y tenerla por entrada permitía que cada puesto dijera una fuente
+-- distinta sin que nada lo impidiera. Eso fue exactamente lo que pasó en la
+-- primera prueba.
+--
+-- No se reemplaza por una columna en `collections`: la descripción de la
+-- colección ya es texto libre y ahí se aclara, sin sumar un campo más que
+-- mantener.
+--
+-- El frontend ya no la lee ni la escribe, así que se puede correr cuando sea.
+-- Correr en el SQL Editor de Supabase.
+-- ============================================
+
+ALTER TABLE collection_entries DROP COLUMN IF EXISTS source;

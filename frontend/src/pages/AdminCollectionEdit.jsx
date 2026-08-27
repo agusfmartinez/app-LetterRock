@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import RequireEditor from '../components/common/RequireEditor'
+import {
+  AlbumSearchPanel,
+  EntriesFlat,
+  EntryEditor,
+  NewNarrativeForm,
+} from '../components/common/CollectionEntryEditor'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollection } from '../hooks/useCollections'
 
@@ -249,6 +255,109 @@ function SectionRow({ collection, section }) {
   )
 }
 
+
+/**
+ * Carga de una colección sin épocas.
+ *
+ * Es la misma mecánica que la pantalla de sección —listado a la izquierda,
+ * edición y buscador a la derecha— pero sobre la colección entera: una lista o
+ * un ranking no se dividen en décadas, se leen de corrido.
+ */
+function FlatEntriesEditor({ collection, entries, sections }) {
+  const [selectedId, setSelectedId] = useState(null)
+  const selected = entries.find(e => e.id === selectedId) || null
+  const isRanking = collection.type === 'ranking'
+  const { flattenCollection, setRanks } = useCollectionAdmin()
+  const confirm = useConfirm()
+
+  // Las entradas cargadas antes de que el ranking numerara solo quedaron sin
+  // puesto, y sin número un ranking no es un ranking.
+  const needsNumbering = isRanking && entries.some(e => e.rank == null)
+
+  // Restos de cuando lista y ranking eran una timeline disfrazada.
+  const inSections = entries.some(e => e.section_id) || sections.length > 0
+
+  const flatten = async () => {
+    const ok = await confirm({
+      title: 'Sacar de las épocas',
+      message:
+        'Los discos salen de sus épocas y quedan como una sola secuencia. Se borran las épocas, no los discos.',
+      confirmLabel: 'Sacar',
+    })
+    if (ok) flattenCollection.mutate(collection.id)
+  }
+
+  // Si la entrada abierta se borró, cerrar el panel.
+  useEffect(() => {
+    if (selectedId && !selected) setSelectedId(null)
+  }, [selectedId, selected])
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex-1 min-w-0 space-y-4">
+        {inSections && (
+          <div className="border border-rock-border rounded-lg p-3 text-sm">
+            <p className="text-gray-400">
+              Esta colección tiene épocas, que son de las timelines. Acá los discos
+              van en una sola secuencia.
+            </p>
+            <button
+              onClick={flatten}
+              disabled={flattenCollection.isPending}
+              className="text-rock-accent hover:underline text-xs mt-1 disabled:opacity-50"
+            >
+              Sacar los discos de las épocas →
+            </button>
+          </div>
+        )}
+
+        <div>
+          <h2 className="text-lg font-bold text-rock-text mb-1">
+            {isRanking ? 'Puestos' : 'Entradas'} ({entries.length})
+          </h2>
+          <p className="text-gray-500 text-sm mb-3">
+            {isRanking
+              ? 'Ordenadas por puesto. El número se edita en el panel de la derecha; las que no tienen puesto van al final.'
+              : 'En el orden que elijas. Movelas con las flechas.'}
+          </p>
+          {needsNumbering && (
+            <button
+              onClick={() => setRanks.mutate(entries)}
+              disabled={setRanks.isPending}
+              className="text-rock-accent hover:underline text-xs mb-2 disabled:opacity-50"
+            >
+              Numerar de 1 a {entries.length} →
+            </button>
+          )}
+          <EntriesFlat
+            entries={entries}
+            selectedId={selectedId}
+            onSelect={id => setSelectedId(id === selectedId ? null : id)}
+            isRanking={isRanking}
+          />
+        </div>
+
+        <NewNarrativeForm collection={collection} entries={entries} isRanking={isRanking} />
+      </div>
+
+      <aside className="w-full lg:w-96 lg:flex-shrink-0 lg:sticky lg:top-24 space-y-4">
+        {selected && (
+          <EntryEditor
+            // El puesto entra en la key: al reordenar, el formulario tiene que
+            // volver a arrancar del número nuevo y no del que quedó tipeado.
+            key={`${selected.id}-${selected.rank ?? ''}`}
+            entry={selected}
+            isRanking={isRanking}
+            siblings={entries}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+        <AlbumSearchPanel collection={collection} entries={entries} isRanking={isRanking} />
+      </aside>
+    </div>
+  )
+}
+
 export default function AdminCollectionEdit() {
   const { slug } = useParams()
   const { data, isLoading } = useCollection(slug)
@@ -260,24 +369,42 @@ export default function AdminCollectionEdit() {
       ) : !data ? (
         <p className="text-red-400">Colección no encontrada.</p>
       ) : (
-        <div className="space-y-6 max-w-3xl">
-          <Link to="/admin/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
-            ← Colecciones
-          </Link>
+        <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
+          <div className="flex items-center gap-4 flex-wrap">
+            <Link to="/admin/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
+              ← Colecciones
+            </Link>
+            <Link
+              to={`/coleccion/${data.collection.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
+            >
+              Ver la página →
+            </Link>
+          </div>
 
           <CollectionFields collection={data.collection} />
 
-          <div>
-            <h2 className="text-lg font-bold text-rock-text mb-3">Secciones</h2>
-            {data.sections.length > 0 && (
-              <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border mb-4">
-                {data.sections.map(s => (
-                  <SectionRow key={s.id} collection={data.collection} section={s} />
-                ))}
-              </div>
-            )}
-            <NewSectionForm collection={data.collection} nextPosition={data.sections.length + 1} />
-          </div>
+          {data.collection.type === 'timeline' ? (
+            <div>
+              <h2 className="text-lg font-bold text-rock-text mb-3">Épocas</h2>
+              {data.sections.length > 0 && (
+                <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border mb-4">
+                  {data.sections.map(s => (
+                    <SectionRow key={s.id} collection={data.collection} section={s} />
+                  ))}
+                </div>
+              )}
+              <NewSectionForm collection={data.collection} nextPosition={data.sections.length + 1} />
+            </div>
+          ) : (
+            <FlatEntriesEditor
+              collection={data.collection}
+              entries={data.entries}
+              sections={data.sections}
+            />
+          )}
         </div>
       )}
     </RequireEditor>
