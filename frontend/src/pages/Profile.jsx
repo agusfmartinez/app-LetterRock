@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { useUserFavorites } from '../hooks/useFavorite'
+import { fetchEntities } from '../services/entities'
 import FollowButton from '../components/common/FollowButton'
 import { useFollow, useUserProfiles } from '../hooks/useFollows'
 import { ROLE_LABEL } from '../hooks/useRole'
@@ -187,10 +188,110 @@ function UserList({ ids, empty }) {
   )
 }
 
+/**
+ * Edición del propio perfil: nombre de usuario y bio.
+ *
+ * La bio ya se mostraba en el perfil, en el buscador y en las listas de
+ * seguidores, pero no había ninguna pantalla donde escribirla. El nombre entra
+ * acá porque el que se elige al registrarse es el único que se tenía, para
+ * siempre.
+ */
+function EditProfile({ profile, onClose }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const setUser = useAuthStore(s => s.setUser)
+  const user = useAuthStore(s => s.user)
+
+  const [username, setUsername] = useState(profile.username)
+  const [bio, setBio] = useState(profile.bio || '')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const cleanName = username.trim()
+  const dirty = cleanName !== profile.username || bio.trim() !== (profile.bio || '')
+
+  const save = async () => {
+    if (!cleanName) {
+      setError('El nombre de usuario no puede quedar vacío.')
+      return
+    }
+    setBusy(true)
+    setError('')
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ username: cleanName, bio: bio.trim() || null })
+      .eq('id', profile.id)
+
+    setBusy(false)
+
+    if (dbError) {
+      // 23505 es la violación del índice único de username: es el único error
+      // que el usuario puede provocar y arreglar por su cuenta.
+      setError(
+        dbError.code === '23505'
+          ? 'Ese nombre de usuario ya está tomado.'
+          : dbError.message
+      )
+      return
+    }
+
+    setUser({ ...user, username: cleanName, bio: bio.trim() || null })
+    queryClient.invalidateQueries({ queryKey: ['profile'] })
+    queryClient.invalidateQueries({ queryKey: ['user-profiles'] })
+    queryClient.invalidateQueries({ queryKey: ['activity-feed'] })
+    onClose()
+
+    // La URL del perfil lleva el nombre adentro: sin esto queda apuntando a uno
+    // que ya no existe y la próxima recarga da "usuario no encontrado".
+    if (cleanName !== profile.username) navigate(`/user/${cleanName}`, { replace: true })
+  }
+
+  return (
+    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+      <label className="block space-y-1">
+        <span className="text-xs text-gray-500">Nombre de usuario</span>
+        <input
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+        />
+      </label>
+
+      <label className="block space-y-1">
+        <span className="text-xs text-gray-500">Bio</span>
+        <textarea
+          value={bio}
+          onChange={e => setBio(e.target.value)}
+          rows={3}
+          placeholder="Contá qué escuchás."
+          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        />
+      </label>
+
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={busy || !dirty}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          {busy ? 'Guardando...' : 'Guardar'}
+        </button>
+        <button onClick={onClose} className="text-sm text-gray-500 hover:text-rock-text">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Profile() {
   const { username } = useParams()
   const [tab, setTab] = useState('reviews')
   const [favFilter, setFavFilter] = useState('all')
+  const [editing, setEditing] = useState(false)
   const sessionUser = useAuthStore(s => s.user)
 
   const { data: profile, isLoading } = useQuery({
@@ -214,7 +315,13 @@ export default function Profile() {
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(20)
-      return data || []
+
+      // Sobre qué opinó. En una ficha de álbum se sabe por la página; acá cada
+      // opinión es de otra cosa, así que hay que resolverlas: una consulta por
+      // tipo, no una por review.
+      const rows = data || []
+      const byId = await fetchEntities(rows)
+      return rows.map(r => ({ ...r, entity: byId.get(r.entity_id) || null }))
     },
     enabled: !!profile?.id,
   })
@@ -231,12 +338,13 @@ export default function Profile() {
   const favArtists = visibleFavorites.filter(f => f.entity_type === 'artist')
   const favAlbums = visibleFavorites.filter(f => f.entity_type === 'album')
   const favTracks = visibleFavorites.filter(f => f.entity_type === 'track')
+  const isOwn = sessionUser?.id === profile.id
 
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Avatar + info */}
       <div className="flex items-start gap-4">
-        <Avatar profile={profile} isOwn={sessionUser?.id === profile.id} />
+        <Avatar profile={profile} isOwn={isOwn} />
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
@@ -246,6 +354,14 @@ export default function Profile() {
               </span>
             )}
             <FollowButton userId={profile.id} />
+            {isOwn && !editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+              >
+                Editar perfil
+              </button>
+            )}
           </div>
           {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
           <p className="text-gray-500 text-xs mt-1">
@@ -263,6 +379,14 @@ export default function Profile() {
           </p>
         </div>
       </div>
+
+      {isOwn && editing && (
+        <EditProfile
+          key={profile.username}
+          profile={profile}
+          onClose={() => setEditing(false)}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-rock-border">
@@ -286,7 +410,7 @@ export default function Profile() {
           {reviews.length === 0 ? (
             <p className="text-gray-500 text-sm">Sin opiniones aún.</p>
           ) : (
-            reviews.map(r => <ReviewCard key={r.id} review={r} />)
+            reviews.map(r => <ReviewCard key={r.id} review={r} showEntity />)
           )}
         </div>
       )}

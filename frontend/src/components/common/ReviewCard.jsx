@@ -1,8 +1,17 @@
+import { Link } from 'react-router-dom'
 import RatingStars from './RatingStars'
+import { ENTITY_NOUN, entityLabel, entityPath } from '../../services/entities'
 import { useAuthStore } from '../../store/authStore'
 import { useConfirm } from './ConfirmDialog'
 
-export default function ReviewCard({ review, onEdit, onDelete, onLike }) {
+/**
+ * `showEntity` sólo lo pide el perfil.
+ *
+ * En la ficha de un disco todas las opiniones son de ese disco y repetir el
+ * título en cada tarjeta es ruido. En el perfil pasa lo contrario: son de cosas
+ * distintas y sin decirlo la opinión no se entiende.
+ */
+export default function ReviewCard({ review, onEdit, onDelete, onLike, showEntity = false }) {
   const { user } = useAuthStore()
   const confirm = useConfirm()
   const isOwn = user && user.id === review.user_id
@@ -34,6 +43,24 @@ export default function ReviewCard({ review, onEdit, onDelete, onLike }) {
         </div>
         <RatingStars value={review.rating} />
       </div>
+
+      {showEntity && review.entity_type && (
+        <p className="mt-2 text-xs text-gray-500">
+          {`sobre ${ENTITY_NOUN[review.entity_type]} `}
+          {entityPath(review.entity_type, review.entity) ? (
+            <Link
+              to={entityPath(review.entity_type, review.entity)}
+              className="text-rock-text hover:text-rock-accent font-medium"
+            >
+              {entityLabel(review.entity_type, review.entity)}
+            </Link>
+          ) : (
+            <span className="text-rock-text font-medium">
+              {entityLabel(review.entity_type, review.entity)}
+            </span>
+          )}
+        </p>
+      )}
 
       {review.text && (
         <p className="mt-3 text-gray-300 text-sm leading-relaxed">{review.text}</p>
