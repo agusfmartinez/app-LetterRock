@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCollections } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -6,6 +7,39 @@ const TYPE_LABEL = {
   timeline: 'Timeline',
   list: 'Lista',
   ranking: 'Ranking',
+}
+
+/**
+ * El orden por defecto es el de carga, y no es casual: la primera tarjeta es lo
+ * que ve alguien que entra sin saber qué hay, así que quién encabeza es una
+ * decisión editorial y no del visitante. El select está para el que busca algo
+ * puntual, no para resolver eso.
+ */
+const SORTS = {
+  added: {
+    label: 'Orden de la casa',
+    compare: (a, b) => String(a.created_at).localeCompare(String(b.created_at)),
+  },
+  recent: {
+    label: 'Más recientes',
+    compare: (a, b) => String(b.created_at).localeCompare(String(a.created_at)),
+  },
+  name: {
+    label: 'Alfabético',
+    compare: (a, b) => a.title.localeCompare(b.title, 'es'),
+  },
+}
+
+const SORT_KEY = 'letterrock:collections-sort'
+
+/** La preferencia es de este visitante y de este navegador; si falla, no importa. */
+function readSort() {
+  try {
+    const stored = localStorage.getItem(SORT_KEY)
+    return stored && SORTS[stored] ? stored : 'added'
+  } catch {
+    return 'added'
+  }
 }
 
 function CollectionCard({ collection }) {
@@ -78,6 +112,19 @@ function CollectionCard({ collection }) {
 export default function Collections() {
   const { data: collections = [], isLoading } = useCollections()
   const { isEditor } = useRole()
+  const [sort, setSort] = useState(readSort)
+
+  // Se ordena acá y no en la consulta: son unas pocas filas que ya están en
+  // memoria, y cambiar el orden no debería costar una ida a la base.
+  const ordered = useMemo(
+    () => [...collections].sort(SORTS[sort].compare),
+    [collections, sort]
+  )
+
+  const changeSort = (value) => {
+    setSort(value)
+    try { localStorage.setItem(SORT_KEY, value) } catch { /* sin persistir */ }
+  }
 
   return (
     <div className="space-y-6">
@@ -100,9 +147,27 @@ export default function Collections() {
       ) : collections.length === 0 ? (
         <p className="text-gray-500 text-sm">Todavía no hay colecciones publicadas.</p>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {collections.map(c => <CollectionCard key={c.id} collection={c} />)}
-        </div>
+        <>
+          {/* Con una sola colección no hay nada que ordenar. */}
+          {collections.length > 1 && (
+            <div className="flex justify-end">
+              <select
+                value={sort}
+                onChange={e => changeSort(e.target.value)}
+                aria-label="Ordenar colecciones"
+                className="bg-rock-dark border border-rock-border rounded px-3 py-1.5 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+              >
+                {Object.entries(SORTS).map(([value, { label }]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {ordered.map(c => <CollectionCard key={c.id} collection={c} />)}
+          </div>
+        </>
       )}
     </div>
   )

@@ -11,9 +11,15 @@ const TYPES = [
   { value: 'ranking', label: 'Ranking (con puesto y fuente)' },
 ]
 
+/**
+ * Alta de colección. Plegada por defecto y debajo del listado: crear una es lo
+ * excepcional —hay tres o cuatro en total—, y ocupando el lugar de arriba
+ * empujaba fuera de la vista lo que uno viene a hacer, que es entrar a editar.
+ */
 function NewCollectionForm() {
   const { user } = useAuthStore()
   const { createCollection } = useCollectionAdmin()
+  const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState('timeline')
   const [description, setDescription] = useState('')
@@ -25,9 +31,17 @@ function NewCollectionForm() {
     createCollection.mutate(
       { title: title.trim(), type, description: description.trim() || null, created_by: user?.id },
       {
-        onSuccess: () => { setTitle(''); setDescription(''); setError('') },
+        onSuccess: () => { setTitle(''); setDescription(''); setError(''); setOpen(false) },
         onError: (err) => setError(err.message),
       }
+    )
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+        + Nueva colección
+      </button>
     )
   }
 
@@ -56,13 +70,22 @@ function NewCollectionForm() {
         className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
       />
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button
-        type="submit"
-        disabled={createCollection.isPending || !title.trim()}
-        className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-      >
-        Crear
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={createCollection.isPending || !title.trim()}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          Crear
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm text-gray-500 hover:text-rock-text"
+        >
+          Cancelar
+        </button>
+      </div>
     </form>
   )
 }
@@ -79,8 +102,6 @@ export default function AdminCollections() {
             Timelines, listas y rankings. Sólo lo publicado se ve desde afuera.
           </p>
         </div>
-
-        <NewCollectionForm />
 
         {isLoading ? (
           <p className="text-gray-500">Cargando...</p>
@@ -105,6 +126,12 @@ export default function AdminCollections() {
                   </span>
                 )}
                 <Link
+                  to={`/admin/coleccion/${c.slug}`}
+                  className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+                >
+                  Editar
+                </Link>
+                <Link
                   to={`/coleccion/${c.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -116,6 +143,8 @@ export default function AdminCollections() {
             ))}
           </div>
         )}
+
+        <NewCollectionForm />
       </div>
     </RequireEditor>
   )

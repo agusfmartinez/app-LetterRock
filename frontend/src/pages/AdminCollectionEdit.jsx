@@ -97,8 +97,11 @@ function CollectionFields({ collection }) {
   )
 }
 
+/** Plegado, como el alta de colección: la mayoría de las visitas vienen a
+ *  editar una sección que ya existe, no a crear otra. */
 function NewSectionForm({ collection, nextPosition }) {
   const { createSection } = useCollectionAdmin()
+  const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [subtitle, setSubtitle] = useState('')
   const [yearFrom, setYearFrom] = useState('')
@@ -124,9 +127,18 @@ function NewSectionForm({ collection, nextPosition }) {
           setYearFrom('')
           setYearTo('')
           setError('')
+          setOpen(false)
         },
         onError: (err) => setError(err.message),
       }
+    )
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+        + Nueva sección
+      </button>
     )
   }
 
@@ -165,13 +177,22 @@ function NewSectionForm({ collection, nextPosition }) {
         El rango de años alimenta las sugerencias de discos al cargar la sección.
       </p>
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button
-        type="submit"
-        disabled={createSection.isPending || !title.trim()}
-        className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-      >
-        Agregar sección
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={createSection.isPending || !title.trim()}
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          Agregar sección
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm text-gray-500 hover:text-rock-text"
+        >
+          Cancelar
+        </button>
+      </div>
     </form>
   )
 }
