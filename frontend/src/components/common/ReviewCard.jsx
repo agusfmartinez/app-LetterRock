@@ -1,8 +1,10 @@
 import RatingStars from './RatingStars'
 import { useAuthStore } from '../../store/authStore'
+import { useConfirm } from './ConfirmDialog'
 
 export default function ReviewCard({ review, onEdit, onDelete, onLike }) {
   const { user } = useAuthStore()
+  const confirm = useConfirm()
   const isOwn = user && user.id === review.user_id
   const date = new Date(review.created_at).toLocaleDateString('es-AR', {
     year: 'numeric',
@@ -52,7 +54,18 @@ export default function ReviewCard({ review, onEdit, onDelete, onLike }) {
               </button>
             )}
             {onDelete && (
-              <button onClick={onDelete} className="text-xs text-gray-500 hover:text-red-400">
+              <button
+                onClick={async () => {
+                  // Lo que se pierde es texto que escribió el usuario y no está
+                  // en ningún otro lado.
+                  const ok = await confirm({
+                    title: 'Borrar opinión',
+                    message: '¿Borrar tu opinión? No se puede deshacer.',
+                  })
+                  if (ok) onDelete()
+                }}
+                className="text-xs text-gray-500 hover:text-red-400"
+              >
                 Borrar
               </button>
             )}

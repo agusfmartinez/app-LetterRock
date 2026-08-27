@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import RequireEditor from '../components/common/RequireEditor'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
@@ -8,6 +9,7 @@ import { useCollection } from '../hooks/useCollections'
 function CollectionFields({ collection }) {
   const navigate = useNavigate()
   const { updateCollection, deleteCollection } = useCollectionAdmin()
+  const confirm = useConfirm()
   const [title, setTitle] = useState(collection.title)
   const [description, setDescription] = useState(collection.description || '')
   const [coverUrl, setCoverUrl] = useState(collection.cover_url || '')
@@ -37,10 +39,11 @@ function CollectionFields({ collection }) {
     )
   }
 
-  const remove = () => {
-    const ok = window.confirm(
-      `¿Borrar "${collection.title}" con todas sus secciones y entradas? No se puede deshacer.`
-    )
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Borrar colección',
+      message: `¿Borrar "${collection.title}" con todas sus secciones y entradas? No se puede deshacer.`,
+    })
     if (!ok) return
     deleteCollection.mutate(collection.id, {
       onSuccess: () => navigate('/admin/colecciones'),
@@ -199,11 +202,13 @@ function NewSectionForm({ collection, nextPosition }) {
 
 function SectionRow({ collection, section }) {
   const { deleteSection } = useCollectionAdmin()
+  const confirm = useConfirm()
 
-  const remove = () => {
-    const ok = window.confirm(
-      `¿Borrar la sección "${section.title}" y sus ${section.entry_count} entradas? No se puede deshacer.`
-    )
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Borrar sección',
+      message: `¿Borrar la sección "${section.title}" y sus ${section.entry_count} entradas? No se puede deshacer.`,
+    })
     if (!ok) return
     deleteSection.mutate(section.id)
   }

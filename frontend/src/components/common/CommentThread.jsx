@@ -1,7 +1,9 @@
 import { useAuthStore } from '../../store/authStore'
+import { useConfirm } from './ConfirmDialog'
 
 function Comment({ comment, onDelete }) {
   const { user } = useAuthStore()
+  const confirm = useConfirm()
   const isOwn = user && user.id === comment.user_id
   const date = new Date(comment.created_at).toLocaleDateString('es-AR', {
     month: 'short',
@@ -22,7 +24,16 @@ function Comment({ comment, onDelete }) {
       </div>
       {isOwn && onDelete && (
         <button
-          onClick={() => onDelete(comment.id)}
+          onClick={async () => {
+            // Una ✕ chica al lado del texto es fácil de tocar sin querer, sobre
+            // todo en el teléfono, y el comentario no se recupera.
+            const ok = await confirm({
+              title: 'Borrar comentario',
+              message: '¿Borrar tu comentario?',
+            })
+            if (ok) onDelete(comment.id)
+          }}
+          title="Borrar comentario"
           className="text-xs text-gray-500 hover:text-red-400 flex-shrink-0"
         >
           ✕

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AlbumLineup from '../components/common/AlbumLineup'
+import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import RequireEditor from '../components/common/RequireEditor'
@@ -238,6 +239,7 @@ function TrackRow({ track }) {
   const update = useCatalogUpdate('tracks')
   const remove = useDeleteTrack()
   const { isAdmin } = useRole()
+  const confirm = useConfirm()
   const [title, setTitle] = useState(track.title || '')
   const [number, setNumber] = useState(track.track_number ?? '')
   const [error, setError] = useState('')
@@ -280,10 +282,12 @@ function TrackRow({ track }) {
       </button>
       {isAdmin && (
         <button
-          onClick={() => {
-            if (window.confirm(`¿Borrar "${track.title}"?`)) {
-              remove.mutate(track.id, { onError: e => setError(describeError(e)) })
-            }
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Borrar canción',
+              message: `¿Borrar "${track.title}" del disco?`,
+            })
+            if (ok) remove.mutate(track.id, { onError: e => setError(describeError(e)) })
           }}
           disabled={remove.isPending}
           className="text-xs text-gray-500 hover:text-red-400 disabled:opacity-50"

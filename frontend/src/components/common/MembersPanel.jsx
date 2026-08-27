@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useConfirm } from './ConfirmDialog'
 import {
   describeError,
   formatPeriod,
@@ -33,6 +34,7 @@ const textToRoles = (text) => text.split(',').map(r => r.trim()).filter(Boolean)
 function StageFields({ stage }) {
   const update = useUpdateMember()
   const remove = useDeleteMember()
+  const confirm = useConfirm()
   const [form, setForm] = useState({
     roles: rolesToText(stage.roles),
     year_from: stage.year_from ?? '',
@@ -105,9 +107,13 @@ function StageFields({ stage }) {
         </button>
         {saved && <span className="text-xs text-gray-500">Guardado</span>}
         <button
-          onClick={() => {
-            if (!window.confirm(`¿Quitar la etapa ${formatPeriod(stage)}?`)) return
-            remove.mutate(stage.id, { onError: e => setError(describeError(e)) })
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Quitar etapa',
+              message: `¿Quitar la etapa ${formatPeriod(stage)}?`,
+              confirmLabel: 'Quitar',
+            })
+            if (ok) remove.mutate(stage.id, { onError: e => setError(describeError(e)) })
           }}
           title="Quitar sólo esta etapa"
           className="text-gray-600 hover:text-red-400 text-xs"
@@ -220,17 +226,22 @@ function AddStage({ person, groupId }) {
  */
 function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
   const removePerson = useDeletePerson()
+  const confirm = useConfirm()
   const [error, setError] = useState('')
   const open = editingKey === person.key
 
   // Sólo los que ya están en el catálogo tienen panel propio que editar.
   const catalogId = person.stages.find(s => s.member_id)?.member_id || null
 
-  const remove = () => {
-    const label = person.stages.length === 1
-      ? `¿Quitar a "${person.name}" de la formación?`
-      : `¿Quitar a "${person.name}" y sus ${person.stages.length} etapas?`
-    if (!window.confirm(label)) return
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Quitar integrante',
+      message: person.stages.length === 1
+        ? `¿Quitar a "${person.name}" de la formación?`
+        : `¿Quitar a "${person.name}" y sus ${person.stages.length} etapas?`,
+      confirmLabel: 'Quitar',
+    })
+    if (!ok) return
     removePerson.mutate(
       person.stages.map(s => s.id),
       { onSuccess: () => setEditingKey(null), onError: e => setError(describeError(e)) }

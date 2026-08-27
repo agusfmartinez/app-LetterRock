@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import RequireEditor from '../components/common/RequireEditor'
 import {
@@ -210,6 +211,7 @@ function EntriesByYear({ entries, selectedId, onSelect }) {
  */
 function EntryEditor({ entry, onClose }) {
   const { updateEntry, deleteEntry } = useCollectionAdmin()
+  const confirm = useConfirm()
   const [form, setForm] = useState({
     body_text: entry.body_text || '',
     title: entry.title || '',
@@ -241,8 +243,13 @@ function EntryEditor({ entry, onClose }) {
     })
   }
 
-  const remove = () => {
-    if (!window.confirm(`¿Quitar "${label}" de esta sección?`)) return
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Quitar entrada',
+      message: `¿Quitar "${label}" de esta sección?`,
+      confirmLabel: 'Quitar',
+    })
+    if (!ok) return
     deleteEntry.mutate(entry.id, {
       onSuccess: onClose,
       onError: e => setError(describeError(e)),
