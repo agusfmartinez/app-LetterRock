@@ -4,6 +4,7 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useCollection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
+import { useAuthStore } from '../store/authStore'
 import { useAlbumMedia } from '../hooks/useTopTracks'
 
 /**
@@ -90,6 +91,7 @@ function SectionCard({ collectionSlug, section }) {
 export default function CollectionDetail() {
   const { slug } = useParams()
   const { isEditor } = useRole()
+  const user = useAuthStore(s => s.user)
   const { data, isLoading } = useCollection(slug)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
@@ -98,6 +100,7 @@ export default function CollectionDetail() {
   const { collection, sections, entries } = data
   const isTimeline = collection.type === 'timeline'
   const isRanking = collection.type === 'ranking'
+  const canEdit = isEditor || (!!user && collection.created_by === user.id)
 
   return (
     <div className="space-y-10">
@@ -129,9 +132,9 @@ export default function CollectionDetail() {
         )}
         <div className="flex items-baseline gap-3 flex-wrap mt-3">
           <h1 className="text-4xl font-bold text-rock-text">{collection.title}</h1>
-          {isEditor && (
+          {canEdit && (
             <Link
-              to={`/admin/coleccion/${collection.slug}`}
+              to={`/coleccion/${collection.slug}/editar`}
               className="text-sm text-gray-500 hover:text-rock-accent"
             >
               Editar

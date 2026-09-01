@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
-import RequireEditor from '../components/common/RequireEditor'
+import RequireCollectionOwner from '../components/common/RequireCollectionOwner'
 import {
   AlbumSearchPanel,
   EntriesFlat,
@@ -52,7 +52,7 @@ function CollectionFields({ collection }) {
     })
     if (!ok) return
     deleteCollection.mutate(collection.id, {
-      onSuccess: () => navigate('/admin/colecciones'),
+      onSuccess: () => navigate('/colecciones'),
       onError: e => setError(e.message),
     })
   }
@@ -224,7 +224,7 @@ function SectionRow({ collection, section }) {
       <span className="text-gray-600 text-sm w-6 text-right">{section.position}</span>
       <div className="flex-1 min-w-0">
         <Link
-          to={`/admin/coleccion/${collection.slug}/${section.slug}`}
+          to={`/coleccion/${collection.slug}/${section.slug}/editar`}
           className="text-rock-text hover:text-rock-accent font-medium"
         >
           {section.title}
@@ -235,7 +235,7 @@ function SectionRow({ collection, section }) {
         </p>
       </div>
       <Link
-        to={`/admin/coleccion/${collection.slug}/${section.slug}`}
+        to={`/coleccion/${collection.slug}/${section.slug}/editar`}
         className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
       >
         Editar
@@ -363,15 +363,16 @@ export default function AdminCollectionEdit() {
   const { data, isLoading } = useCollection(slug)
 
   return (
-    <RequireEditor>
+    <>
       {isLoading ? (
         <p className="text-gray-500">Cargando...</p>
       ) : !data ? (
         <p className="text-red-400">Colección no encontrada.</p>
       ) : (
+        <RequireCollectionOwner collection={data.collection}>
         <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
           <div className="flex items-center gap-4 flex-wrap">
-            <Link to="/admin/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
+            <Link to="/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
               ← Colecciones
             </Link>
             <Link
@@ -406,7 +407,8 @@ export default function AdminCollectionEdit() {
             />
           )}
         </div>
+        </RequireCollectionOwner>
       )}
-    </RequireEditor>
+    </>
   )
 }

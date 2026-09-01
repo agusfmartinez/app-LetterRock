@@ -52,13 +52,15 @@ export default function App() {
             <Route path="/track/:id" element={<TrackDetail />} />
             <Route path="/colecciones" element={<Collections />} />
             <Route path="/coleccion/:slug" element={<CollectionDetail />} />
+            {/* Editar dejó de ser cosa del panel: la ruta acompaña a la
+                colección, y quién puede entrar lo decide el dueño, no el rol. */}
+            <Route path="/coleccion/:slug/editar" element={<AdminCollectionEdit />} />
             <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
+            <Route path="/coleccion/:slug/:sectionSlug/editar" element={<AdminSectionEdit />} />
             <Route path="/usuarios" element={<Users />} />
             <Route path="/user/:username" element={<Profile />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/colecciones" element={<AdminCollections />} />
-            <Route path="/admin/coleccion/:slug" element={<AdminCollectionEdit />} />
-            <Route path="/admin/coleccion/:slug/:sectionSlug" element={<AdminSectionEdit />} />
             <Route path="/admin/catalogo" element={<AdminArtists />} />
             <Route path="/admin/catalogo/ocultos" element={<AdminArtists hidden />} />
             <Route path="/admin/descubrir" element={<AdminDiscover />} />

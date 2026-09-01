@@ -4,6 +4,7 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
+import { useAuthStore } from '../store/authStore'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useAlbumMedia } from '../hooks/useTopTracks'
 
@@ -33,6 +34,7 @@ function SectionNav({ collectionSlug, prev, next }) {
 export default function CollectionSection() {
   const { slug, sectionSlug } = useParams()
   const { isEditor } = useRole()
+  const user = useAuthStore(s => s.user)
   const { data, isLoading } = useCollectionSection(slug, sectionSlug)
 
   const groups = useMemo(
@@ -85,6 +87,7 @@ export default function CollectionSection() {
   if (!data.section) return <p className="text-red-400">Sección no encontrada.</p>
 
   const { collection, section, entries, prev, next } = data
+  const canEdit = isEditor || (!!user && collection.created_by === user.id)
 
   return (
     <div className="space-y-8">
@@ -111,9 +114,9 @@ export default function CollectionSection() {
       <header className="max-w-2xl">
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-5xl font-black text-rock-text">{section.title}</h1>
-          {isEditor && (
+          {canEdit && (
             <Link
-              to={`/admin/coleccion/${collection.slug}/${section.slug}`}
+              to={`/coleccion/${collection.slug}/${section.slug}/editar`}
               className="text-sm text-gray-500 hover:text-rock-accent"
             >
               Editar

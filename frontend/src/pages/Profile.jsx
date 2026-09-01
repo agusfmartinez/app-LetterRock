@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
+import { CollectionCard } from './Collections'
+import { useUserCollections } from '../hooks/useCollections'
 import { useUserFavorites } from '../hooks/useFavorite'
 import { fetchEntities } from '../services/entities'
 import FollowButton from '../components/common/FollowButton'
@@ -328,6 +330,7 @@ export default function Profile() {
 
   const { data: favorites = [], isLoading: loadingFavorites } = useUserFavorites(profile?.id)
   const follow = useFollow(profile?.id)
+  const { data: collections = [] } = useUserCollections(profile?.id)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!profile) return <p className="text-red-400">Usuario no encontrado.</p>
@@ -366,6 +369,7 @@ export default function Profile() {
           {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
           <p className="text-gray-500 text-xs mt-1">
             {reviews.length} opiniones · {favorites.length} favoritos ·{' '}
+            {collections.length} {collections.length === 1 ? 'colección' : 'colecciones'} ·{' '}
             <button
               onClick={() => setTab('seguidores')}
               className="hover:text-rock-accent"
@@ -390,7 +394,7 @@ export default function Profile() {
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-rock-border">
-        {['reviews', 'favoritos', 'seguidores', 'siguiendo'].map(t => (
+        {['reviews', 'favoritos', 'colecciones', 'seguidores', 'siguiendo'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -468,6 +472,27 @@ export default function Profile() {
             </>
           )}
         </div>
+      )}
+
+      {tab === 'colecciones' && (
+        collections.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            {isOwn ? (
+              <>
+                Todavía no armaste ninguna.{' '}
+                <Link to="/colecciones" className="text-rock-accent hover:underline">
+                  Armá la primera →
+                </Link>
+              </>
+            ) : (
+              'Todavía no armó ninguna.'
+            )}
+          </p>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2">
+            {collections.map(c => <CollectionCard key={c.id} collection={c} />)}
+          </div>
+        )
       )}
 
       {tab === 'seguidores' && (

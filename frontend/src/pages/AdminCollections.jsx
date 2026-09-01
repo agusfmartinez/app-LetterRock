@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useConfirm } from '../components/common/ConfirmDialog'
 import RequireEditor from '../components/common/RequireEditor'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
@@ -90,6 +91,62 @@ function NewCollectionForm() {
   )
 }
 
+
+/**
+ * Moderación: fijar arriba del índice y bajar del sitio.
+ *
+ * Las dos son de editor y RLS lo hace cumplir con un trigger, no con la policy
+ * de UPDATE: esa no puede comparar el valor viejo con el nuevo, así que el dueño
+ * de una colección podría marcarse como oficial o desocultarse solo.
+ *
+ * Ocultar no borra, igual que en el catálogo de artistas: baja la colección del
+ * índice pero su dueño la sigue viendo, y se puede revertir.
+ */
+function ModerationButtons({ collection }) {
+  const { updateCollection } = useCollectionAdmin()
+  const confirm = useConfirm()
+
+  const toggleOfficial = () => {
+    updateCollection.mutate({ id: collection.id, is_official: !collection.is_official })
+  }
+
+  const toggleHidden = async () => {
+    if (!collection.hidden) {
+      const ok = await confirm({
+        title: 'Ocultar colección',
+        message: `"${collection.title}" deja de aparecer en el índice. Su dueño la sigue viendo y se puede restaurar.`,
+        confirmLabel: 'Ocultar',
+      })
+      if (!ok) return
+    }
+    updateCollection.mutate({ id: collection.id, hidden: !collection.hidden })
+  }
+
+  return (
+    <>
+      <button
+        onClick={toggleOfficial}
+        disabled={updateCollection.isPending}
+        title={collection.is_official ? 'Sacar de las de la app' : 'Fijar como de la app'}
+        className={`text-xs border rounded px-2 py-1 disabled:opacity-50 ${
+          collection.is_official
+            ? 'border-rock-accent text-rock-accent'
+            : 'border-rock-border text-gray-500 hover:text-rock-accent hover:border-rock-accent'
+        }`}
+      >
+        {collection.is_official ? 'De la app' : 'Fijar'}
+      </button>
+      <button
+        onClick={toggleHidden}
+        disabled={updateCollection.isPending}
+        className="text-xs text-gray-500 hover:text-red-400 disabled:opacity-50"
+      >
+        {collection.hidden ? 'Restaurar' : 'Ocultar'}
+      </button>
+    </>
+  )
+}
+
 export default function AdminCollections() {
   const { data: collections = [], isLoading } = useCollections()
 
@@ -99,7 +156,9 @@ export default function AdminCollections() {
         <div>
           <h1 className="text-2xl font-bold text-rock-text">Colecciones</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Timelines, listas y rankings. Sólo lo publicado se ve desde afuera.
+            Todas las del sitio, propias y de la comunidad. "Fijar" las manda
+            arriba del índice como colecciones de LetterRock; "Ocultar" las baja
+            sin borrarlas.
           </p>
         </div>
 
@@ -113,20 +172,26 @@ export default function AdminCollections() {
               <div key={c.id} className="flex items-center gap-3 p-3">
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/admin/coleccion/${c.slug}`}
-                    className="text-rock-text hover:text-rock-accent font-medium"
+                    to={`/coleccion/${c.slug}/editar`}
+                    className={`font-medium hover:text-rock-accent ${
+                      c.hidden ? 'text-gray-500 line-through' : 'text-rock-text'
+                    }`}
                   >
                     {c.title}
                   </Link>
-                  <p className="text-gray-500 text-xs">{c.type} · /{c.slug}</p>
+                  <p className="text-gray-500 text-xs">
+                    {[c.type, `/${c.slug}`, c.author ? `por ${c.author.username}` : 'de la app']
+                      .join(' · ')}
+                  </p>
                 </div>
                 {!c.is_published && (
                   <span className="text-xs uppercase tracking-widest text-gray-500 border border-rock-border rounded px-2 py-0.5">
                     Borrador
                   </span>
                 )}
+                <ModerationButtons collection={c} />
                 <Link
-                  to={`/admin/coleccion/${c.slug}`}
+                  to={`/coleccion/${c.slug}/editar`}
                   className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
                 >
                   Editar

@@ -8,7 +8,7 @@ import {
   EntryEditor,
   NewNarrativeForm,
 } from '../components/common/CollectionEntryEditor'
-import RequireEditor from '../components/common/RequireEditor'
+import RequireCollectionOwner from '../components/common/RequireCollectionOwner'
 import {
   describeError,
   EMPTY_ALBUM_FILTERS,
@@ -110,16 +110,17 @@ export default function AdminSectionEdit() {
   }, [selectedId, selected])
 
   return (
-    <RequireEditor>
+    <>
       {isLoading ? (
         <p className="text-gray-500">Cargando...</p>
       ) : !data?.section ? (
         <p className="text-red-400">Sección no encontrada.</p>
       ) : (
+        <RequireCollectionOwner collection={data.collection}>
         <div className="space-y-6">
           <div className="flex items-center gap-4 flex-wrap">
             <Link
-              to={`/admin/coleccion/${data.collection.slug}`}
+              to={`/coleccion/${data.collection.slug}/editar`}
               className="text-gray-400 hover:text-rock-accent text-sm"
             >
               ← {data.collection.title}
@@ -177,7 +178,8 @@ export default function AdminSectionEdit() {
             </aside>
           </div>
         </div>
+        </RequireCollectionOwner>
       )}
-    </RequireEditor>
+    </>
   )
 }

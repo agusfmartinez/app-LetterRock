@@ -76,6 +76,41 @@ export function groupEntriesByYear(entries: any[]): YearGroup[] {
 }
 
 /**
+ * Las colecciones de un usuario, para su perfil.
+ *
+ * No filtra por publicada ni por oculta: eso ya lo hace RLS, que le muestra al
+ * dueño sus borradores y a los demás sólo lo publicado. Repetir la regla acá
+ * sería una segunda copia que puede quedar desincronizada de la de la base.
+ */
+export function useUserCollections(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['user-collections', userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('collections')
+        .select('*, author:users(username, avatar_url)')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+
+      const list = data || []
+      if (list.length === 0) return []
+
+      const { data: sections } = await supabase
+        .from('collection_sections')
+        .select('collection_id')
+        .in('collection_id', list.map(c => c.id))
+
+      const counts = new Map<string, number>()
+      for (const s of sections || []) {
+        counts.set(s.collection_id, (counts.get(s.collection_id) || 0) + 1)
+      }
+      return list.map(c => ({ ...c, section_count: counts.get(c.id) || 0 }))
+    },
+    enabled: !!userId,
+  })
+}
+
+/**
  * Orden de una colección sin épocas.
  *
  * En un ranking manda el puesto y los que todavía no lo tienen van al final:
@@ -114,7 +149,7 @@ export function useCollection(slug: string | undefined) {
     queryFn: async () => {
       const { data: collection } = await supabase
         .from('collections')
-        .select('*')
+        .select('*, author:users(username, avatar_url)')
         .eq('slug', slug)
         .single()
 
@@ -156,7 +191,7 @@ export function useCollectionSection(slug: string | undefined, sectionSlug: stri
     queryFn: async () => {
       const { data: collection } = await supabase
         .from('collections')
-        .select('*')
+        .select('*, author:users(username, avatar_url)')
         .eq('slug', slug)
         .single()
 
@@ -205,10 +240,14 @@ export function useCollections() {
   return useQuery({
     queryKey: ['collections'],
     queryFn: async () => {
+      // Quién la armó: en el índice conviven las de la app y las de la
+      // comunidad, y sin el autor no hay forma de distinguir una de otra más
+      // allá del bloque en el que caen.
       const { data } = await supabase
         .from('collections')
-        .select('*')
-        .order('created_at', { ascending: true })
+        .select('*, author:users(username, avatar_url)')
+        .order('is_official', { ascending: false })
+        .order('created_at', { ascending: false })
 
       const list = data || []
       if (list.length === 0) return []
