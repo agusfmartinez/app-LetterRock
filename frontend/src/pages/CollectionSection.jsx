@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import FavoriteButton from '../components/common/FavoriteButton'
+import RatingStars from '../components/common/RatingStars'
+import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
+import ReviewForm from '../components/forms/ReviewForm'
+import { useReviews } from '../hooks/useReviews'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -36,6 +41,10 @@ export default function CollectionSection() {
   const { isEditor } = useRole()
   const user = useAuthStore(s => s.user)
   const { data, isLoading } = useCollectionSection(slug, sectionSlug)
+
+  // Antes de cualquier return: los hooks no pueden quedar detrás de un `if`.
+  const sectionId = data?.section?.id
+  const { reviews, createReview, deleteReview } = useReviews('collection_section', sectionId)
 
   const groups = useMemo(
     () => groupEntriesByYear(data?.entries || []),
@@ -89,6 +98,10 @@ export default function CollectionSection() {
   const { collection, section, entries, prev, next } = data
   const canEdit = isEditor || (!!user && collection.created_by === user.id)
 
+  const average = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : null
+
   return (
     <div className="space-y-8">
       <Link
@@ -126,6 +139,17 @@ export default function CollectionSection() {
         {section.subtitle && (
           <p className="text-rock-accent mt-2 tracking-wide">{section.subtitle}</p>
         )}
+        <div className="flex items-center gap-3 mt-3">
+          <FavoriteButton entityType="collection_section" entityId={section.id} />
+          {average !== null && (
+            <>
+              <RatingStars value={Math.round(average)} />
+              <span className="text-gray-500 text-sm">
+                {average.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+              </span>
+            </>
+          )}
+        </div>
         {section.intro_text && (
           <div className="mt-5 space-y-3">
             {section.intro_text.split(/\n+/).filter(Boolean).map((p, i) => (
@@ -168,6 +192,24 @@ export default function CollectionSection() {
           </div>
         </div>
       )}
+
+      {/* La opinión va en la época y no en la colección: en una timeline lo que
+          se lee de corrido es esto, y la portada es apenas un índice de épocas. */}
+      <section className="max-w-2xl">
+        <h2 className="text-xl font-bold text-rock-text mb-4">
+          Opiniones sobre {section.title} ({reviews.length})
+        </h2>
+        <div className="space-y-4">
+          <ReviewForm entityType="collection_section" entityId={section.id} onSubmit={createReview} />
+          {reviews.length > 0 ? (
+            reviews.map(r => (
+              <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+            ))
+          ) : (
+            <p className="text-gray-500 text-sm">Todavía nadie opinó de esta época.</p>
+          )}
+        </div>
+      </section>
 
       <SectionNav collectionSlug={collection.slug} prev={prev} next={next} />
     </div>

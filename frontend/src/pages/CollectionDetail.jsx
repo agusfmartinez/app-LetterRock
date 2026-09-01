@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import FavoriteButton from '../components/common/FavoriteButton'
+import RatingStars from '../components/common/RatingStars'
+import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
+import ReviewForm from '../components/forms/ReviewForm'
+import { useReviews } from '../hooks/useReviews'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useCollection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -94,6 +99,10 @@ export default function CollectionDetail() {
   const user = useAuthStore(s => s.user)
   const { data, isLoading } = useCollection(slug)
 
+  // Van antes del early return: los hooks no pueden quedar detrás de un `if`.
+  const collectionId = data?.collection?.id
+  const { reviews, createReview, deleteReview } = useReviews('collection', collectionId)
+
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!data) return <p className="text-red-400">Colección no encontrada.</p>
 
@@ -101,6 +110,12 @@ export default function CollectionDetail() {
   const isTimeline = collection.type === 'timeline'
   const isRanking = collection.type === 'ranking'
   const canEdit = isEditor || (!!user && collection.created_by === user.id)
+
+  // Se muestra pero no ordena el índice: con tres votos el promedio lo gana el
+  // que se autovota primero.
+  const average = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : null
 
   return (
     <div className="space-y-10">
@@ -132,6 +147,7 @@ export default function CollectionDetail() {
         )}
         <div className="flex items-baseline gap-3 flex-wrap mt-3">
           <h1 className="text-4xl font-bold text-rock-text">{collection.title}</h1>
+          <FavoriteButton entityType="collection" entityId={collection.id} />
           {canEdit && (
             <Link
               to={`/coleccion/${collection.slug}/editar`}
@@ -141,6 +157,24 @@ export default function CollectionDetail() {
             </Link>
           )}
         </div>
+
+        {collection.author && (
+          <p className="text-gray-500 text-sm mt-2">
+            por{' '}
+            <Link to={`/user/${collection.author.username}`} className="hover:text-rock-accent">
+              {collection.author.username}
+            </Link>
+          </p>
+        )}
+
+        {!isTimeline && average !== null && (
+          <div className="flex items-center gap-2 mt-3">
+            <RatingStars value={Math.round(average)} />
+            <span className="text-gray-500 text-sm">
+              {average.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+            </span>
+          </div>
+        )}
         {collection.description && (
           <p className="text-gray-400 mt-3 leading-relaxed">{collection.description}</p>
         )}
@@ -160,6 +194,29 @@ export default function CollectionDetail() {
             <SectionCard key={s.id} collectionSlug={collection.slug} section={s} />
           ))}
         </div>
+      )}
+
+      {/* Opinar sobre una lista curada es tan válido como opinar sobre un disco:
+          lo que se juzga es la selección, no la música.
+
+          En una timeline no va acá: esta página es un índice de épocas, y lo que
+          se lee —y por lo tanto lo que se opina— está adentro de cada una. */}
+      {!isTimeline && (
+      <section className="max-w-2xl">
+        <h2 className="text-xl font-bold text-rock-text mb-4">
+          Opiniones ({reviews.length})
+        </h2>
+        <div className="space-y-4">
+          <ReviewForm entityType="collection" entityId={collection.id} onSubmit={createReview} />
+          {reviews.length > 0 ? (
+            reviews.map(r => (
+              <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+            ))
+          ) : (
+            <p className="text-gray-500 text-sm">Todavía nadie opinó.</p>
+          )}
+        </div>
+      </section>
       )}
     </div>
   )

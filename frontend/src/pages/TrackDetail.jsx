@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import TrackRow from '../components/common/TrackRow'
@@ -6,12 +5,12 @@ import FavoriteButton from '../components/common/FavoriteButton'
 import MediaEmbed from '../components/common/MediaEmbed'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
 import { formatPlayCount } from '../hooks/useTopTracks'
-import CommentThread from '../components/common/CommentThread'
-import CommentForm from '../components/forms/CommentForm'
+import ReviewCard from '../components/common/ReviewCard'
+import ReviewForm from '../components/forms/ReviewForm'
+import { useReviews } from '../hooks/useReviews'
 import { getAlbum } from '../services/api'
 import { albumYear } from '../services/dates'
 import { supabase } from '../services/supabaseClient'
-import { useAuthStore } from '../store/authStore'
 
 function formatDuration(ms) {
   if (!ms) return '—'
@@ -21,8 +20,7 @@ function formatDuration(ms) {
 
 export default function TrackDetail() {
   const { id } = useParams()
-  const { user } = useAuthStore()
-  const [comments, setComments] = useState([])
+  const { reviews, createReview, deleteReview } = useReviews('track', id)
 
   // Lookup album_id from track (lightweight, cached)
   const { data: resolvedAlbumId } = useQuery({
@@ -49,37 +47,6 @@ export default function TrackDetail() {
   const artist = albumData?.artist
   const tracks = albumData?.tracks || []
   const track = tracks.find(t => t.id === id) || null
-
-  const fetchComments = async (trackId) => {
-    const { data } = await supabase
-      .from('comments')
-      .select('*, user:users(username, avatar_url)')
-      .eq('entity_type', 'track')
-      .eq('entity_id', trackId)
-      .order('created_at', { ascending: true })
-    setComments(data || [])
-  }
-
-  useEffect(() => {
-    setComments([])
-    fetchComments(id)
-  }, [id])
-
-  const handleComment = async ({ body }) => {
-    if (!user) return
-    await supabase.from('comments').insert({
-      user_id: user.id,
-      entity_type: 'track',
-      entity_id: id,
-      body,
-    })
-    fetchComments(id)
-  }
-
-  const handleDeleteComment = async (commentId) => {
-    await supabase.from('comments').delete().eq('id', commentId)
-    fetchComments(id)
-  }
 
   if (isLoading || (!track && resolvedAlbumId)) return <p className="text-gray-500">Cargando...</p>
   if (!track) return <p className="text-red-400">Canción no encontrada.</p>
@@ -189,17 +156,21 @@ export default function TrackDetail() {
             </div>
           </section>
 
-          {/* Comments */}
+          {/* Una canción se puntúa como cualquier otra obra. Hasta ahora era la
+              única que no se podía, y a cambio tenía una caja de comentarios que
+              ninguna otra ficha tenía. */}
           <section>
             <h2 className="text-xl font-bold text-rock-text mb-4">
-              Comentarios ({comments.length})
+              Opiniones ({reviews.length})
             </h2>
             <div className="max-w-2xl space-y-4">
-              <CommentForm entityType="track" entityId={id} onSubmit={handleComment} />
-              {comments.length > 0 ? (
-                <CommentThread comments={comments} onDelete={handleDeleteComment} />
+              <ReviewForm entityType="track" entityId={id} onSubmit={createReview} />
+              {reviews.length > 0 ? (
+                reviews.map(r => (
+                  <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+                ))
               ) : (
-                <p className="text-gray-500 text-sm">Sin comentarios aún.</p>
+                <p className="text-gray-500 text-sm">Todavía nadie opinó.</p>
               )}
             </div>
           </section>
