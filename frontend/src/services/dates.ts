@@ -57,14 +57,15 @@ export function formatReleaseDate(album: any): string | null {
 
 /** Clave de orden cronológico. Los bloques sin mes abren el año. */
 export function entrySortKey(entry: any): string {
-  const raw = entry.album?.release_date
+  // Una canción no tiene fecha propia: la que la ubica es la de su disco.
+  const raw = entry.album?.release_date ?? entry.track?.album?.release_date
   if (raw) return raw
   if (entry.year) return `${entry.year}-00-00`
   return '9999-99-99' // sin fecha → al final
 }
 
 export function entryYear(entry: any): number | null {
-  return albumYear(entry.album) ?? entry.year ?? null
+  return albumYear(entry.album) ?? albumYear(entry.track?.album) ?? entry.year ?? null
 }
 
 const RELATIVE = new Intl.RelativeTimeFormat('es-AR', { numeric: 'auto' })

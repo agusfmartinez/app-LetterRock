@@ -7,6 +7,7 @@ import {
   EMPTY_ALBUM_FILTERS,
   useAlbumSearch,
   useCollectionAdmin,
+  useTrackSearch,
 } from '../../hooks/useCollectionAdmin'
 import { groupEntriesByYear, nextPositionInYear } from '../../hooks/useCollections'
 import { albumYear, formatReleaseDate } from '../../services/dates'
@@ -28,9 +29,11 @@ function nextPosition(entries) {
 
 /** Fila de una línea. No despliega nada: al elegirla se edita en el panel derecho. */
 export function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMoveDown, moving }) {
-  const album = entry.album
+  // Una canción se muestra con la portada y la banda de su disco, y con su
+  // propio título: es lo único suyo que la distingue en la fila.
+  const album = entry.album || entry.track?.album
   const artist = entry.artist || album?.artist
-  const label = album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
+  const label = entry.track?.title || entry.album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
   const dateLabel = album ? formatReleaseDate(album) : entry.year ? String(entry.year) : null
 
   return (
@@ -71,7 +74,9 @@ export function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMove
           ) : entry.artist?.image_url ? (
             <img src={entry.artist.image_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm">📝</div>
+            <div className="w-full h-full flex items-center justify-center text-sm">
+              {entry.track ? '🎵' : '📝'}
+            </div>
           )}
         </div>
 
@@ -215,9 +220,9 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const album = entry.album
+  const album = entry.album || entry.track?.album
   const isNarrative = entry.entry_type === 'narrative'
-  const label = album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
+  const label = entry.track?.title || entry.album?.title || entry.artist?.name || entry.title || 'Bloque de texto'
 
   const set = (key) => (e) => {
     setSaved(false)
@@ -274,7 +279,8 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         <div className="flex-1 min-w-0">
           <p className="text-rock-text font-semibold truncate">{label}</p>
           <p className="text-gray-500 text-xs truncate">
-            {(entry.artist || album?.artist)?.name}
+            {[(entry.artist || album?.artist)?.name, entry.track ? album?.title : null]
+              .filter(Boolean).join(' · ')}
           </p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-rock-text text-sm flex-shrink-0">
@@ -478,19 +484,30 @@ function YoutubePanel({ albumId, artist }) {
   )
 }
 
-/** Buscador de discos. Arranca vacío: muestra resultados recién al ejecutar la consulta. */
+/**
+ * Buscador de discos y de canciones. Arranca vacío: muestra resultados recién al
+ * ejecutar la consulta.
+ *
+ * Las dos búsquedas viven en el mismo panel y no en dos: quien arma una
+ * colección elige qué está juntando, y una lista puede mezclar discos y temas.
+ * Cambia qué se busca, no dónde se busca.
+ */
 export function AlbumSearchPanel({ collection, section = null, entries, isRanking = false }) {
+  const [mode, setMode] = useState('album')
   const [form, setForm] = useState({
     ...EMPTY_ALBUM_FILTERS,
     yearFrom: section?.year_from ?? '',
     yearTo: section?.year_to ?? '',
   })
   const [filters, setFilters] = useState(null)
-  const { data: albums = [], isLoading, error } = useAlbumSearch(
-    { sectionId: section?.id ?? null, collectionId: collection.id },
-    filters,
-    !!filters
-  )
+
+  const scope = { sectionId: section?.id ?? null, collectionId: collection.id }
+  const albumQuery = useAlbumSearch(scope, filters, !!filters && mode === 'album')
+  const trackQuery = useTrackSearch(scope, filters, !!filters && mode === 'track')
+
+  const isTrackMode = mode === 'track'
+  const { data: results = [], isLoading, error } = isTrackMode ? trackQuery : albumQuery
+
   const { createEntry } = useCollectionAdmin()
   const [addError, setAddError] = useState('')
 
@@ -506,13 +523,17 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
     setFilters(null)
   }
 
-  const add = (album) => {
+  const add = (item) => {
+    // Una canción se ubica en el tiempo por la fecha de su disco: no tiene una
+    // propia.
+    const album = isTrackMode ? item.album : item
+
     createEntry.mutate(
       {
         collection_id: collection.id,
         section_id: section?.id ?? null,
-        entry_type: 'album',
-        album_id: album.id,
+        entry_type: isTrackMode ? 'track' : 'album',
+        ...(isTrackMode ? { track_id: item.id } : { album_id: item.id }),
         // Con épocas, cada año tiene su propio orden. Sin épocas hay una sola
         // secuencia y lo nuevo va al final, que es donde el editor lo espera.
         position: section
@@ -531,10 +552,34 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h2 className="font-bold text-rock-text">Buscar discos</h2>
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="font-bold text-rock-text">Buscar</h2>
+        <div className="flex gap-1 bg-rock-dark border border-rock-border rounded-lg p-1">
+          {[
+            { value: 'album', label: 'Discos' },
+            { value: 'track', label: 'Canciones' },
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => { setMode(value); setFilters(null) }}
+              className={`px-3 py-1 rounded text-xs transition-colors ${
+                mode === value ? 'bg-rock-accent text-white' : 'text-gray-400 hover:text-rock-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <form onSubmit={search} className="space-y-2">
-        <input value={form.title} onChange={set('title')} placeholder="Título del disco" className={`w-full ${INPUT}`} />
+        <input
+          value={form.title}
+          onChange={set('title')}
+          placeholder={isTrackMode ? 'Título de la canción' : 'Título del disco'}
+          className={`w-full ${INPUT}`}
+        />
         <input value={form.artist} onChange={set('artist')} placeholder="Banda" className={`w-full ${INPUT}`} />
         <div className="flex gap-2">
           <input value={form.yearFrom} onChange={set('yearFrom')} placeholder="Desde" type="number" className={`w-1/2 ${INPUT}`} />
@@ -573,27 +618,33 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
         </p>
       ) : isLoading ? (
         <p className="text-gray-500 text-sm border-t border-rock-border pt-3">Buscando...</p>
-      ) : albums.length === 0 ? (
+      ) : results.length === 0 ? (
         <p className="text-gray-500 text-sm border-t border-rock-border pt-3">
           Sin resultados. Si falta una banda, buscala primero en la app para que se ingeste.
         </p>
       ) : (
         <div className="border-t border-rock-border pt-3 space-y-1 max-h-[28rem] overflow-y-auto">
-          <p className="text-gray-600 text-xs">{albums.length} resultados</p>
-          {albums.map(a => (
+          <p className="text-gray-600 text-xs">{results.length} resultados</p>
+          {results.map(a => {
+            // La portada, la banda y la fecha de una canción son las de su disco.
+            const cover = isTrackMode ? a.album : a
+            return (
             <div key={a.id} className="flex items-center gap-2 py-1">
               <div className="w-9 h-9 rounded overflow-hidden bg-rock-dark flex-shrink-0">
-                {a.cover_url ? (
-                  <img src={a.cover_url} alt="" className="w-full h-full object-cover" />
+                {cover?.cover_url ? (
+                  <img src={cover.cover_url} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-sm">💿</div>
+                  <div className="w-full h-full flex items-center justify-center text-sm">
+                    {isTrackMode ? '🎵' : '💿'}
+                  </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-rock-text text-sm truncate">{a.title}</p>
                 <p className="text-gray-500 text-xs truncate">
-                  {a.artist?.name}
-                  {a.release_date ? ` · ${formatReleaseDate(a)}` : ''}
+                  {cover?.artist?.name}
+                  {isTrackMode && cover?.title ? ` · ${cover.title}` : ''}
+                  {cover?.release_date ? ` · ${formatReleaseDate(cover)}` : ''}
                 </p>
               </div>
               <button
@@ -604,7 +655,8 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
                 +
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

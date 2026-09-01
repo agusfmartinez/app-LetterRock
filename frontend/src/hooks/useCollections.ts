@@ -6,7 +6,10 @@ const ENTRY_SELECT = `
   id, entry_type, title, body_text, year, rank, position, section_id, image_url,
   album:albums(id, title, cover_url, release_date, release_date_precision, album_type,
                description, external_spotify_id, artist:artists(id, name, slug)),
-  artist:artists(id, name, slug, image_url, formed_year)
+  artist:artists(id, name, slug, image_url, formed_year),
+  track:tracks(id, title, duration_ms, external_spotify_id,
+               album:albums(id, title, cover_url, release_date, release_date_precision,
+                            external_spotify_id, artist:artists(id, name, slug)))
 `
 
 /**

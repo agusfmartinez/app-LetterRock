@@ -201,6 +201,90 @@ function AlbumEntry({ entry, media, people, standalone = false }) {
   )
 }
 
+
+/**
+ * Una canción dentro de una colección.
+ *
+ * Se apoya en su disco para todo lo que la canción no tiene: la portada, el año
+ * y la banda. Lo que sí es suyo es el reproductor, que arranca en ese tema y no
+ * en el álbum entero — que es de lo que se trata una colección de canciones.
+ */
+function TrackEntry({ entry, media, standalone = false }) {
+  const track = entry.track
+  const album = track.album
+  const artist = album?.artist
+
+  // El id de YouTube de este tema, si la vinculación del álbum ya lo trajo.
+  const youtubeId = media?.top?.find(t => t.id === track.id)?.youtubeId || null
+
+  return (
+    <article className="py-10 border-b border-rock-border last:border-0">
+      <div className="flex flex-col md:flex-row gap-8">
+        <Link
+          to={`/track/${track.id}`}
+          className="w-full md:w-40 aspect-square rounded-lg overflow-hidden bg-rock-card flex-shrink-0 self-start block group"
+        >
+          {album?.cover_url ? (
+            <img
+              src={album.cover_url}
+              alt={album.title}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-6xl">🎵</div>
+          )}
+        </Link>
+
+        <div className="flex-1 min-w-0 space-y-4">
+          <div>
+            {standalone && album && <PreciseDate album={album} standalone />}
+            <Link
+              to={`/track/${track.id}`}
+              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
+            >
+              {track.title}
+            </Link>
+            <p className="text-gray-400 text-lg">
+              {artist && (
+                <Link to={`/artist/${artist.slug}`} className="hover:text-rock-accent">
+                  {artist.name}
+                </Link>
+              )}
+              {artist && album && ' · '}
+              {album && (
+                <Link to={`/album/${album.id}`} className="hover:text-rock-accent">
+                  {album.title}
+                </Link>
+              )}
+            </p>
+          </div>
+
+          <Paragraphs text={entry.body_text} />
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <FavoriteButton entityType="track" entityId={track.id} />
+            <PlatformBadges
+              links={
+                track.external_spotify_id
+                  ? { spotify: { url: `https://open.spotify.com/track/${track.external_spotify_id}` } }
+                  : {}
+              }
+              fallbacks={{ youtube: youtubeMusicSearch(`${artist?.name || ''} ${track.title}`) }}
+            />
+          </div>
+
+          <MediaEmbed
+            compact
+            spotify={track.external_spotify_id ? { type: 'track', id: track.external_spotify_id } : null}
+            youtube={youtubeId ? { videoId: youtubeId } : null}
+          />
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function ArtistEntry({ entry }) {
   const artist = entry.artist
 
@@ -250,6 +334,9 @@ function ArtistEntry({ entry }) {
 export default function TimelineEntry({ entry, media, people, standalone = false }) {
   if (entry.entry_type === 'album' && entry.album) {
     return <AlbumEntry entry={entry} media={media} people={people} standalone={standalone} />
+  }
+  if (entry.entry_type === 'track' && entry.track) {
+    return <TrackEntry entry={entry} media={media} standalone={standalone} />
   }
   if (entry.entry_type === 'artist' && entry.artist) return <ArtistEntry entry={entry} />
   return <NarrativeEntry entry={entry} standalone={standalone} />

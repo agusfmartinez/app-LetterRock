@@ -52,7 +52,7 @@ export default function CollectionSection() {
   )
 
   const albumIds = useMemo(
-    () => (data?.entries || []).map(e => e.album?.id).filter(Boolean),
+    () => (data?.entries || []).map(e => e.album?.id || e.track?.album?.id).filter(Boolean),
     [data?.entries]
   )
   const { data: albumMedia = {} } = useAlbumMedia(albumIds)
@@ -60,7 +60,9 @@ export default function CollectionSection() {
   // La formación de todas las bandas de la página en una sola consulta. Pedirla
   // por disco eran veinte idas y vueltas al abrir una década.
   const artistIds = useMemo(
-    () => (data?.entries || []).map(e => e.album?.artist?.id).filter(Boolean),
+    () => (data?.entries || [])
+      .map(e => e.album?.artist?.id || e.track?.album?.artist?.id)
+      .filter(Boolean),
     [data?.entries]
   )
   const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
@@ -183,8 +185,8 @@ export default function CollectionSection() {
                   <TimelineEntry
                     key={e.id}
                     entry={e}
-                    media={e.album?.id ? albumMedia[e.album.id] : null}
-                    people={e.album?.artist?.id ? membersByArtist[e.album.artist.id] : null}
+                    media={albumMedia[e.album?.id || e.track?.album?.id] || null}
+                    people={membersByArtist[e.album?.artist?.id || e.track?.album?.artist?.id] || null}
                   />
                 ))}
               </section>

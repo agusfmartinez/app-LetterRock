@@ -15,7 +15,7 @@ export function slugify(text: string): string {
 function useInvalidateCollections() {
   const queryClient = useQueryClient()
   return () => {
-    for (const key of ['collections', 'collection', 'collection-section', 'album-search']) {
+    for (const key of ['collections', 'collection', 'collection-section', 'album-search', 'track-search']) {
       queryClient.invalidateQueries({ queryKey: [key] })
     }
   }
@@ -31,6 +31,9 @@ export function describeError(error: any): string {
   if (error.code === '23505') {
     if (String(error.message).includes('idx_collection_entries_unique_album')) {
       return 'Ese disco ya está cargado en esta sección.'
+    }
+    if (String(error.message).includes('idx_collection_entries_unique_track')) {
+      return 'Esa canción ya está en esta colección.'
     }
     if (String(error.message).includes('collection_sections_slug')) {
       return 'Ya existe una sección con ese nombre en la colección.'
@@ -241,6 +244,68 @@ export function useAlbumSearch(
       const { data, error } = await query
       if (error) throw error
       return (data || []).filter((a: any) => !taken.has(a.id))
+    },
+    enabled: enabled && (!!sectionId || !!collectionId),
+  })
+}
+
+/**
+ * Búsqueda de canciones, para las colecciones que las llevan.
+ *
+ * Filtra por título de tema y por banda, no por título de disco: quien arma
+ * "las diez mejores canciones" busca el tema, y el disco es un dato de contexto.
+ * El rango de años se aplica sobre la fecha del disco, que es lo único que ubica
+ * a una canción en el tiempo.
+ */
+export function useTrackSearch(
+  scope: { sectionId?: string | null; collectionId?: string | null },
+  filters: AlbumFilters,
+  enabled: boolean
+) {
+  const { sectionId = null, collectionId = null } = scope || {}
+
+  return useQuery({
+    queryKey: ['track-search', sectionId, collectionId, filters],
+    queryFn: async () => {
+      const takenQuery = supabase.from('collection_entries').select('track_id')
+      const { data: existing } = await (sectionId
+        ? takenQuery.eq('section_id', sectionId)
+        : takenQuery.eq('collection_id', collectionId))
+      const taken = new Set((existing || []).map((e: any) => e.track_id).filter(Boolean))
+
+      // Los filtros de banda y de año viven en otras tablas, así que primero se
+      // resuelve qué álbumes entran y después se piden sus temas.
+      let albumQuery = supabase.from('albums').select('id').eq('hidden', false)
+
+      if (filters.artist.trim()) {
+        const { data: artists } = await supabase
+          .from('artists')
+          .select('id')
+          .ilike('name', `%${filters.artist.trim()}%`)
+        const artistIds = (artists || []).map((a: any) => a.id)
+        if (artistIds.length === 0) return []
+        albumQuery = albumQuery.in('artist_id', artistIds)
+      }
+      if (filters.studioOnly) albumQuery = albumQuery.eq('album_type', 'album')
+      if (filters.yearFrom) albumQuery = albumQuery.gte('release_date', `${filters.yearFrom}-01-01`)
+      if (filters.yearTo) albumQuery = albumQuery.lte('release_date', `${filters.yearTo}-12-31`)
+
+      const { data: albums } = await albumQuery
+      const albumIds = (albums || []).map((a: any) => a.id)
+      if (albumIds.length === 0) return []
+
+      let query = supabase
+        .from('tracks')
+        .select('id, title, duration_ms, album:albums(id, title, cover_url, release_date, artist:artists(id, name))')
+        .in('album_id', albumIds)
+        .order('title')
+        .limit(100)
+
+      if (filters.title.trim()) query = query.ilike('title', `%${filters.title.trim()}%`)
+
+      const { data, error } = await query
+      if (error) throw error
+      return (data || []).filter((t: any) => !taken.has(t.id))
     },
     enabled: enabled && (!!sectionId || !!collectionId),
   })

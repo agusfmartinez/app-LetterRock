@@ -20,11 +20,16 @@ import { useAlbumMedia } from '../hooks/useTopTracks'
  * un ranking, el número gigante al costado.
  */
 function FlatEntries({ entries, isRanking }) {
-  const albumIds = useMemo(() => entries.map(e => e.album?.id).filter(Boolean), [entries])
+  // El álbum de una canción cuenta igual: de ahí salen su reproductor y su
+  // formación, que la canción no tiene por sí sola.
+  const albumIds = useMemo(
+    () => entries.map(e => e.album?.id || e.track?.album?.id).filter(Boolean),
+    [entries]
+  )
   const { data: albumMedia = {} } = useAlbumMedia(albumIds)
 
   const artistIds = useMemo(
-    () => entries.map(e => e.album?.artist?.id).filter(Boolean),
+    () => entries.map(e => e.album?.artist?.id || e.track?.album?.artist?.id).filter(Boolean),
     [entries]
   )
   const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
@@ -43,8 +48,8 @@ function FlatEntries({ entries, isRanking }) {
           <div className="flex-1 min-w-0">
             <TimelineEntry
               entry={entry}
-              media={entry.album?.id ? albumMedia[entry.album.id] : null}
-              people={entry.album?.artist?.id ? membersByArtist[entry.album.artist.id] : null}
+              media={albumMedia[entry.album?.id || entry.track?.album?.id] || null}
+              people={membersByArtist[entry.album?.artist?.id || entry.track?.album?.artist?.id] || null}
               standalone
             />
           </div>
