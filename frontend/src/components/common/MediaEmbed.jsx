@@ -41,11 +41,14 @@ function writePreference(value) {
  * arranca por el primer id de esa lista y no por el del path, así que terminaba
  * empezando por la pista 2. Sin encadenar arranca donde corresponde, a cambio de
  * perder el avance automático.
+ *
+ * `youtube.listId` es el otro caso: una playlist entera, que YouTube incrusta
+ * por el path `videoseries` en vez de por un id de video.
  */
 export default function MediaEmbed({ spotify, youtube, compact = false, className = '' }) {
   const available = []
   if (spotify?.id) available.push('spotify')
-  if (youtube?.videoId) available.push('youtube')
+  if (youtube?.videoId || youtube?.listId) available.push('youtube')
 
   const [provider, setProvider] = useState(() => {
     const preferred = readPreference()
@@ -105,7 +108,11 @@ export default function MediaEmbed({ spotify, youtube, compact = false, classNam
         <div className="aspect-video w-full">
           <iframe
             title="Reproductor de YouTube"
-            src={`https://www.youtube.com/embed/${youtube.videoId}?rel=0`}
+            src={
+              youtube.listId
+                ? `https://www.youtube.com/embed/videoseries?list=${youtube.listId}&rel=0`
+                : `https://www.youtube.com/embed/${youtube.videoId}?rel=0`
+            }
             width="100%"
             height="100%"
             frameBorder="0"

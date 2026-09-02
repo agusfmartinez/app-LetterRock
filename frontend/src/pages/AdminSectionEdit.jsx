@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
+import PlaylistField from '../components/common/PlaylistField'
 import {
   AlbumSearchPanel,
   EntriesByYear,
@@ -28,6 +29,7 @@ function SectionFields({ section }) {
     subtitle: section.subtitle || '',
     intro_text: section.intro_text || '',
     cover_url: section.cover_url || '',
+    playlist_url: section.playlist_url || '',
     year_from: section.year_from ?? '',
     year_to: section.year_to ?? '',
   })
@@ -44,6 +46,7 @@ function SectionFields({ section }) {
         subtitle: form.subtitle.trim() || null,
         intro_text: form.intro_text.trim() || null,
         cover_url: form.cover_url.trim() || null,
+        playlist_url: form.playlist_url.trim() || null,
         year_from: form.year_from ? Number(form.year_from) : null,
         year_to: form.year_to ? Number(form.year_to) : null,
       },
@@ -79,6 +82,10 @@ function SectionFields({ section }) {
         onChange={url => setForm(f => ({ ...f, cover_url: url }))}
         folder="collections"
         placeholder="URL de portada de la sección (opcional)"
+      />
+      <PlaylistField
+        value={form.playlist_url}
+        onChange={url => setForm(f => ({ ...f, playlist_url: url }))}
       />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex items-center gap-3">

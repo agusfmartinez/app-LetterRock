@@ -23,6 +23,7 @@ import AdminDiscover from './pages/AdminDiscover'
 import AdminArtistEdit from './pages/AdminArtistEdit'
 import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import MemberDetail from './pages/MemberDetail'
+import SpotifyCallback from './pages/SpotifyCallback'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -66,6 +67,9 @@ export default function App() {
             <Route path="/admin/descubrir" element={<AdminDiscover />} />
             <Route path="/admin/artista/:id" element={<AdminArtistEdit />} />
             <Route path="/admin/album/:id" element={<AdminAlbumEdit />} />
+            {/* La vuelta de Spotify. Vive en una ventana aparte que se cierra
+                sola: no es una página a la que se navegue. */}
+            <Route path="/spotify-callback" element={<SpotifyCallback />} />
             <Route path="/auth/login" element={<AuthPages mode="login" />} />
             <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
           </Routes>

@@ -215,7 +215,9 @@ function TrackEntry({ entry, media, standalone = false }) {
   const artist = album?.artist
 
   // El id de YouTube de este tema, si la vinculación del álbum ya lo trajo.
-  const youtubeId = media?.top?.find(t => t.id === track.id)?.youtubeId || null
+  // Contra `all` y no contra `top`: un tema puede no estar entre los cuatro más
+  // escuchados de su disco y aun así ser el que alguien eligió para la lista.
+  const youtubeId = media?.all?.find(t => t.id === track.id)?.youtubeId || null
 
   return (
     <article className="py-10 border-b border-rock-border last:border-0">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import FavoriteButton from '../components/common/FavoriteButton'
 import RatingStars from '../components/common/RatingStars'
+import PlaylistPanel from '../components/common/PlaylistPanel'
 import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
@@ -194,6 +195,15 @@ export default function CollectionSection() {
           </div>
         </div>
       )}
+
+      {/* La playlist de la época, no la de la colección: "Los 70" no suena como
+          toda la historia del rock argentino. */}
+      <PlaylistPanel
+        playlistUrl={section.playlist_url}
+        entries={entries}
+        media={albumMedia}
+        title={`${collection.title} · ${section.title}`}
+      />
 
       {/* La opinión va en la época y no en la colección: en una timeline lo que
           se lee de corrido es esto, y la portada es apenas un índice de épocas. */}

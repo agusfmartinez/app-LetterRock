@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
+import PlaylistField from '../components/common/PlaylistField'
 import RequireCollectionOwner from '../components/common/RequireCollectionOwner'
 import {
   AlbumSearchPanel,
@@ -19,12 +20,14 @@ function CollectionFields({ collection }) {
   const [title, setTitle] = useState(collection.title)
   const [description, setDescription] = useState(collection.description || '')
   const [coverUrl, setCoverUrl] = useState(collection.cover_url || '')
+  const [playlistUrl, setPlaylistUrl] = useState(collection.playlist_url || '')
   const [error, setError] = useState('')
 
   const dirty =
     title !== collection.title ||
     description !== (collection.description || '') ||
-    coverUrl !== (collection.cover_url || '')
+    coverUrl !== (collection.cover_url || '') ||
+    playlistUrl !== (collection.playlist_url || '')
 
   const save = () => {
     updateCollection.mutate(
@@ -33,6 +36,7 @@ function CollectionFields({ collection }) {
         title: title.trim(),
         description: description.trim() || null,
         cover_url: coverUrl.trim() || null,
+        playlist_url: playlistUrl.trim() || null,
       },
       { onError: e => setError(e.message) }
     )
@@ -77,6 +81,7 @@ function CollectionFields({ collection }) {
         folder="collections"
         placeholder="URL de portada (opcional)"
       />
+      <PlaylistField value={playlistUrl} onChange={setPlaylistUrl} />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import FavoriteButton from '../components/common/FavoriteButton'
 import RatingStars from '../components/common/RatingStars'
+import PlaylistPanel from '../components/common/PlaylistPanel'
 import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
@@ -19,21 +20,7 @@ import { useAlbumMedia } from '../hooks/useTopTracks'
  * su reproductor y su formación. Lo único que cambia es qué manda el orden, y en
  * un ranking, el número gigante al costado.
  */
-function FlatEntries({ entries, isRanking }) {
-  // El álbum de una canción cuenta igual: de ahí salen su reproductor y su
-  // formación, que la canción no tiene por sí sola.
-  const albumIds = useMemo(
-    () => entries.map(e => e.album?.id || e.track?.album?.id).filter(Boolean),
-    [entries]
-  )
-  const { data: albumMedia = {} } = useAlbumMedia(albumIds)
-
-  const artistIds = useMemo(
-    () => entries.map(e => e.album?.artist?.id || e.track?.album?.artist?.id).filter(Boolean),
-    [entries]
-  )
-  const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
-
+function FlatEntries({ entries, isRanking, albumMedia, membersByArtist }) {
   return (
     <div>
       {entries.map((entry, i) => (
@@ -108,10 +95,28 @@ export default function CollectionDetail() {
   const collectionId = data?.collection?.id
   const { reviews, createReview, deleteReview } = useReviews('collection', collectionId)
 
+  // El álbum de una canción cuenta igual: de ahí salen su reproductor y su
+  // formación, que la canción no tiene por sí sola.
+  //
+  // Se piden acá y no dentro de las tarjetas porque la playlist derivada
+  // necesita los mismos datos: los ids de YouTube de cada tema salen de acá.
+  const entries = data?.entries || []
+  const albumIds = useMemo(
+    () => entries.map(e => e.album?.id || e.track?.album?.id).filter(Boolean),
+    [entries]
+  )
+  const { data: albumMedia = {} } = useAlbumMedia(albumIds)
+
+  const artistIds = useMemo(
+    () => entries.map(e => e.album?.artist?.id || e.track?.album?.artist?.id).filter(Boolean),
+    [entries]
+  )
+  const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
+
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!data) return <p className="text-red-400">Colección no encontrada.</p>
 
-  const { collection, sections, entries } = data
+  const { collection, sections } = data
   const isTimeline = collection.type === 'timeline'
   const isRanking = collection.type === 'ranking'
   const canEdit = isEditor || (!!user && collection.created_by === user.id)
@@ -189,7 +194,12 @@ export default function CollectionDetail() {
         entries.length === 0 ? (
           <p className="text-gray-500 text-sm">Esta colección todavía no tiene discos.</p>
         ) : (
-          <FlatEntries entries={entries} isRanking={isRanking} />
+          <FlatEntries
+            entries={entries}
+            isRanking={isRanking}
+            albumMedia={albumMedia}
+            membersByArtist={membersByArtist}
+          />
         )
       ) : sections.length === 0 ? (
         <p className="text-gray-500 text-sm">Esta colección todavía no tiene secciones.</p>
@@ -200,6 +210,16 @@ export default function CollectionDetail() {
           ))}
         </div>
       )}
+
+      {/* En una timeline las entradas viven en las épocas, así que acá sólo
+          puede aparecer la playlist que alguien haya pegado. Es correcto: la
+          derivada de "los 70" se arma en la página de los 70. */}
+      <PlaylistPanel
+        playlistUrl={collection.playlist_url}
+        entries={entries}
+        media={albumMedia}
+        title={collection.title}
+      />
 
       {/* Opinar sobre una lista curada es tan válido como opinar sobre un disco:
           lo que se juzga es la selección, no la música.

@@ -10,9 +10,18 @@ export type TopTrack = {
   url: string | null
 }
 
+export type RankedTrack = TopTrack & { spotifyId: string | null; youtubeId: string | null }
+
 export type AlbumMedia = {
   /** Temas ordenados por reproducciones, para el bloque de destacados. */
-  top: TopTrack[]
+  top: RankedTrack[]
+  /**
+   * Los mismos, sin cortar. `top` está recortado para que el bloque de
+   * destacados no muestre veinte filas, pero buscar el video de un tema suelto
+   * —una entrada de canción, o la playlist derivada— tiene que poder mirar el
+   * álbum entero: el tema puede no estar entre los más escuchados.
+   */
+  all: RankedTrack[]
   /** El más escuchado, en las dos plataformas: es lo que suena en la timeline. */
   feature: { spotifyId: string | null; youtubeId: string | null } | null
 }
@@ -54,7 +63,7 @@ export function useAlbumMedia(albumIds: string[], topLimit = 4) {
         byTrack.get(link.entity_id)![link.provider] = link
       }
 
-      const ranked: Record<string, (TopTrack & { spotifyId: string | null; youtubeId: string | null })[]> = {}
+      const ranked: Record<string, RankedTrack[]> = {}
 
       for (const track of tracks || []) {
         const providers = byTrack.get(track.id)
@@ -77,6 +86,7 @@ export function useAlbumMedia(albumIds: string[], topLimit = 4) {
         const best = sorted[0]
         result[albumId] = {
           top: sorted.slice(0, topLimit),
+          all: sorted,
           feature: best ? { spotifyId: best.spotifyId, youtubeId: best.youtubeId } : null,
         }
       }
