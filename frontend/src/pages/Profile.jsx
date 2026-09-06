@@ -6,6 +6,8 @@ import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { CollectionCard } from './Collections'
 import { useUserCollections } from '../hooks/useCollections'
+import { useUserPosts } from '../hooks/usePosts'
+import ActivityItem from '../components/common/ActivityItem'
 import { useUserFavorites } from '../hooks/useFavorite'
 import { fetchEntities } from '../services/entities'
 import FollowButton from '../components/common/FollowButton'
@@ -331,6 +333,7 @@ export default function Profile() {
   const { data: favorites = [], isLoading: loadingFavorites } = useUserFavorites(profile?.id)
   const follow = useFollow(profile?.id)
   const { data: collections = [] } = useUserCollections(profile?.id)
+  const { data: posts = [] } = useUserPosts(profile?.id)
 
   if (isLoading) return <p className="text-gray-500">Cargando...</p>
   if (!profile) return <p className="text-red-400">Usuario no encontrado.</p>
@@ -368,6 +371,7 @@ export default function Profile() {
           </div>
           {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
           <p className="text-gray-500 text-xs mt-1">
+            {posts.length} {posts.length === 1 ? 'posteo' : 'posteos'} ·{' '}
             {reviews.length} opiniones · {favorites.length} favoritos ·{' '}
             {collections.length} {collections.length === 1 ? 'colección' : 'colecciones'} ·{' '}
             <button
@@ -394,7 +398,7 @@ export default function Profile() {
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-rock-border">
-        {['reviews', 'favoritos', 'colecciones', 'seguidores', 'siguiendo'].map(t => (
+        {['posteos', 'reviews', 'favoritos', 'colecciones', 'seguidores', 'siguiendo'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -408,6 +412,25 @@ export default function Profile() {
           </button>
         ))}
       </div>
+
+      {/* Se reusa la fila del feed en vez de una tarjeta propia: es el mismo
+          posteo, y dos maquetas para lo mismo se despegan con el tiempo. */}
+      {tab === 'posteos' && (
+        <div className="max-w-2xl">
+          {posts.length === 0 ? (
+            <p className="text-gray-500 text-sm">Sin posteos aún.</p>
+          ) : (
+            <div className="bg-rock-card border border-rock-border rounded-lg px-4">
+              {posts.map(p => (
+                <ActivityItem
+                  key={p.id}
+                  activity={{ ...p, kind: 'post', text: p.body }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'reviews' && (
         <div className="space-y-3">

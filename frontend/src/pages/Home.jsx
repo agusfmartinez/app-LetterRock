@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import ActivityItem from '../components/common/ActivityItem'
 import ArtistCard from '../components/common/ArtistCard'
+import PostForm from '../components/forms/PostForm'
 import { useActivityFeed } from '../hooks/useActivityFeed'
 import { useMyFollowing } from '../hooks/useFollows'
 import { supabase } from '../services/supabaseClient'
@@ -117,6 +118,12 @@ export default function Home() {
             </div>
           )}
         </div>
+        {/* Arriba del feed y no en una página aparte: postear es escribir en
+            esto que estás mirando. `PostForm` no se muestra sin sesión. */}
+        <div className="max-w-2xl mb-4">
+          <PostForm />
+        </div>
+
         {/* Sin esto, alguien que no sigue a nadie ve el feed global sin entender
             por qué le aparece gente que no eligió. */}
         {user && !loadingFollowing && following.length === 0 && (
