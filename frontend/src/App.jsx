@@ -23,6 +23,7 @@ import AdminDiscover from './pages/AdminDiscover'
 import AdminArtistEdit from './pages/AdminArtistEdit'
 import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import MemberDetail from './pages/MemberDetail'
+import Onboarding from './pages/Onboarding'
 import SpotifyCallback from './pages/SpotifyCallback'
 import { useAuth } from './hooks/useAuth'
 
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/spotify-callback" element={<SpotifyCallback />} />
             <Route path="/auth/login" element={<AuthPages mode="login" />} />
             <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
+            <Route path="/bienvenida" element={<Onboarding />} />
           </Routes>
         </main>
         <Footer />

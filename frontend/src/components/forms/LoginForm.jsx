@@ -18,10 +18,13 @@ export default function LoginForm({ mode = 'login' }) {
     try {
       if (mode === 'login') {
         await login(email, password)
+        navigate('/')
       } else {
         await signup(email, password, username)
+        // Y no a Home directo: recién registrado no sigue a nadie ni tiene
+        // favoritos, y esos dos son la materia prima de casi todo lo demás.
+        navigate('/bienvenida')
       }
-      navigate('/')
     } catch (err) {
       setError(err.message || 'Error de autenticación')
     } finally {
