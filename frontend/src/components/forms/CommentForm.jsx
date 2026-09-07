@@ -24,12 +24,12 @@ export default function CommentForm({ entityType, entityId, onSubmit }) {
         value={body}
         onChange={e => setBody(e.target.value)}
         placeholder="Agregar comentario..."
-        className="flex-1 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="flex-1 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <button
         type="submit"
         disabled={!body.trim() || loading}
-        className="bg-rock-accent text-white px-3 py-2 rounded text-sm hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+        className="bg-rock-accent text-white px-3 py-2 rounded text-sm hover:bg-rock-accentBright disabled:opacity-50 flex-shrink-0"
       >
         {loading ? '...' : 'Comentar'}
       </button>

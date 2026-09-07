@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import FollowButton from '../components/common/FollowButton'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 
@@ -73,11 +74,11 @@ export default function Users() {
         value={term}
         onChange={e => setTerm(e.target.value)}
         placeholder="Buscar usuario..."
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
 
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : visible.length === 0 ? (
         <p className="text-gray-500 text-sm">
           {query ? 'Ningún usuario con ese nombre.' : 'Todavía no hay otros usuarios.'}

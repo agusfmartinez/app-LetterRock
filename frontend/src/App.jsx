@@ -25,6 +25,8 @@ import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import MemberDetail from './pages/MemberDetail'
 import Onboarding from './pages/Onboarding'
 import SpotifyCallback from './pages/SpotifyCallback'
+import Legal from './pages/Legal'
+import NotFound from './pages/NotFound'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -42,9 +44,10 @@ export default function App() {
   return (
     <ConfirmProvider>
       <div className="min-h-screen flex flex-col bg-rock-dark text-rock-text">
+        <a href="#main" className="skip-link">Saltar al contenido</a>
         <ScrollToTop />
         <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        <main id="main" className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
@@ -74,6 +77,9 @@ export default function App() {
             <Route path="/auth/login" element={<AuthPages mode="login" />} />
             <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
             <Route path="/bienvenida" element={<Onboarding />} />
+            <Route path="/privacidad" element={<Legal page="privacidad" />} />
+            <Route path="/terminos" element={<Legal page="terminos" />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />

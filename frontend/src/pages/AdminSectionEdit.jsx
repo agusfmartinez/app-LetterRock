@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import PlaylistField from '../components/common/PlaylistField'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import {
   AlbumSearchPanel,
   EntriesByYear,
@@ -20,7 +21,7 @@ import { groupEntriesByYear, nextPositionInYear, useCollectionSection } from '..
 import { albumYear, formatReleaseDate } from '../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 function SectionFields({ section }) {
   const { updateSection } = useCollectionAdmin()
@@ -92,7 +93,7 @@ function SectionFields({ section }) {
         <button
           onClick={save}
           disabled={updateSection.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Guardar sección
         </button>
@@ -119,7 +120,7 @@ export default function AdminSectionEdit() {
   return (
     <>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : !data?.section ? (
         <p className="text-red-400">Sección no encontrada.</p>
       ) : (

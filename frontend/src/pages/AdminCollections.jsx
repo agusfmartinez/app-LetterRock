@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import RequireEditor from '../components/common/RequireEditor'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useAuthStore } from '../store/authStore'
@@ -53,7 +54,7 @@ function NewCollectionForm() {
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Título"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       {title && <p className="text-gray-600 text-xs">/coleccion/{slugify(title)}</p>}
       <select
@@ -68,14 +69,14 @@ function NewCollectionForm() {
         onChange={e => setDescription(e.target.value)}
         placeholder="Descripción"
         rows={2}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={createCollection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Crear
         </button>
@@ -163,7 +164,7 @@ export default function AdminCollections() {
         </div>
 
         {isLoading ? (
-          <p className="text-gray-500">Cargando...</p>
+          <InlineSkeleton />
         ) : collections.length === 0 ? (
           <p className="text-gray-500 text-sm">Todavía no hay colecciones.</p>
         ) : (

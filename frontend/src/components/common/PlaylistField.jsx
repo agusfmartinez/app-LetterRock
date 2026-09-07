@@ -22,7 +22,7 @@ export default function PlaylistField({ value, onChange, className = '' }) {
         value={text}
         onChange={e => onChange(e.target.value)}
         placeholder="Link de una playlist de Spotify o YouTube (opcional)"
-        className={`w-full bg-rock-dark border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent ${
+        className={`w-full bg-rock-dark border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent ${
           invalid ? 'border-red-500/60' : 'border-rock-border'
         }`}
       />

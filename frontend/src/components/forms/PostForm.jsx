@@ -4,7 +4,7 @@ import { ENTITY_NOUN } from '../../services/entities'
 import { useAuthStore } from '../../store/authStore'
 
 const INPUT =
-  'w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+  'w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 /**
  * Buscador para colgar el posteo de algo del catálogo.
@@ -144,7 +144,7 @@ export default function PostForm() {
         <button
           type="submit"
           disabled={!canSend}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Postear
         </button>

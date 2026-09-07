@@ -2,8 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0a0a0a;
-  color: #e0e0e0;
-  font-family: system-ui, -apple-system, sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: theme('colors.rock.dark');
+    color: theme('colors.rock.text');
+    font-family: theme('fontFamily.sans');
+  }
+
+  /* Headlines get the condensed display face, tightened up — the body text
+     stays on Manrope. Sentence case is already how the copy is written. */
+  h1, h2, h3 {
+    font-family: theme('fontFamily.display');
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  h1 { letter-spacing: -0.02em; }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Tabular figures wherever numbers show up (years, ratings, track times) so
+     columns of them don't wobble. */
+  :is(.tabular-nums, time, [data-numeric]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: theme('colors.rock.accentDim');
+    color: theme('colors.rock.text');
+  }
+
+  /* Visible keyboard focus everywhere — most components rely on the browser
+     default, which is inconsistent across engines. This is deliberately not
+     scoped to a class so it covers every interactive element without having
+     to touch each component. */
+  :is(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid theme('colors.rock.accentBright');
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Baseline hover/press feedback for every button and link in the app.
+     Components can still override transform/transition for a bespoke effect
+     (e.g. RatingStars' hover:scale-110) — utility classes win over this. */
+  button, a {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Thin, tinted scrollbar instead of the default OS chrome, so it doesn't
+     look like a bare unstyled page on WebKit/Chromium. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: theme('colors.rock.dark');
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.rock.border');
+    border-radius: 999px;
+    border: 2px solid theme('colors.rock.dark');
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.rock.borderStrong');
+  }
+}
+
+@layer components {
+  /* Skip-to-content link for keyboard users — hidden until focused. */
+  .skip-link {
+    @apply fixed left-3 top-3 z-[100] -translate-y-16 focus:translate-y-0 bg-rock-accent text-white text-sm font-medium px-4 py-2 rounded transition-transform;
+  }
+
+  /* Shimmer skeleton for loading states, replacing plain "Cargando..." text. */
+  .skeleton {
+    @apply bg-rock-border/60 rounded relative overflow-hidden;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(239, 232, 225, 0.06),
+      transparent
+    );
+    background-size: 400px 100%;
+    background-repeat: no-repeat;
+    @apply animate-shimmer;
+  }
 }

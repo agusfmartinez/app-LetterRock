@@ -4,6 +4,7 @@ import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import PlaylistField from '../components/common/PlaylistField'
 import RequireCollectionOwner from '../components/common/RequireCollectionOwner'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import {
   AlbumSearchPanel,
   EntriesFlat,
@@ -66,14 +67,14 @@ function CollectionFields({ collection }) {
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-rock-text focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-rock-text focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder="Descripción"
         rows={3}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <ImageField
         value={coverUrl}
@@ -89,7 +90,7 @@ function CollectionFields({ collection }) {
         <button
           onClick={save}
           disabled={!dirty || updateCollection.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Guardar
         </button>
@@ -164,7 +165,7 @@ function NewSectionForm({ collection, nextPosition }) {
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder="Título (ej: Los 70)"
-          className="flex-1 min-w-[160px] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          className="flex-1 min-w-[160px] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
         />
         <input
           value={yearFrom}
@@ -185,7 +186,7 @@ function NewSectionForm({ collection, nextPosition }) {
         value={subtitle}
         onChange={e => setSubtitle(e.target.value)}
         placeholder="Bajada (opcional)"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <p className="text-gray-600 text-xs">
         El rango de años alimenta las sugerencias de discos al cargar la sección.
@@ -195,7 +196,7 @@ function NewSectionForm({ collection, nextPosition }) {
         <button
           type="submit"
           disabled={createSection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Agregar sección
         </button>
@@ -370,7 +371,7 @@ export default function AdminCollectionEdit() {
   return (
     <>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : !data ? (
         <p className="text-red-400">Colección no encontrada.</p>
       ) : (

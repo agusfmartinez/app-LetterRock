@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useConfirm } from './ConfirmDialog'
 import ImageField from './ImageField'
+import { IconDisc, IconNote } from './Icons'
 import {
   describeError,
   EMPTY_ALBUM_FILTERS,
@@ -13,7 +14,7 @@ import { groupEntriesByYear, nextPositionInYear } from '../../hooks/useCollectio
 import { albumYear, formatReleaseDate } from '../../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../../services/api'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 /*
  * Piezas del editor de entradas, compartidas por las dos formas de cargar una
@@ -74,8 +75,8 @@ export function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMove
           ) : entry.artist?.image_url ? (
             <img src={entry.artist.image_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm">
-              {entry.track ? '🎵' : '📝'}
+            <div className="w-full h-full flex items-center justify-center text-rock-border">
+              {entry.track ? <IconNote className="w-4 h-4" /> : <span className="text-sm">📝</span>}
             </div>
           )}
         </div>
@@ -359,7 +360,7 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         <button
           onClick={save}
           disabled={updateEntry.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Guardar
         </button>
@@ -597,7 +598,7 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90"
+            className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright"
           >
             Buscar
           </button>
@@ -634,8 +635,8 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
                 {cover?.cover_url ? (
                   <img src={cover.cover_url} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-sm">
-                    {isTrackMode ? '🎵' : '💿'}
+                  <div className="w-full h-full flex items-center justify-center text-rock-border">
+                    {isTrackMode ? <IconNote className="w-4 h-4" /> : <IconDisc className="w-4 h-4" />}
                   </div>
                 )}
               </div>
@@ -727,7 +728,7 @@ export function NewNarrativeForm({ collection, section = null, entries, isRankin
         <button
           type="submit"
           disabled={createEntry.isPending || !form.body.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Agregar bloque
         </button>

@@ -17,7 +17,7 @@ import { useAuthStore } from '../store/authStore'
 function UserResult({ user }) {
   return (
     <div className="flex items-center gap-3 p-3">
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white font-bold flex-shrink-0">
+      <div className="w-10 h-10 rounded-lg overflow-hidden bg-rock-accent flex items-center justify-center text-white font-semibold flex-shrink-0">
         {user.avatar_url ? (
           <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
         ) : (
@@ -87,12 +87,12 @@ export default function Search() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Bandas, artistas o usuarios..."
-          className="flex-1 bg-rock-dark border border-rock-border rounded-lg px-4 py-3 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent text-lg"
+          className="flex-1 bg-rock-dark border border-rock-border rounded-lg px-4 py-3 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent text-lg"
         />
         <button
           type="submit"
           disabled={!query.trim() || loading}
-          className="bg-rock-accent text-white px-5 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+          className="bg-rock-accent text-white px-5 py-3 rounded-lg font-semibold hover:bg-rock-accentBright disabled:opacity-50 flex-shrink-0"
         >
           {loading ? '...' : 'Buscar'}
         </button>
@@ -107,7 +107,7 @@ export default function Search() {
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
             Usuarios
           </h2>
-          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+          <div className="bg-rock-card rounded-lg divide-y divide-rock-border shadow-card">
             {users.map(u => <UserResult key={u.id} user={u} />)}
           </div>
         </div>

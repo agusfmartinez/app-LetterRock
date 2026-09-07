@@ -6,6 +6,7 @@ import PlaylistPanel from '../components/common/PlaylistPanel'
 import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
+import { PageSkeleton } from '../components/common/Skeleton'
 import { useReviews } from '../hooks/useReviews'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useCollection } from '../hooks/useCollections'
@@ -113,7 +114,7 @@ export default function CollectionDetail() {
   )
   const { data: membersByArtist = {} } = useBandMembersMany(artistIds)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (!data) return <p className="text-red-400">Colección no encontrada.</p>
 
   const { collection, sections } = data

@@ -3,6 +3,7 @@ import AlbumLineup from './AlbumLineup'
 import FavoriteButton from './FavoriteButton'
 import MediaEmbed from './MediaEmbed'
 import PlatformBadges, { youtubeMusicSearch } from './PlatformBadges'
+import { IconDisc, IconGuitar, IconNote } from './Icons'
 import { albumYear, effectivePrecision, formatReleaseDate } from '../../services/dates'
 import { formatPlayCount } from '../../hooks/useTopTracks'
 
@@ -123,7 +124,9 @@ function AlbumEntry({ entry, media, people, standalone = false }) {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-7xl">💿</div>
+              <div className="w-full h-full flex items-center justify-center text-rock-border">
+                <IconDisc className="w-16 h-16" />
+              </div>
             )}
           </Link>
 
@@ -139,14 +142,16 @@ function AlbumEntry({ entry, media, people, standalone = false }) {
         <div className="flex-1 min-w-0 space-y-4">
           <div>
             <PreciseDate album={album} standalone={standalone} />
-            <Link
-              to={`/album/${album.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
-            >
-              {album.title}
-            </Link>
+            <h3 className="text-3xl font-bold mt-1">
+              <Link
+                to={`/album/${album.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-rock-text hover:text-rock-accent"
+              >
+                {album.title}
+              </Link>
+            </h3>
             {artist && (
               <Link
                 to={`/artist/${artist.slug}`}
@@ -234,19 +239,23 @@ function TrackEntry({ entry, media, standalone = false }) {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl">🎵</div>
+            <div className="w-full h-full flex items-center justify-center text-rock-border">
+              <IconNote className="w-14 h-14" />
+            </div>
           )}
         </Link>
 
         <div className="flex-1 min-w-0 space-y-4">
           <div>
             {standalone && album && <PreciseDate album={album} standalone />}
-            <Link
-              to={`/track/${track.id}`}
-              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
-            >
-              {track.title}
-            </Link>
+            <h3 className="text-3xl font-bold mt-1">
+              <Link
+                to={`/track/${track.id}`}
+                className="text-rock-text hover:text-rock-accent"
+              >
+                {track.title}
+              </Link>
+            </h3>
             <p className="text-gray-400 text-lg">
               {artist && (
                 <Link to={`/artist/${artist.slug}`} className="hover:text-rock-accent">
@@ -305,17 +314,21 @@ function ArtistEntry({ entry }) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-7xl">🎸</div>
+            <div className="w-full h-full flex items-center justify-center text-rock-border">
+              <IconGuitar className="w-16 h-16" />
+            </div>
           )}
         </Link>
 
         <div className="flex-1 min-w-0 space-y-4">
-          <Link
-            to={`/artist/${artist.slug}`}
-            className="text-3xl font-bold text-rock-text hover:text-rock-accent block"
-          >
-            {artist.name}
-          </Link>
+          <h3 className="text-3xl font-bold">
+            <Link
+              to={`/artist/${artist.slug}`}
+              className="text-rock-text hover:text-rock-accent"
+            >
+              {artist.name}
+            </Link>
+          </h3>
           <Paragraphs text={entry.body_text} />
           <div className="flex items-center gap-3 flex-wrap">
             <FavoriteButton entityType="artist" entityId={artist.id} />

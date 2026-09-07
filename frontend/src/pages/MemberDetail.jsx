@@ -1,5 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import MemberTimeline from '../components/common/MemberTimeline'
+import { IconGuitar } from '../components/common/Icons'
+import { PageSkeleton } from '../components/common/Skeleton'
 import { groupByBand, roleLabel, useMemberTrajectory } from '../hooks/useArtistMembers'
 
 /**
@@ -16,7 +18,7 @@ export default function MemberDetail() {
   const { mbId } = useParams()
   const { data: stages = [], isLoading } = useMemberTrajectory(mbId)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (stages.length === 0) {
     return <p className="text-gray-500">No hay datos de este músico.</p>
   }
@@ -60,7 +62,9 @@ export default function MemberDetail() {
                   {band.image ? (
                     <img src={band.image} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-sm">🎸</div>
+                    <div className="w-full h-full flex items-center justify-center text-rock-border">
+                      <IconGuitar className="w-4 h-4" />
+                    </div>
                   )}
                 </div>
 

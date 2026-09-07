@@ -12,7 +12,7 @@ function Comment({ comment, onDelete }) {
 
   return (
     <div className="flex gap-3 py-3 border-b border-rock-border last:border-0">
-      <div className="w-7 h-7 rounded-full bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">
+      <div className="w-7 h-7 rounded-lg bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold">
         {comment.user?.username?.[0]?.toUpperCase() ?? '?'}
       </div>
       <div className="flex-1 min-w-0">

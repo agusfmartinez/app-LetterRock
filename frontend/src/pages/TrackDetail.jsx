@@ -4,6 +4,8 @@ import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
 import MediaEmbed from '../components/common/MediaEmbed'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
+import { IconDisc } from '../components/common/Icons'
+import { PageSkeleton } from '../components/common/Skeleton'
 import { formatPlayCount } from '../hooks/useTopTracks'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
@@ -48,7 +50,7 @@ export default function TrackDetail() {
   const tracks = albumData?.tracks || []
   const track = tracks.find(t => t.id === id) || null
 
-  if (isLoading || (!track && resolvedAlbumId)) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading || (!track && resolvedAlbumId)) return <PageSkeleton />
   if (!track) return <p className="text-red-400">Canción no encontrada.</p>
 
   const year = albumYear(album)
@@ -72,7 +74,9 @@ export default function TrackDetail() {
             {album.cover_url ? (
               <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-7xl">💿</div>
+              <div className="w-full h-full flex items-center justify-center text-rock-border">
+                <IconDisc className="w-20 h-20" />
+              </div>
             )}
           </Link>
           <div>

@@ -42,7 +42,7 @@ export default function LoginForm({ mode = 'login' }) {
           placeholder="Nombre de usuario"
           required
           minLength={3}
-          className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
         />
       )}
       <input
@@ -51,7 +51,7 @@ export default function LoginForm({ mode = 'login' }) {
         onChange={e => setEmail(e.target.value)}
         placeholder="Email"
         required
-        className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <input
         type="password"
@@ -60,13 +60,13 @@ export default function LoginForm({ mode = 'login' }) {
         placeholder="Contraseña"
         required
         minLength={6}
-        className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-4 py-2.5 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-rock-accent text-white py-2.5 rounded font-semibold hover:opacity-90 disabled:opacity-50"
+        className="w-full bg-rock-accent text-white py-2.5 rounded font-semibold hover:bg-rock-accentBright disabled:opacity-50"
       >
         {loading ? 'Cargando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
       </button>

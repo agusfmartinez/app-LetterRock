@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router-dom'
 import ImageField from '../components/common/ImageField'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import MembersPanel from '../components/common/MembersPanel'
+import { IconDisc } from '../components/common/Icons'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import RequireEditor from '../components/common/RequireEditor'
 import {
   describeError,
@@ -18,7 +20,7 @@ import { slugify } from '../hooks/useCollectionAdmin'
 import { linkArtistDiscography, refreshArtistFromSpotify } from '../services/api'
 import { formatReleaseDate, timeAgo } from '../services/dates'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 /**
  * Cuándo corrió esta ingesta por última vez.
@@ -150,7 +152,7 @@ function ArtistForm({ artist }) {
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Guardar
         </button>
@@ -277,7 +279,7 @@ function NewAlbumForm({ artistId }) {
         <button
           type="submit"
           disabled={create.isPending || !form.title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Crear disco
         </button>
@@ -420,7 +422,9 @@ function AlbumRow({ album }) {
         {album.cover_url ? (
           <img src={album.cover_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">💿</div>
+          <div className="w-full h-full flex items-center justify-center text-rock-border">
+            <IconDisc className="w-4 h-4" />
+          </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -471,7 +475,7 @@ export default function AdminArtistEdit() {
   return (
     <RequireEditor>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : !data ? (
         <p className="text-red-400">Artista no encontrado.</p>
       ) : (

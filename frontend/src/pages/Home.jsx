@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import ActivityItem from '../components/common/ActivityItem'
 import ArtistCard from '../components/common/ArtistCard'
 import PostForm from '../components/forms/PostForm'
+import { IconGuitar } from '../components/common/Icons'
 import { useActivityFeed } from '../hooks/useActivityFeed'
 import { useMyFollowing } from '../hooks/useFollows'
 import { supabase } from '../services/supabaseClient'
@@ -49,35 +50,58 @@ export default function Home() {
 
   return (
     <div className="space-y-12">
-      {/* Hero */}
-      <section className="text-center py-16 border-b border-rock-border">
-        <h1 className="text-4xl md:text-6xl font-bold text-rock-text mb-4">
-          🎸 <span className="text-rock-accent">LetterRock</span>
-        </h1>
-        <p className="text-gray-400 text-lg max-w-xl mx-auto">
-          La comunidad del rock nacional argentino. Descubrí, opiná, seguí.
-        </p>
-        <div className="mt-8 flex gap-4 justify-center flex-wrap">
-          <Link
-            to="/search"
-            className="bg-rock-accent text-white px-6 py-2.5 rounded-lg font-semibold hover:opacity-90"
-          >
-            Explorar bandas
-          </Link>
-          <Link
-            to="/auth/signup"
-            className="border border-rock-border text-rock-text px-6 py-2.5 rounded-lg hover:border-rock-accent transition-colors"
-          >
-            Crear cuenta
-          </Link>
+      {/* Hero — offset left instead of dead-centered, with a faint grain
+          texture and radial glow behind the mark so the section isn't flat
+          text-on-black. */}
+      <section className="relative overflow-hidden rounded-xl border border-rock-border bg-rock-card py-16 px-8 md:px-14">
+        <div
+          className="absolute inset-0 bg-grain pointer-events-none"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-rock-accent/20 blur-3xl pointer-events-none"
+          aria-hidden="true"
+        />
+        <div className="relative max-w-2xl animate-fade-up">
+          <h1 className="flex items-center gap-3 text-4xl md:text-6xl font-display font-semibold text-rock-text mb-4">
+            <IconGuitar className="w-9 h-9 md:w-12 md:h-12 text-rock-accent flex-shrink-0" />
+            <span className="text-rock-accent">LetterRock</span>
+          </h1>
+          <p className="text-gray-400 text-lg max-w-xl">
+            La comunidad del rock nacional argentino. Descubrí, opiná, seguí.
+          </p>
+          <div className="mt-8 flex gap-4 flex-wrap">
+            <Link
+              to="/search"
+              className="bg-rock-accent text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-rock-accentBright hover:shadow-glow"
+            >
+              Explorar bandas
+            </Link>
+            <Link
+              to="/auth/signup"
+              className="border border-rock-border text-rock-text px-6 py-2.5 rounded-lg hover:border-rock-accent"
+            >
+              Crear cuenta
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Recent Artists */}
       <section>
-        <h2 className="text-xl font-bold text-rock-text mb-4">Bandas en la comunidad</h2>
+        <h2 className="text-xl font-semibold text-rock-text mb-4">Bandas en la comunidad</h2>
         {loading ? (
-          <p className="text-gray-500">Cargando...</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-lg overflow-hidden">
+                <div className="aspect-square skeleton" />
+                <div className="p-3 space-y-2">
+                  <div className="skeleton h-3.5 w-4/5" />
+                  <div className="skeleton h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : recentArtists.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>Todavía no hay bandas.</p>
@@ -95,7 +119,7 @@ export default function Home() {
       {/* Activity feed */}
       <section>
         <div className="flex items-baseline gap-4 mb-4 flex-wrap">
-          <h2 className="text-xl font-bold text-rock-text">Actividad reciente</h2>
+          <h2 className="text-xl font-semibold text-rock-text">Actividad reciente</h2>
           {/* Sin sesión no hay a quién seguir, así que el filtro no aparece. */}
           {user && (
             <div className="flex gap-1 bg-rock-card border border-rock-border rounded-lg p-1">
@@ -137,7 +161,17 @@ export default function Home() {
         )}
 
         {loadingActivity ? (
-          <p className="text-gray-500">Cargando...</p>
+          <div className="max-w-2xl bg-rock-card border border-rock-border rounded-lg px-4 py-2 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2">
+                <div className="skeleton w-9 h-9 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-3.5 w-3/5" />
+                  <div className="skeleton h-3 w-2/5" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : activity.length === 0 ? (
           <p className="text-gray-500 text-sm">
             {scoped

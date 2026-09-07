@@ -5,6 +5,7 @@ import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import ManualFieldMark from '../components/common/ManualFieldMark'
 import RequireEditor from '../components/common/RequireEditor'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import {
   describeError,
   useAdminAlbum,
@@ -16,7 +17,7 @@ import {
 import { useRole } from '../hooks/useRole'
 import { formatReleaseDate } from '../services/dates'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 const PRECISIONS = [
   { value: '', label: 'Sin definir' },
@@ -147,7 +148,7 @@ function AlbumForm({ album }) {
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Guardar
         </button>
@@ -226,7 +227,7 @@ function NewTrackForm({ albumId, nextNumber }) {
       <button
         type="submit"
         disabled={create.isPending || !title.trim()}
-        className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+        className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:bg-rock-accentBright disabled:opacity-50"
       >
         Agregar
       </button>
@@ -306,7 +307,7 @@ export default function AdminAlbumEdit() {
   return (
     <RequireEditor>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : !data ? (
         <p className="text-red-400">Álbum no encontrado.</p>
       ) : (

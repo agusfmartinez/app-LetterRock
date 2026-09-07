@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import { ROLE_LABEL, useRole } from '../hooks/useRole'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -60,7 +61,7 @@ export default function AdminUsers() {
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : (
         <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
           {users.map(u => {

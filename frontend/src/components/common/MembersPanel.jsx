@@ -21,7 +21,7 @@ import { useInvalidateCatalog } from '../../hooks/useCatalogAdmin'
 import { importArtistMembers } from '../../services/api'
 import { timeAgo } from '../../services/dates'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-2 py-1 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-2 py-1 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 /** Los roles se editan como texto separado por comas: es un array en la base. */
 const rolesToText = (roles) => (roles || []).join(', ')
@@ -101,7 +101,7 @@ function StageFields({ stage }) {
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="ml-auto bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-30"
+          className="ml-auto bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:bg-rock-accentBright disabled:opacity-30"
         >
           Guardar
         </button>
@@ -395,7 +395,7 @@ function NewMemberForm({ groupId }) {
         <button
           type="submit"
           disabled={create.isPending || !form.member_name.trim()}
-          className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Agregar
         </button>

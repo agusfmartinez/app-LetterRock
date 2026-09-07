@@ -33,7 +33,7 @@ export default function FollowButton({ userId }) {
       className={`group text-sm rounded px-3 py-1 font-semibold transition-colors disabled:opacity-50 ${
         isFollowing
           ? 'border border-rock-border text-gray-400 hover:border-red-400 hover:text-red-400'
-          : 'bg-rock-accent text-white hover:opacity-90'
+          : 'bg-rock-accent text-white hover:bg-rock-accentBright'
       }`}
     >
       {/* Estando en "Siguiendo", el texto cambia recién al pasar por encima: en

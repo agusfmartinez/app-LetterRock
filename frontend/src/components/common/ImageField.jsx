@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { ACCEPTED_IMAGE_TYPES, uploadImage } from '../../services/storage'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 /**
  * Imagen de una ficha: se sube un archivo o se pega una URL.

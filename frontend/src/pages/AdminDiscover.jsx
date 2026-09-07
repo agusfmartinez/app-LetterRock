@@ -4,7 +4,7 @@ import RequireEditor from '../components/common/RequireEditor'
 import { useInvalidateCatalog } from '../hooks/useCatalogAdmin'
 import { discoverArtists, saveDiscovered } from '../services/api'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent'
 
 const TYPE_LABEL = { group: 'banda', person: 'músico', other: 'otro' }
 
@@ -241,7 +241,7 @@ export default function AdminDiscover() {
             <button
               type="submit"
               disabled={busy || empty}
-              className="bg-rock-accent text-white px-4 py-2 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              className="bg-rock-accent text-white px-4 py-2 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
             >
               {busy ? 'Buscando...' : 'Buscar'}
             </button>
@@ -292,7 +292,7 @@ export default function AdminDiscover() {
               <button
                 onClick={save}
                 disabled={busy || selected.size === 0}
-                className="ml-auto bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-30"
+                className="ml-auto bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-30"
               >
                 Agregar {selected.size > 0 ? `(${selected.size})` : ''}
               </button>

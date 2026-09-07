@@ -43,14 +43,14 @@ export default function ReviewForm({ entityType, entityId, existingReview, onSub
         onChange={e => setText(e.target.value)}
         placeholder="Escribí tu opinión (opcional)..."
         rows={3}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent resize-none"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent resize-none"
       />
       {error && <p className="text-red-400 text-xs">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={!rating || loading}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm hover:bg-rock-accentBright disabled:opacity-50"
         >
           {loading ? 'Publicando...' : 'Publicar'}
         </button>

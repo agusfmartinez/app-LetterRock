@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
+import { IconGuitar } from '../components/common/Icons'
 import {
   ARTISTS_PAGE_SIZE,
   useAdminArtists,
@@ -25,7 +26,9 @@ function ArtistRow({ artist, hidden }) {
         {artist.image_url ? (
           <img src={artist.image_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">🎸</div>
+          <div className="w-full h-full flex items-center justify-center text-rock-border">
+            <IconGuitar className="w-4 h-4" />
+          </div>
         )}
       </div>
 
@@ -147,12 +150,12 @@ export default function AdminArtists({ hidden = false }) {
             value={search}
             onChange={e => changeSearch(e.target.value)}
             placeholder="Buscar artista..."
-            className="flex-1 min-w-[12rem] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+            className="flex-1 min-w-[12rem] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
           />
           <select
             value={sort}
             onChange={e => changeSort(e.target.value)}
-            className="bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+            className="bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
           >
             {Object.entries(SORT_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>

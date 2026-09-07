@@ -5,6 +5,8 @@ import AlbumCard from '../components/common/AlbumCard'
 import ArtistCard from '../components/common/ArtistCard'
 import ReviewCard from '../components/common/ReviewCard'
 import { CollectionCard } from './Collections'
+import { IconDisc } from '../components/common/Icons'
+import { PageSkeleton, InlineSkeleton } from '../components/common/Skeleton'
 import { useUserCollections } from '../hooks/useCollections'
 import { useUserPosts } from '../hooks/usePosts'
 import ActivityItem from '../components/common/ActivityItem'
@@ -40,7 +42,9 @@ function FavoriteTrackRow({ track }) {
         {track.album?.cover_url ? (
           <img src={track.album.cover_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">💿</div>
+          <div className="w-full h-full flex items-center justify-center text-rock-border">
+            <IconDisc className="w-4 h-4" />
+          </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -166,7 +170,7 @@ function UserList({ ids, empty }) {
   const { data: users = [], isLoading } = useUserProfiles(ids)
 
   if (ids.length === 0) return <p className="text-gray-500 text-sm">{empty}</p>
-  if (isLoading) return <p className="text-gray-500 text-sm">Cargando...</p>
+  if (isLoading) return <InlineSkeleton />
 
   return (
     <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
@@ -258,7 +262,7 @@ function EditProfile({ profile, onClose }) {
         <input
           value={username}
           onChange={e => setUsername(e.target.value)}
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
         />
       </label>
 
@@ -269,7 +273,7 @@ function EditProfile({ profile, onClose }) {
           onChange={e => setBio(e.target.value)}
           rows={3}
           placeholder="Contá qué escuchás."
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
         />
       </label>
 
@@ -279,7 +283,7 @@ function EditProfile({ profile, onClose }) {
         <button
           onClick={save}
           disabled={busy || !dirty}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           {busy ? 'Guardando...' : 'Guardar'}
         </button>
@@ -335,7 +339,7 @@ export default function Profile() {
   const { data: collections = [] } = useUserCollections(profile?.id)
   const { data: posts = [] } = useUserPosts(profile?.id)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (!profile) return <p className="text-red-400">Usuario no encontrado.</p>
 
   const visibleFavorites = favorites.filter(

@@ -22,17 +22,17 @@ export default function ReviewCard({ review, onEdit, onDelete, onLike, showEntit
   })
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4">
+    <div className="bg-rock-card rounded-lg p-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           {review.user?.avatar_url ? (
             <img
               src={review.user.avatar_url}
               alt={review.user.username}
-              className="w-8 h-8 rounded-full object-cover"
+              className="w-8 h-8 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-rock-accent flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-rock-accent flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
               {review.user?.username?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}

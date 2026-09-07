@@ -4,6 +4,8 @@ import AlbumLineup from '../components/common/AlbumLineup'
 import TrackRow from '../components/common/TrackRow'
 import FavoriteButton from '../components/common/FavoriteButton'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
+import { IconDisc } from '../components/common/Icons'
+import { PageSkeleton } from '../components/common/Skeleton'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { getAlbum } from '../services/api'
@@ -28,7 +30,7 @@ export default function AlbumDetail() {
   const links = data?.links || {}
   const { reviews, createReview, deleteReview } = useReviews('album', id)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (!album) return <p className="text-red-400">Álbum no encontrado.</p>
 
   const year = albumYear(album)
@@ -51,7 +53,9 @@ export default function AlbumDetail() {
           {album.cover_url ? (
             <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-7xl">💿</div>
+            <div className="w-full h-full flex items-center justify-center text-rock-border">
+              <IconDisc className="w-20 h-20" />
+            </div>
           )}
         </div>
         <div>

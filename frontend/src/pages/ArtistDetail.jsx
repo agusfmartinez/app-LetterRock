@@ -7,6 +7,8 @@ import MemberList from '../components/common/MemberList'
 import MemberTimeline from '../components/common/MemberTimeline'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
+import { IconGuitar } from '../components/common/Icons'
+import { PageSkeleton } from '../components/common/Skeleton'
 import { getArtist } from '../services/api'
 import { originLabel } from '../services/artists'
 import { groupByBand, groupByPerson, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
@@ -98,7 +100,7 @@ export default function ArtistDetail() {
   const former = people.filter(p => !p.active)
   const bandsPlayedIn = groupByBand(trajectory)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (error) return <p className="text-red-400">Artista no encontrado.</p>
   if (!artist) return null
 
@@ -110,7 +112,9 @@ export default function ArtistDetail() {
           {artist.image_url ? (
             <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl">🎸</div>
+            <div className="w-full h-full flex items-center justify-center text-rock-border">
+              <IconGuitar className="w-16 h-16" />
+            </div>
           )}
         </div>
         <div>

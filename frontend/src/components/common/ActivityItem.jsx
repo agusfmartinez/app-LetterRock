@@ -90,9 +90,9 @@ export default function ActivityItem({ activity }) {
       activity.hidden ? 'opacity-50' : ''
     }`}>
       {user?.avatar_url ? (
-        <img src={user.avatar_url} alt={user.username} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+        <img src={user.avatar_url} alt={user.username} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-sm font-bold">
+        <div className="w-8 h-8 rounded-lg bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold">
           {user?.username?.[0]?.toUpperCase() ?? '?'}
         </div>
       )}

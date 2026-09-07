@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import FollowButton from '../components/common/FollowButton'
+import { IconGuitar } from '../components/common/Icons'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import {
   MIN_FAVORITE_ARTISTS,
   useOnboardingArtists,
@@ -22,7 +24,9 @@ function ArtistTile({ artist, selected, onToggle }) {
         {artist.image_url ? (
           <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl text-gray-600">🎸</div>
+          <div className="w-full h-full flex items-center justify-center text-gray-600">
+            <IconGuitar className="w-8 h-8" />
+          </div>
         )}
         {selected && (
           <div className="absolute inset-0 bg-rock-accent/30 flex items-center justify-center">
@@ -65,11 +69,11 @@ function PickArtists({ selected, onToggle, onNext, onSkip }) {
         value={term}
         onChange={e => setTerm(e.target.value)}
         placeholder="Buscar una banda..."
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
 
       {isLoading ? (
-        <p className="text-gray-500 text-sm">Cargando...</p>
+        <InlineSkeleton />
       ) : artists.length === 0 ? (
         <p className="text-gray-500 text-sm">
           Ninguna banda con ese nombre.{' '}
@@ -89,7 +93,7 @@ function PickArtists({ selected, onToggle, onNext, onSkip }) {
         <button
           onClick={onNext}
           disabled={!canContinue}
-          className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Continuar
         </button>
@@ -151,7 +155,7 @@ function PickPeople({ onDone }) {
 
       <button
         onClick={onDone}
-        className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:opacity-90"
+        className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:bg-rock-accentBright"
       >
         Ir al inicio
       </button>

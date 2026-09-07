@@ -6,6 +6,7 @@ import PlaylistPanel from '../components/common/PlaylistPanel'
 import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
+import { PageSkeleton } from '../components/common/Skeleton'
 import { useReviews } from '../hooks/useReviews'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
@@ -94,7 +95,7 @@ export default function CollectionSection() {
     yearRefs.current[label]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
+  if (isLoading) return <PageSkeleton />
   if (!data?.collection) return <p className="text-red-400">Colección no encontrada.</p>
   if (!data.section) return <p className="text-red-400">Sección no encontrada.</p>
 

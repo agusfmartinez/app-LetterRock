@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { InlineSkeleton } from '../components/common/Skeleton'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -92,7 +93,7 @@ function NewCollectionButton() {
         onChange={e => setTitle(e.target.value)}
         placeholder="Título (ej: Los diez que me cambiaron la cabeza)"
         autoFocus
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
       />
       <select
         value={type}
@@ -106,7 +107,7 @@ function NewCollectionButton() {
         <button
           type="submit"
           disabled={createCollection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-rock-accentBright disabled:opacity-50"
         >
           Crear
         </button>
@@ -242,7 +243,7 @@ export default function Collections() {
       </header>
 
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <InlineSkeleton />
       ) : (
         <>
           {official.length > 0 && (
@@ -268,7 +269,7 @@ export default function Collections() {
                   value={sort}
                   onChange={e => changeSort(e.target.value)}
                   aria-label="Ordenar colecciones de la comunidad"
-                  className="ml-auto bg-rock-dark border border-rock-border rounded px-3 py-1.5 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+                  className="ml-auto bg-rock-dark border border-rock-border rounded px-3 py-1.5 text-sm text-rock-text focus:outline-none focus:border-rock-accent focus:ring-1 focus:ring-rock-accent"
                 >
                   {Object.entries(SORTS).map(([value, { label }]) => (
                     <option key={value} value={value}>{label}</option>
