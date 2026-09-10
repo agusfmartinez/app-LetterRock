@@ -1,0 +1,22 @@
+1) bloquear el textarea de "que estas escuchando?"
+2) cambiaria el texto "toda la comunidad"/"a quienes sigo" por "Comunidad"/"Siguiendo"
+3) cuando cambio a siguiendo me aparece "Silencio por acá. Nadie de los que seguís opinó todavía. Probá con toda la comunidad.", pero igualmente a la derecha veo un div que dice "Todavía no seguís a nadie" ... y un botón "Buscar gente". Es redundante que este en los dos lados no? o sino que sentido tiene el div ese en el aside?
+4) no se si me gusta tanto que en el inicio, debajo de la imagen y el nombre del artista, diga "Formado en 1960". Creo que solo dejaría imagen y nombre (que decis?)
+5) los div "a" del aside, que listan las colecciones, en el mockup debajo del nombre dicen, por ejemplo, "3 épocas", "50 discos", "Lista 2 entradas", es decir como una descripción no?. Entiendo que traer la imagen en ese recuadro pequeño seria achicar demasiado.
+6) Cambiaria el texto de "bandas que entraron en el archivo" por "Artistas populares"
+7) en la pagina de buscador, quitar el texto "Si no está en el archivo, lo traemos del catálogo."
+8) en la pagina de colecciones, cambiaria el texto "La historia disco por disco, listas y rankings. Las nuestras arrancan el recorrido; las de la comunidad lo siguen." y también cambiaria el texto "Recorridos armados a mano". No se que pondría pero no los que están ahora.
+9) Cambiar el texto "armar la mia" por "nueva coleccion"
+10) y el botón de administrar colección, también le pondría los estilos redondeados (como mencione antes sobre los botones de tipo link que le falta)
+11) Las card de colecciones, al tener el titulo sobre la imagen en texto blanco, no se llega a leer bien. Me gusta que el titulo este ahi pero hay que buscar una manera de que sea mas legible.
+
+cosas que tiene el mockup y me dan dudas:
+1) en el inicio, debajo de la imagen y el nombre, tienen como una estrella y puntuación, pero nosotros no tenemos puntuación por artistas no? tienen por ejemplo "★ 4,4"
+
+
+cosas que no están en el mockup pero estaría bueno modificar:
+1) textos de botones, como por ejemplo "ver todas →" que manda a /search y demases etiquetas "a" con flechitas, quizás estaría bueno cambiarlas a botones redondeados con un icono de flecha en lugar del texto flecha.
+2) en el inicio, quizás cambiaria el vinilo que esta en el banner, me gustaria poner algo mas animado y dinamico, como un vinilo con animación o algo asi. Que me propones? 
+3) debería pensar como reorganizar el index, ya que me parece que pensando en una red social no tiene quizás mucho sentido mostrar siempre el banner, y las secciones, y quizás si ya estas logueado solo mostrar tipo feed (para pensar realmente)
+4) Como mencione antes, el listado de colecciones del inicio es muy pequeño, quizás se podría agrandar y poder traer la imagen, que quede algo como imagen, nombre, y "timeline - 7 épocas" etc. Y quizás cambiaria el texto del titulo de ese aside, y le pondría algo como "Colecciones populares" o algo asi
+5) en pagina colecciones, las creadas por la comunidad, replicar el mismo card que usan las de letterbox (que trae la imagen) ya que no tiene sentido marcar esa diferencia en el card.
