@@ -12,12 +12,14 @@ export default function ReviewForm({ entityType, entityId, existingReview, onSub
 
   if (!user) {
     return (
-      <p className="text-gray-400 text-sm">
-        <Link to="/auth/login" className="text-rock-accent hover:underline">
-          Iniciá sesión
-        </Link>{' '}
-        para dejar una opinión.
-      </p>
+      <div className="card">
+        <p className="text-sm text-gray-400">
+          <Link to="/auth/login" className="text-rock-accent hover:text-rock-accentBright">
+            Entrá
+          </Link>{' '}
+          para puntuar y dejar tu opinión.
+        </p>
+      </div>
     )
   }
 
@@ -33,24 +35,24 @@ export default function ReviewForm({ entityType, entityId, existingReview, onSub
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h3 className="text-sm font-semibold text-rock-text">
-        {existingReview ? 'Editar opinión' : 'Dejá tu opinión'}
-      </h3>
+    <form onSubmit={handleSubmit} className="card space-y-3.5">
+      <p className="text-[13.5px] text-gray-400">
+        {existingReview ? 'Editar tu puntaje' : 'Tu puntaje'}
+      </p>
       <RatingStars value={rating} onRate={setRating} interactive />
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
-        placeholder="Escribí tu opinión (opcional)..."
+        placeholder="Escribí qué te pasa con esto (opcional)"
         rows={3}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent resize-none"
+        className="input resize-y"
       />
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-      <div className="flex gap-2">
+      {error && <p className="field-error">{error}</p>}
+      <div className="flex gap-2 flex-wrap">
         <button
           type="submit"
           disabled={!rating || loading}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {loading ? 'Publicando...' : 'Publicar'}
         </button>
@@ -58,7 +60,7 @@ export default function ReviewForm({ entityType, entityId, existingReview, onSub
           <button
             type="button"
             onClick={onCancel}
-            className="text-gray-500 px-4 py-1.5 text-sm hover:text-white"
+            className="btn btn-secondary"
           >
             Cancelar
           </button>

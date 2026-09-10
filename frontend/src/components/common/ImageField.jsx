@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { ACCEPTED_IMAGE_TYPES, uploadImage } from '../../services/storage'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 /**
  * Imagen de una ficha: se sube un archivo o se pega una URL.
@@ -51,7 +51,7 @@ export default function ImageField({ value, onChange, folder, placeholder = 'URL
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="border border-rock-border rounded px-3 py-2 text-sm text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50 flex-shrink-0"
+          className="btn btn-secondary flex-none"
         >
           {busy ? 'Subiendo...' : 'Subir'}
         </button>
@@ -65,20 +65,20 @@ export default function ImageField({ value, onChange, folder, placeholder = 'URL
         className="hidden"
       />
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
 
       {value && (
         <div className="flex items-start gap-2">
           <img
             src={value}
             alt=""
-            className="max-h-28 rounded border border-rock-border"
+            className="max-h-28 rounded-xl shadow-card"
             onError={e => { e.currentTarget.style.display = 'none' }}
           />
           <button
             type="button"
             onClick={() => onChange('')}
-            className="text-xs text-gray-500 hover:text-red-400"
+            className="text-xs text-gray-500 hover:text-rock-accentBright"
           >
             Quitar
           </button>

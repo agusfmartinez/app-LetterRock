@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { EmptyState, ErrorState, SkeletonGrid } from '../components/common/States'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -49,7 +50,6 @@ function readSort() {
   }
 }
 
-
 /**
  * Alta desde la página pública: crear una colección dejó de ser cosa del panel.
  *
@@ -79,110 +79,141 @@ function NewCollectionButton() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-rock-accent hover:underline">
+      <button onClick={() => setOpen(true)} className="btn btn-primary px-6 py-3">
         + Armar la mía
       </button>
     )
   }
 
   return (
-    <form onSubmit={submit} className="w-full bg-rock-card border border-rock-border rounded-lg p-4 space-y-3 mt-3">
+    <form onSubmit={submit} className="w-full max-w-lg card space-y-3">
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Título (ej: Los diez que me cambiaron la cabeza)"
         autoFocus
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="input"
       />
-      <select
-        value={type}
-        onChange={e => setType(e.target.value)}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text"
-      >
+      <select value={type} onChange={e => setType(e.target.value)} className="input">
         {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
       </select>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      <div className="flex items-center gap-3">
+      {error && <p className="field-error">{error}</p>}
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="submit"
           disabled={createCollection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Crear
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500 hover:text-rock-text">
+        <button type="button" onClick={() => setOpen(false)} className="btn btn-secondary">
           Cancelar
         </button>
-        <span className="text-xs text-gray-600">Nace como borrador: sólo la ves vos.</span>
+        <span className="text-xs text-gray-500">Nace como borrador: sólo la ves vos.</span>
       </div>
     </form>
   )
 }
 
-export function CollectionCard({ collection }) {
+/** Los carteles de estado, iguales en las dos variantes de tarjeta. */
+function StatusTags({ collection }) {
+  return (
+    <>
+      {/* Un editor ve también lo que no está publicado, y necesita saber cuál
+          es cuál sin entrar. */}
+      {!collection.is_published && <span className="tag tag-outline">Borrador</span>}
+      {collection.hidden && <span className="tag tag-accent">Oculta</span>}
+    </>
+  )
+}
+
+/**
+ * La tarjeta de una colección.
+ *
+ * `variant="wide"` es la de LetterRock: tapa apaisada y descripción, porque
+ * son la portada del sitio y tienen que invitar a entrar. `variant="compact"`
+ * es la de la comunidad, que son muchas y entran de a tres por fila.
+ */
+export function CollectionCard({ collection, variant = 'wide' }) {
   const count = collection.section_count
+  const meta = [
+    TYPE_LABEL[collection.type] || null,
+    collection.type === 'timeline'
+      ? count === 0
+        ? 'sin épocas todavía'
+        : `${count} ${count === 1 ? 'época' : 'épocas'}`
+      : null,
+  ].filter(Boolean).join(' · ')
+
+  if (variant === 'compact') {
+    return (
+      <Link
+        to={`/coleccion/${collection.slug}`}
+        className="card card-hover flex flex-col gap-2.5"
+      >
+        <span className="w-14 h-14 rounded-lg overflow-hidden bg-rock-border grid place-items-center flex-none">
+          {collection.cover_url ? (
+            <img src={collection.cover_url} alt="" className="w-full h-full object-cover washed" />
+          ) : (
+            <span className="font-display text-xl text-gray-500">
+              {collection.title?.[0]?.toUpperCase()}
+            </span>
+          )}
+        </span>
+        <p className="font-display text-lg leading-tight mt-1">{collection.title}</p>
+        {collection.author && (
+          <p className="text-[12.5px] text-gray-500">por {collection.author.username}</p>
+        )}
+        {collection.description && (
+          <p className="text-[13.5px] text-gray-400 leading-relaxed line-clamp-3">
+            {collection.description}
+          </p>
+        )}
+        <div className="flex gap-2 flex-wrap mt-auto pt-1">
+          {meta && <span className="tag tag-neutral">{meta}</span>}
+          <StatusTags collection={collection} />
+        </div>
+      </Link>
+    )
+  }
 
   return (
     <Link
       to={`/coleccion/${collection.slug}`}
-      className="group bg-rock-card border border-rock-border rounded-lg overflow-hidden hover:border-rock-accent transition-colors flex flex-col"
+      className="group card card-hover !p-0 overflow-hidden flex flex-col"
     >
-      <div className="aspect-[16/9] bg-rock-dark overflow-hidden">
+      <div className="aspect-[16/9] bg-rock-border overflow-hidden relative flex items-end p-6">
         {collection.cover_url ? (
           <img
             src={collection.cover_url}
-            alt={collection.title}
+            alt=""
             loading="lazy"
-            className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+            className="absolute inset-0 w-full h-full object-cover washed
+                       transition-[filter,transform] duration-500
+                       group-hover:filter-none group-hover:scale-[1.04]"
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center px-4 text-center">
-            <span className="text-2xl font-black text-rock-border group-hover:text-rock-accent transition-colors">
-              {collection.title}
-            </span>
-          </div>
-        )}
+        ) : null}
+        {/* El título va sobre la tapa: sin él, una tapa sin texto no dice cuál
+            colección es hasta leer el cuerpo. */}
+        <span className="relative font-display text-[27px] leading-tight max-w-[20ch]
+                         [text-shadow:0_2px_12px_rgba(0,0,0,0.8)]">
+          {collection.title}
+        </span>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <h2 className="text-xl font-bold text-rock-text group-hover:text-rock-accent transition-colors">
-            {collection.title}
-          </h2>
-          {/* Un editor ve también lo que no está publicado, y necesita saber
-              cuál es cuál sin entrar. */}
-          {!collection.is_published && (
-            <span className="text-[10px] uppercase tracking-widest text-rock-accent border border-rock-accent rounded px-1.5 py-0.5">
-              Borrador
-            </span>
-          )}
-          {collection.hidden && (
-            <span className="text-[10px] uppercase tracking-widest text-red-400 border border-red-400 rounded px-1.5 py-0.5">
-              Oculta
-            </span>
-          )}
-        </div>
-
+      <div className="p-5 flex-1 flex flex-col">
         {collection.author && (
-          <p className="text-gray-500 text-xs mt-1">por {collection.author.username}</p>
+          <p className="text-xs text-gray-500 mb-1.5">por {collection.author.username}</p>
         )}
-
         {collection.description && (
-          <p className="text-gray-400 text-sm mt-2 leading-relaxed line-clamp-3">
+          <p className="text-[14.5px] text-gray-400 leading-relaxed line-clamp-3 mb-3.5">
             {collection.description}
           </p>
         )}
-
-        <p className="text-gray-600 text-xs mt-auto pt-3">
-          {[
-            TYPE_LABEL[collection.type] || null,
-            collection.type === 'timeline'
-              ? count === 0
-                ? 'sin épocas todavía'
-                : `${count} ${count === 1 ? 'época' : 'épocas'}`
-              : null,
-          ].filter(Boolean).join(' · ')}
-        </p>
+        <div className="flex gap-2 flex-wrap mt-auto">
+          {meta && <span className="tag tag-accent">{meta}</span>}
+          <StatusTags collection={collection} />
+        </div>
       </div>
     </Link>
   )
@@ -196,11 +227,10 @@ export function CollectionCard({ collection }) {
  * llegar salvo tipeando la URL.
  */
 export default function Collections() {
-  const { data: collections = [], isLoading } = useCollections()
+  const { data: collections = [], isLoading, error, refetch } = useCollections()
   const { isEditor } = useRole()
   const user = useAuthStore(s => s.user)
   const [sort, setSort] = useState(readSort)
-
 
   /*
    * RLS le devuelve al editor y al dueño también lo oculto, así que el filtro va
@@ -224,69 +254,87 @@ export default function Collections() {
   }
 
   return (
-    <div className="space-y-10">
-      <header>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold text-rock-text">Colecciones</h1>
+    <div className="animate-fade-up">
+      <header className="max-w-[56ch] py-10">
+        <p className="kicker mb-3.5">Recorridos armados a mano</p>
+        <h1 className="text-screen mb-4">Colecciones</h1>
+        <p className="text-[16.5px] leading-relaxed text-gray-300 mb-6">
+          La historia disco por disco, listas y rankings. Las nuestras arrancan el
+          recorrido; las de la comunidad lo siguen.
+        </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          {user ? (
+            <NewCollectionButton />
+          ) : (
+            <Link to="/auth/login" className="btn btn-primary px-6 py-3">
+              Entrá para armar la tuya
+            </Link>
+          )}
           {isEditor && (
             <Link to="/admin/colecciones" className="text-sm text-gray-500 hover:text-rock-accent">
               Administrar
             </Link>
           )}
-          {user && <NewCollectionButton />}
         </div>
-        <p className="text-gray-500 text-sm mt-2 max-w-2xl">
-          Recorridos armados a mano: la historia disco por disco, listas y rankings.
-          Cualquiera puede armar los suyos.
-        </p>
       </header>
 
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <SkeletonGrid count={4} min={300} />
+      ) : error ? (
+        <ErrorState title="No pudimos traer las colecciones." onRetry={refetch} />
       ) : (
         <>
           {official.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                De LetterRock
-              </h2>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {official.map(c => <CollectionCard key={c.id} collection={c} />)}
+            <section className="mb-16">
+              <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">
+                DE LETTERROCK
+              </p>
+              <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}>
+                {official.map(c => <CollectionCard key={c.id} collection={c} variant="wide" />)}
               </div>
             </section>
           )}
 
-          <section className="space-y-4">
-            <div className="flex items-baseline gap-4 flex-wrap">
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                De la comunidad
-              </h2>
+          <section>
+            <div className="flex items-baseline gap-4 flex-wrap mb-4">
+              <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500">
+                DE LA COMUNIDAD
+              </p>
               {/* El selector es sólo de este bloque: las de la app van fijadas
                   arriba en el orden que eligió el editor. */}
               {community.length > 1 && (
-                <select
-                  value={sort}
-                  onChange={e => changeSort(e.target.value)}
-                  aria-label="Ordenar colecciones de la comunidad"
-                  className="ml-auto bg-rock-dark border border-rock-border rounded px-3 py-1.5 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
-                >
+                <div className="seg ml-auto">
                   {Object.entries(SORTS).map(([value, { label }]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <label key={value} className="seg-opt">
+                      <input
+                        type="radio"
+                        name="sort"
+                        checked={sort === value}
+                        onChange={() => changeSort(value)}
+                      />
+                      <span>{label}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               )}
             </div>
 
             {community.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                Todavía nadie armó la suya.{' '}
+              <EmptyState
+                title="Todavía nadie armó la suya"
+                action={
+                  !user && (
+                    <Link to="/auth/login" className="btn btn-secondary">Entrar</Link>
+                  )
+                }
+              >
                 {user
-                  ? 'Podés ser el primero.'
-                  : <Link to="/auth/login" className="text-rock-accent hover:underline">Entrá para armar una →</Link>}
-              </p>
+                  ? 'Podés ser el primero: elegí discos y ordenalos como quieras.'
+                  : 'Con una cuenta podés armar tus propios recorridos.'}
+              </EmptyState>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {community.map(c => <CollectionCard key={c.id} collection={c} />)}
+              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))' }}>
+                {community.map(c => <CollectionCard key={c.id} collection={c} variant="compact" />)}
               </div>
             )}
           </section>

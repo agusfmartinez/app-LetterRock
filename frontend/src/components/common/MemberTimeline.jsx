@@ -44,7 +44,7 @@ export default function MemberTimeline({ people }) {
               <span
                 key={year}
                 style={{ left: `${left(year)}%` }}
-                className="absolute text-[10px] text-gray-600 -translate-x-1/2"
+                className="absolute font-mono text-[10.5px] text-gray-500 -translate-x-1/2"
               >
                 {year}
               </span>
@@ -55,12 +55,16 @@ export default function MemberTimeline({ people }) {
         {drawable.map(person => (
           <div key={person.key} className="flex items-center group">
             <div className="w-36 flex-shrink-0 pr-3 text-right">
-              <span className="text-xs text-gray-400 group-hover:text-rock-text truncate block">
+              <span className="text-[12.5px] text-gray-400 group-hover:text-rock-text truncate block">
                 {person.name}
               </span>
             </div>
 
-            <div className="relative flex-1 h-5">
+            <div className="relative flex-1 h-5 my-1">
+              {/* El riel de fondo: sin él, una etapa corta queda flotando y no
+                  se lee contra qué período es corta. */}
+              <span className="absolute inset-x-0 top-1 bottom-1 rounded-full bg-rock-border/60" />
+
               {/* Guías de año, para poder leer dónde cae cada barra. */}
               {ticks.map(year => (
                 <span
@@ -75,7 +79,7 @@ export default function MemberTimeline({ people }) {
                   key={i}
                   style={{ left: `${left(seg.from)}%`, width: `${width(seg)}%` }}
                   title={`${person.name}: ${seg.from === seg.to ? seg.from : `${seg.from}–${seg.to}`}`}
-                  className={`absolute top-1 bottom-1 rounded-sm ${
+                  className={`absolute top-1 bottom-1 rounded-full ${
                     person.isOriginal ? 'bg-rock-accent' : 'bg-gray-600 group-hover:bg-gray-500'
                   }`}
                 />

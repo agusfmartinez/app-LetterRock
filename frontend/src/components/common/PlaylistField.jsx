@@ -22,15 +22,13 @@ export default function PlaylistField({ value, onChange, className = '' }) {
         value={text}
         onChange={e => onChange(e.target.value)}
         placeholder="Link de una playlist de Spotify o YouTube (opcional)"
-        className={`w-full bg-rock-dark border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent ${
-          invalid ? 'border-red-500/60' : 'border-rock-border'
-        }`}
+        className={`input ${invalid ? 'border-rock-accent' : ''}`}
       />
       {ref && (
         <p className="text-gray-500 text-xs mt-1">{playlistLabel(ref)} · se muestra al final de la página</p>
       )}
       {invalid && (
-        <p className="text-red-400 text-xs mt-1">
+        <p className="text-rock-accentBright text-xs mt-1">
           No reconocemos ese link. Tiene que ser una playlist o un álbum de Spotify,
           o una playlist de YouTube (las mixes automáticos que empiezan con RD no se
           pueden incrustar).

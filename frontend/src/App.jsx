@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { ConfirmProvider } from './components/common/ConfirmDialog'
 import Navbar from './components/common/Navbar'
+import MobileTabBar from './components/common/MobileTabBar'
 import Footer from './components/common/Footer'
 import Home from './pages/Home'
 import Search from './pages/Search'
@@ -25,6 +26,8 @@ import AdminAlbumEdit from './pages/AdminAlbumEdit'
 import MemberDetail from './pages/MemberDetail'
 import Onboarding from './pages/Onboarding'
 import SpotifyCallback from './pages/SpotifyCallback'
+import Legal from './pages/Legal'
+import NotFound from './pages/NotFound'
 import { useAuth } from './hooks/useAuth'
 
 /** Cada navegación arranca arriba: si no, saltar de década conserva el scroll. */
@@ -44,7 +47,8 @@ export default function App() {
       <div className="min-h-screen flex flex-col bg-rock-dark text-rock-text">
         <ScrollToTop />
         <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        {/* pb-28 en mobile: la barra de solapas es fija y taparía el final. */}
+        <main className="flex-1 w-full mx-auto px-4 pt-6 pb-28 md:pb-12 max-w-7xl">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
@@ -74,9 +78,13 @@ export default function App() {
             <Route path="/auth/login" element={<AuthPages mode="login" />} />
             <Route path="/auth/signup" element={<AuthPages mode="signup" />} />
             <Route path="/bienvenida" element={<Onboarding />} />
+            <Route path="/legal/:doc" element={<Legal />} />
+            {/* Cualquier otra cosa cae en el 404, no en una pantalla en blanco. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />
+        <MobileTabBar />
       </div>
     </ConfirmProvider>
   )

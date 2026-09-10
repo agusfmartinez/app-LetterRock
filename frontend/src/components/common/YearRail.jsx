@@ -16,12 +16,12 @@ export default function YearRail({ groups, activeLabel, onSelect }) {
                 onClick={() => onSelect(group.label)}
                 className={`block w-full text-left text-sm py-0.5 transition-colors ${
                   active
-                    ? 'text-rock-accent font-bold'
-                    : 'text-gray-600 hover:text-rock-text'
+                    ? 'text-rock-accent font-semibold'
+                    : 'text-gray-500 hover:text-rock-text'
                 }`}
               >
                 {group.label}
-                <span className="text-xs text-gray-700 ml-1">{group.entries.length}</span>
+                <span className="font-mono text-[11px] text-gray-500 ml-1.5">{group.entries.length}</span>
               </button>
             </li>
           )

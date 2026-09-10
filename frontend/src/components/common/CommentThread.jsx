@@ -12,7 +12,7 @@ function Comment({ comment, onDelete }) {
 
   return (
     <div className="flex gap-3 py-3 border-b border-rock-border last:border-0">
-      <div className="w-7 h-7 rounded-full bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">
+      <div className="w-7 h-7 rounded-full bg-rock-accent flex-shrink-0 flex items-center justify-center text-rock-text text-xs font-bold">
         {comment.user?.username?.[0]?.toUpperCase() ?? '?'}
       </div>
       <div className="flex-1 min-w-0">
@@ -34,7 +34,7 @@ function Comment({ comment, onDelete }) {
             if (ok) onDelete(comment.id)
           }}
           title="Borrar comentario"
-          className="text-xs text-gray-500 hover:text-red-400 flex-shrink-0"
+          className="text-xs text-gray-500 hover:text-rock-accentBright flex-shrink-0"
         >
           ✕
         </button>

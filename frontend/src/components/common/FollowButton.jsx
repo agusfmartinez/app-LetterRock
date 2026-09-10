@@ -19,7 +19,7 @@ export default function FollowButton({ userId }) {
     return (
       <Link
         to="/auth/login"
-        className="text-sm border border-rock-border rounded px-3 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+        className="btn btn-secondary !min-h-0 !px-4 !py-1.5"
       >
         Seguir
       </Link>
@@ -30,10 +30,8 @@ export default function FollowButton({ userId }) {
     <button
       onClick={() => toggle()}
       disabled={isPending}
-      className={`group text-sm rounded px-3 py-1 font-semibold transition-colors disabled:opacity-50 ${
-        isFollowing
-          ? 'border border-rock-border text-gray-400 hover:border-red-400 hover:text-red-400'
-          : 'bg-rock-accent text-white hover:opacity-90'
+      className={`btn group !min-h-0 !px-4 !py-1.5 ${
+        isFollowing ? 'btn-secondary !text-gray-400 hover:!text-rock-accentBright' : 'btn-primary'
       }`}
     >
       {/* Estando en "Siguiendo", el texto cambia recién al pasar por encima: en

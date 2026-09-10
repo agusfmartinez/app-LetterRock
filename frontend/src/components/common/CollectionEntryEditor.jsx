@@ -13,7 +13,7 @@ import { groupEntriesByYear, nextPositionInYear } from '../../hooks/useCollectio
 import { albumYear, formatReleaseDate } from '../../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../../services/api'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 /*
  * Piezas del editor de entradas, compartidas por las dos formas de cargar una
@@ -56,7 +56,7 @@ export function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMove
             onClick={() => onMove(dir)}
             disabled={!can || moving}
             title={title}
-            className="text-[10px] leading-none text-gray-600 hover:text-rock-accent disabled:opacity-20 disabled:hover:text-gray-600 py-0.5"
+            className="text-[10px] leading-none text-gray-500 hover:text-rock-accent disabled:opacity-20 disabled:hover:text-gray-500 py-0.5"
           >
             {arrow}
           </button>
@@ -91,7 +91,7 @@ export function EntryRow({ entry, selected, onSelect, onMove, canMoveUp, canMove
           </p>
         </div>
 
-        {!entry.body_text && <span className="text-xs text-gray-600 flex-shrink-0">sin texto</span>}
+        {!entry.body_text && <span className="text-xs text-gray-500 flex-shrink-0">sin texto</span>}
       </button>
     </div>
   )
@@ -116,19 +116,19 @@ export function EntriesByYear({ entries, selectedId, onSelect }) {
         <div key={group.label}>
           <div className="flex items-baseline gap-2 mb-1">
             <h3 className="text-lg font-black text-rock-accent">{group.label}</h3>
-            <span className="text-gray-600 text-xs">
+            <span className="text-gray-500 text-xs">
               {group.entries.length} {group.entries.length === 1 ? 'entrada' : 'entradas'}
             </span>
             {group.entries.some(e => e.position > 0) && (
               <span
-                className="text-gray-600 text-xs"
+                className="text-gray-500 text-xs"
                 title="Este año quedó en el orden que elegiste; las entradas nuevas se agregan al final"
               >
                 · orden manual
               </span>
             )}
           </div>
-          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border overflow-hidden">
+          <div className="card !p-0 overflow-hidden divide-y divide-rock-border overflow-hidden">
             {group.entries.map((e, i) => (
               <EntryRow
                 key={e.id}
@@ -176,7 +176,7 @@ export function EntriesFlat({ entries, selectedId, onSelect, isRanking = false }
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border overflow-hidden">
+    <div className="card !p-0 overflow-hidden divide-y divide-rock-border overflow-hidden">
       {entries.map((e, i) => (
         <div key={e.id} className="flex items-center">
           {/* El número sólo en el ranking: ahí es el contenido. En una lista
@@ -331,7 +331,7 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         el disco. Copiarla es un acto explícito, para partir de ese texto.
       */}
       {!form.body_text.trim() && album?.description && (
-        <div className="text-gray-600 text-xs space-y-1">
+        <div className="text-gray-500 text-xs space-y-1">
           <p>
             Vacío: la timeline muestra la descripción del disco. Escribí acá para
             contar qué significa en esta colección.
@@ -353,18 +353,18 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         />
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={updateEntry.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Guardar
         </button>
         {saved && <span className="text-xs text-gray-500">Guardado</span>}
-        <button onClick={remove} className="ml-auto text-xs text-gray-500 hover:text-red-400">
+        <button onClick={remove} className="ml-auto text-xs text-gray-500 hover:text-rock-accentBright">
           Quitar de la sección
         </button>
       </div>
@@ -408,7 +408,7 @@ function YoutubePanel({ albumId, artist }) {
         <button
           onClick={() => run(linkAlbumToYoutube, 'link')}
           disabled={busy}
-          className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+          className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
         >
           Vincular con YouTube
         </button>
@@ -416,7 +416,7 @@ function YoutubePanel({ albumId, artist }) {
           <button
             onClick={() => run(() => linkArtistDiscography(artist.id), 'discography')}
             disabled={busy}
-            className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+            className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
           >
             Vincular discografía completa
           </button>
@@ -431,7 +431,7 @@ function YoutubePanel({ albumId, artist }) {
       </div>
 
       {busy && <p className="text-gray-500 text-xs">Consultando YouTube...</p>}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
 
       {status?.label === 'link' && (
         <div className="text-xs space-y-1">
@@ -440,10 +440,10 @@ function YoutubePanel({ albumId, artist }) {
             {!status.channelWasCached && ' (canal del artista resuelto y guardado)'}
           </p>
           {status.partial > 0 && (
-            <p className="text-gray-600">{status.partial} por coincidencia parcial de título</p>
+            <p className="text-gray-500">{status.partial} por coincidencia parcial de título</p>
           )}
           {status.unmatched?.length > 0 && (
-            <p className="text-gray-600">Sin match: {status.unmatched.join(', ')}</p>
+            <p className="text-gray-500">Sin match: {status.unmatched.join(', ')}</p>
           )}
           {status.top?.length > 0 && (
             <div className="pt-1">
@@ -470,7 +470,7 @@ function YoutubePanel({ albumId, artist }) {
                   ` · ${status.albums.filter(a => a.ingested).length} con tracks recién traídos de Spotify`}
               </p>
               {status.albums?.filter(a => a.skipped).map(a => (
-                <p key={a.album} className="text-gray-600">{a.album}: {a.skipped}</p>
+                <p key={a.album} className="text-gray-500">{a.album}: {a.skipped}</p>
               ))}
             </>
           )}
@@ -551,10 +551,10 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="font-bold text-rock-text">Buscar</h2>
-        <div className="flex gap-1 bg-rock-dark border border-rock-border rounded-lg p-1">
+        <h2 className="font-display text-lg">Buscar</h2>
+        <div className="flex gap-1 bg-rock-dark rounded-full p-1">
           {[
             { value: 'album', label: 'Discos' },
             { value: 'track', label: 'Canciones' },
@@ -564,7 +564,7 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
               type="button"
               onClick={() => { setMode(value); setFilters(null) }}
               className={`px-3 py-1 rounded text-xs transition-colors ${
-                mode === value ? 'bg-rock-accent text-white' : 'text-gray-400 hover:text-rock-text'
+                mode === value ? 'bg-rock-accent text-rock-text' : 'text-gray-400 hover:text-rock-text'
               }`}
             >
               {label}
@@ -597,7 +597,7 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90"
+            className="btn btn-primary"
           >
             Buscar
           </button>
@@ -609,22 +609,22 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
         </div>
       </form>
 
-      {addError && <p className="text-red-400 text-sm">{addError}</p>}
-      {error && <p className="text-red-400 text-sm">{describeError(error)}</p>}
+      {addError && <p className="text-rock-accentBright text-sm">{addError}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{describeError(error)}</p>}
 
       {!filters ? (
-        <p className="text-gray-600 text-xs border-t border-rock-border pt-3">
+        <p className="text-gray-500 text-xs border-t border-rock-border pt-3">
           Los años vienen del rango de la época. Ajustá los filtros y tocá Buscar.
         </p>
       ) : isLoading ? (
-        <p className="text-gray-500 text-sm border-t border-rock-border pt-3">Buscando...</p>
+        <p className="text-gray-500 text-sm border-t border-rock-border pt-3">Buscando…</p>
       ) : results.length === 0 ? (
         <p className="text-gray-500 text-sm border-t border-rock-border pt-3">
           Sin resultados. Si falta una banda, buscala primero en la app para que se ingeste.
         </p>
       ) : (
         <div className="border-t border-rock-border pt-3 space-y-1 max-h-[28rem] overflow-y-auto">
-          <p className="text-gray-600 text-xs">{results.length} resultados</p>
+          <p className="text-gray-500 text-xs">{results.length} resultados</p>
           {results.map(a => {
             // La portada, la banda y la fecha de una canción son las de su disco.
             const cover = isTrackMode ? a.album : a
@@ -650,7 +650,7 @@ export function AlbumSearchPanel({ collection, section = null, entries, isRankin
               <button
                 onClick={() => add(a)}
                 disabled={createEntry.isPending}
-                className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50 flex-shrink-0"
+                className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
               >
                 +
               </button>
@@ -707,9 +707,9 @@ export function NewNarrativeForm({ collection, section = null, entries, isRankin
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h3 className="font-bold text-rock-text text-sm">Bloque de texto</h3>
-      <p className="text-gray-600 text-xs">
+    <form onSubmit={submit} className="card space-y-3">
+      <h3 className="font-display text-lg text-sm">Bloque de texto</h3>
+      <p className="text-gray-500 text-xs">
         Para hitos sin disco asociado. El año lo ubica en la cronología.
       </p>
       <div className="flex gap-2">
@@ -722,12 +722,12 @@ export function NewNarrativeForm({ collection, section = null, entries, isRankin
         onChange={url => setForm(f => ({ ...f, image_url: url }))}
         folder="entries"
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={createEntry.isPending || !form.body.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Agregar bloque
         </button>

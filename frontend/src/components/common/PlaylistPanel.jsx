@@ -64,12 +64,12 @@ function CreateInSpotify({ tracks, name, description }) {
       </button>
       {error && (
         <div className="mt-1 max-w-sm">
-          <p className="text-red-400 text-xs">{error}</p>
+          <p className="text-rock-accentBright text-xs">{error}</p>
           {/* Cuando la URI de vuelta no está cargada en el dashboard, Spotify
               lo dice adentro del popup y acá no llega nada: quien cierra la
               ventana ve "cancelaste". Mostrar la URI exacta es lo único que
               convierte ese callejón en algo accionable. */}
-          <p className="text-gray-600 text-xs mt-1">
+          <p className="text-gray-500 text-xs mt-1">
             Si Spotify mostró un error de configuración, esta página pide volver a{' '}
             <code className="text-gray-500">{redirectUri()}</code>: tiene que estar cargada
             tal cual en los Redirect URIs de la app.
@@ -122,7 +122,7 @@ function CopySpotify({ tracks, subdued }) {
         </p>
       )}
       {state === 'error' && (
-        <p className="text-red-400 text-xs mt-1">El navegador no dejó copiar.</p>
+        <p className="text-rock-accentBright text-xs mt-1">El navegador no dejó copiar.</p>
       )}
     </div>
   )
@@ -154,7 +154,7 @@ export default function PlaylistPanel({ playlistUrl, entries = [], media = {}, t
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl font-bold text-rock-text">Escuchar</h2>
+      <h2 className="font-display text-2xl">Escuchar</h2>
 
       {attached && (
         <div className="max-w-2xl space-y-2">
@@ -199,7 +199,7 @@ export default function PlaylistPanel({ playlistUrl, entries = [], media = {}, t
             <CopySpotify tracks={tracks} subdued={canCreate} />
           </div>
           {tracks.filter(t => t.youtubeId).length > YOUTUBE_TEMP_LIMIT && (
-            <p className="text-gray-600 text-xs">
+            <p className="text-gray-500 text-xs">
               YouTube corta en {YOUTUBE_TEMP_LIMIT} temas: van los primeros.
             </p>
           )}

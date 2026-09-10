@@ -6,13 +6,6 @@ import { useRole } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
 import { ENTITY_NOUN, entityLabel, entityPath } from '../../services/entities'
 
-const KIND_ICON = {
-  review: '★',
-  favorite: '♥',
-  comment: '💬',
-  post: '✎',
-}
-
 function timeAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
   const min = Math.floor(diff / 60000)
@@ -59,14 +52,14 @@ function PostActions({ activity }) {
   return (
     <div className="flex items-center gap-3 mt-1">
       {isOwn && (
-        <button onClick={remove} className="text-xs text-gray-600 hover:text-red-400">
+        <button onClick={remove} className="text-xs text-gray-500 hover:text-rock-accentBright">
           Borrar
         </button>
       )}
       {isEditor && (
         <button
           onClick={() => setPostHidden.mutate({ id: activity.id, hidden: !activity.hidden })}
-          className="text-xs text-gray-600 hover:text-rock-accent"
+          className="text-xs text-gray-500 hover:text-rock-accent"
         >
           {activity.hidden ? 'Restaurar' : 'Ocultar'}
         </button>
@@ -86,26 +79,29 @@ export default function ActivityItem({ activity }) {
   const hasTarget = !!entity_type
 
   return (
-    <div className={`flex gap-3 py-3 border-b border-rock-border last:border-0 ${
+    <div className={`flex gap-3.5 py-5 border-b border-rock-border last:border-0 ${
       activity.hidden ? 'opacity-50' : ''
     }`}>
       {user?.avatar_url ? (
-        <img src={user.avatar_url} alt={user.username} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+        <img src={user.avatar_url} alt={user.username} className="w-10 h-10 flex-none rounded-full object-cover" />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-rock-accent flex-shrink-0 flex items-center justify-center text-white text-sm font-bold">
+        <div className="w-10 h-10 flex-none rounded-full bg-rock-accent/25
+                        grid place-items-center text-rock-accentBright text-sm font-bold">
           {user?.username?.[0]?.toUpperCase() ?? '?'}
         </div>
       )}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-400">
-          <span className="text-rock-accent mr-1">{KIND_ICON[kind]}</span>
+        {/* Sin icono de tipo: el verbo ya dice qué pasó ("opinó sobre", "guardó
+            en favoritos"), y un glifo al principio de cada renglón armaba una
+            columna de ruido a la izquierda del feed. */}
+        <p className="text-[14.5px] text-gray-400 leading-snug">
           {user?.username ? (
-            <Link to={`/user/${user.username}`} className="text-rock-text font-medium hover:text-rock-accent">
+            <Link to={`/user/${user.username}`} className="text-rock-text font-semibold hover:text-rock-accent">
               {user.username}
             </Link>
           ) : (
-            <span className="text-rock-text font-medium">Alguien</span>
+            <span className="text-rock-text font-semibold">Alguien</span>
           )}
           {isPost && !hasTarget ? (
             ' posteó'
@@ -113,36 +109,33 @@ export default function ActivityItem({ activity }) {
             <>
               {` ${verb(kind)} ${ENTITY_NOUN[entity_type]} `}
               {path ? (
-                <Link to={path} className="text-rock-text font-medium hover:text-rock-accent">
+                <Link to={path} className="text-rock-text font-semibold hover:text-rock-accent">
                   {label}
                 </Link>
               ) : (
-                <span className="text-rock-text font-medium">{label}</span>
+                <span className="text-rock-text font-semibold">{label}</span>
               )}
             </>
           )}
           {activity.hidden && (
-            <span className="text-xs text-gray-500 ml-2 border border-rock-border rounded px-1">
-              oculto
-            </span>
+            <span className="tag tag-neutral ml-2">oculto</span>
           )}
         </p>
-
-        {kind === 'review' && rating && (
-          <div className="mt-1">
-            <RatingStars value={rating} />
-          </div>
-        )}
 
         {/* El posteo no se recorta: el texto no es un extra del evento, es el
             evento. Una review sí, porque su título ya dice de qué se trata. */}
         {text && (
-          <p className={`text-sm text-gray-300 mt-1 whitespace-pre-line ${isPost ? '' : 'line-clamp-3'}`}>
+          <p className={`text-[14.5px] text-gray-300 leading-relaxed mt-1.5 whitespace-pre-line ${isPost ? '' : 'line-clamp-3'}`}>
             {text}
           </p>
         )}
 
-        <p className="text-xs text-gray-500 mt-1">{timeAgo(created_at)}</p>
+        {/* Puntaje, cuándo y likes van juntos en un renglón de meta: son tres
+            datos chicos sobre el mismo evento, no tres bloques. */}
+        <div className="flex items-center gap-3.5 mt-2">
+          {kind === 'review' && rating && <RatingStars value={rating} size="sm" />}
+          <span className="text-[11.5px] text-gray-500">{timeAgo(created_at)}</span>
+        </div>
 
         {isPost && <PostActions activity={activity} />}
       </div>

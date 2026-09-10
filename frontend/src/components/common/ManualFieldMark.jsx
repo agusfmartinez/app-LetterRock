@@ -15,7 +15,7 @@ export default function ManualFieldMark({ field, manualFields, onRelease, classN
         <button
           onClick={() => onRelease(field)}
           title="Volver al valor de Spotify en la próxima ingesta"
-          className="text-gray-500 hover:text-red-400"
+          className="text-gray-500 hover:text-rock-accentBright"
         >
           ✕
         </button>

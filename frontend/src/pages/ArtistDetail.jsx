@@ -7,6 +7,13 @@ import MemberList from '../components/common/MemberList'
 import MemberTimeline from '../components/common/MemberTimeline'
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
+import {
+  EmptyState,
+  ErrorState,
+  NotFoundLine,
+  SkeletonFicha,
+  SkeletonGrid,
+} from '../components/common/States'
 import { getArtist } from '../services/api'
 import { originLabel } from '../services/artists'
 import { groupByBand, groupByPerson, roleLabel, useBandMembers, useMemberTrajectory } from '../hooks/useArtistMembers'
@@ -37,31 +44,30 @@ function Bio({ text }) {
   const paragraphs = text.split(/\n+/).filter(Boolean)
 
   return (
-    <div className="mt-3 max-w-2xl">
+    <div className="mt-1">
       <div
         ref={ref}
         className={`relative overflow-hidden transition-[max-height] duration-500 ease-in-out ${
-          open ? 'max-h-[3000px]' : 'max-h-28'
+          open ? 'max-h-[3000px]' : 'max-h-32'
         }`}
       >
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {paragraphs.map((para, i) => (
-            <p key={i} className="text-gray-300 text-sm leading-relaxed">{para}</p>
+            <p key={i} className="text-[15px] leading-[1.7] text-gray-300 max-w-prose">
+              {para}
+            </p>
           ))}
         </div>
 
         {/* Desvanece el corte para que no parezca texto cortado por un bug. */}
         {!open && overflows && (
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-rock-dark to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-rock-dark to-transparent pointer-events-none" />
         )}
       </div>
 
       {overflows && (
-        <button
-          onClick={() => setOpen(!open)}
-          className="text-rock-accent hover:underline text-xs mt-2"
-        >
-          {open ? 'Ver menos' : 'Ver más'}
+        <button onClick={() => setOpen(!open)} className="btn btn-ghost text-[13px] mt-2 -ml-2">
+          {open ? 'Ver menos' : 'Seguir leyendo'}
         </button>
       )}
     </div>
@@ -72,7 +78,7 @@ export default function ArtistDetail() {
   const { slug } = useParams()
   const [albumFilter, setAlbumFilter] = useState('album')
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['artist', slug],
     queryFn: () => getArtist(slug),
     refetchInterval: (query) => {
@@ -98,73 +104,97 @@ export default function ArtistDetail() {
   const former = people.filter(p => !p.active)
   const bandsPlayedIn = groupByBand(trajectory)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
-  if (error) return <p className="text-red-400">Artista no encontrado.</p>
-  if (!artist) return null
+  if (isLoading) return <div className="py-11"><SkeletonFicha lines={5} /></div>
+  if (error) return <ErrorState title="No pudimos traer esta banda." onRetry={refetch} />
+  if (!artist) return <NotFoundLine>Artista no encontrado.</NotFoundLine>
+
+  const filtered = albums.filter(a => a.album_type === albumFilter)
+  const rating = artist.avg_rating ? parseFloat(artist.avg_rating).toFixed(1) : null
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-40 h-40 md:w-52 md:h-52 rounded-lg overflow-hidden bg-rock-card flex-shrink-0">
+    <div className="animate-fade-up">
+      {/* — Ficha — */}
+      <div className="flex flex-wrap gap-9 py-8 items-start">
+        <div className="w-40 h-40 md:w-[232px] md:h-[232px] flex-none rounded-xl overflow-hidden
+                        bg-rock-card shadow-card">
           {artist.image_url ? (
-            <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" />
+            <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover washed" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl">🎸</div>
+            <div className="w-full h-full grid place-items-center bg-rock-border">
+              <span className="font-display text-5xl text-gray-500">
+                {artist.name?.[0]?.toUpperCase()}
+              </span>
+            </div>
           )}
         </div>
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-rock-text">{artist.name}</h1>
+
+        <div className="flex-1 min-w-[300px]">
+          <p className="kicker mb-3">
+            {[artist.country, originLabel(artist)].filter(Boolean).join(' · ') || 'Banda'}
+          </p>
+          <h1 className="text-screen mb-4">{artist.name}</h1>
+
+          {rating && (
+            <div className="flex gap-2 flex-wrap mb-5">
+              <span className="tag tag-neutral">★ {rating}</span>
+            </div>
+          )}
+
+          <div className="flex gap-2.5 flex-wrap mb-5">
             <FavoriteButton entityType="artist" entityId={artist.id} />
           </div>
-          <p className="text-gray-500 mt-1 text-sm">
-            {[artist.country, originLabel(artist)].filter(Boolean).join(' · ')}
-          </p>
+
           {artist.bio && <Bio text={artist.bio} />}
         </div>
       </div>
 
-      {/* Albums */}
-      <section>
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-xl font-bold text-rock-text">Discografía</h2>
-          <div className="flex gap-1 bg-rock-card border border-rock-border rounded-lg p-1">
+      {/* — Discografía — */}
+      <section className="mb-16">
+        <div className="flex items-baseline gap-4 flex-wrap mb-3">
+          <h2 className="font-display text-3xl">Discografía</h2>
+          <div className="seg ml-auto">
             {[
               { value: 'album', label: 'Álbumes' },
               { value: 'single', label: 'Sencillos y EP' },
             ].map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setAlbumFilter(value)}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  albumFilter === value
-                    ? 'bg-rock-accent text-black font-semibold'
-                    : 'text-gray-400 hover:text-rock-text'
-                }`}
-              >
-                {label}
-              </button>
+              <label key={value} className="seg-opt">
+                <input
+                  type="radio"
+                  name="disco"
+                  checked={albumFilter === value}
+                  onChange={() => setAlbumFilter(value)}
+                />
+                <span>{label}</span>
+              </label>
             ))}
           </div>
         </div>
+        <p className="text-[12.5px] text-gray-500 mb-6 hidden md:block">
+          Pasá el mouse por un disco para sacarlo de la funda.
+        </p>
+
         {data?.ingestingAlbums ? (
-          <p className="text-gray-500 text-sm">Cargando discografía...</p>
-        ) : (() => {
-          const filtered = albums.filter(a => a.album_type === albumFilter)
-          return filtered.length === 0 ? (
-            <p className="text-gray-500 text-sm">Sin resultados.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {filtered.map(a => <AlbumCard key={a.id} album={a} />)}
-            </div>
-          )
-        })()}
+          <SkeletonGrid count={5} min={168} />
+        ) : filtered.length === 0 ? (
+          <EmptyState title="Nada por acá">
+            {albumFilter === 'album'
+              ? 'Esta banda todavía no tiene álbumes fichados.'
+              : 'No hay sencillos ni EP cargados.'}
+          </EmptyState>
+        ) : (
+          <div className="grid gap-8" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(168px,1fr))' }}>
+            {filtered.map(a => <AlbumCard key={a.id} album={a} />)}
+          </div>
+        )}
       </section>
 
+      {/* — Formación — */}
       {people.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-rock-text mb-3">Formación</h2>
+        <section className="mb-16">
+          <h2 className="font-display text-3xl mb-1.5">Quiénes pasaron por la banda</h2>
+          <p className="text-[13.5px] text-gray-500 mb-6">
+            {people.length} {people.length === 1 ? 'músico' : 'músicos'}. Las barras son las etapas de cada uno.
+          </p>
 
           {/*
             En desktop van al lado: el gráfico necesita ancho para que los años
@@ -172,25 +202,25 @@ export default function ArtistDetail() {
             media pantalla vacía a la derecha del gráfico. Abajo de lg vuelven a
             apilarse, que es la única forma de que el gráfico entre.
           */}
-          <div className="grid gap-4 lg:grid-cols-5">
-            <div className="bg-rock-card border border-rock-border rounded-lg p-4 lg:col-span-3">
+          <div className="grid gap-5 lg:grid-cols-5">
+            <div className="card lg:col-span-3">
               <MemberTimeline people={people} />
             </div>
 
             <div className="space-y-4 lg:col-span-2">
               {current.length > 0 && former.length > 0 ? (
                 <>
-                  <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
-                    <p className="text-gray-500 text-xs pt-2">Integrantes</p>
+                  <div className="card !py-4">
+                    <p className="kicker mb-2">Formación actual</p>
                     <MemberList people={current} />
                   </div>
-                  <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
-                    <p className="text-gray-500 text-xs pt-2">Pasaron por la banda</p>
+                  <div className="card !py-4">
+                    <p className="kicker mb-2">Pasaron antes</p>
                     <MemberList people={former} />
                   </div>
                 </>
               ) : (
-                <div className="bg-rock-card border border-rock-border rounded-lg px-4 py-1">
+                <div className="card !py-4">
                   <MemberList people={people} />
                 </div>
               )}
@@ -199,21 +229,19 @@ export default function ArtistDetail() {
         </section>
       )}
 
+      {/* — Trayectoria, para un solista — */}
       {bandsPlayedIn.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-rock-text mb-3">Bandas</h2>
-          <div className="max-w-2xl bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+        <section className="mb-16">
+          <h2 className="font-display text-3xl mb-5">Bandas</h2>
+          <div className="max-w-2xl card !p-0 divide-y divide-rock-border">
             {bandsPlayedIn.map(band => (
-              <div key={band.key} className="flex items-baseline gap-3 p-3 flex-wrap">
+              <div key={band.key} className="flex items-baseline gap-3 p-4 flex-wrap">
                 {band.slug ? (
-                  <Link
-                    to={`/artist/${band.slug}`}
-                    className="text-rock-text font-medium hover:text-rock-accent"
-                  >
+                  <Link to={`/artist/${band.slug}`} className="font-medium hover:text-rock-accent">
                     {band.name}
                   </Link>
                 ) : (
-                  <span className="text-rock-text font-medium">{band.name}</span>
+                  <span className="font-medium">{band.name}</span>
                 )}
                 {band.roles.length > 0 && (
                   <span className="text-gray-500 text-xs">
@@ -229,20 +257,19 @@ export default function ArtistDetail() {
         </section>
       )}
 
-      {/* Reviews */}
+      {/* — Opiniones — */}
       <section>
-        <h2 className="text-xl font-bold text-rock-text mb-4">Opiniones</h2>
+        <h2 className="font-display text-3xl mb-5">Lo que escribieron</h2>
         <div className="max-w-2xl space-y-4">
           <ReviewForm entityType="artist" entityId={artist.id} onSubmit={createReview} />
-          {reviews.map(r => (
-            <ReviewCard
-              key={r.id}
-              review={r}
-              onDelete={() => deleteReview(r.id)}
-            />
-          ))}
-          {reviews.length === 0 && (
-            <p className="text-gray-500 text-sm">Sin opiniones aún. ¡Sé el primero!</p>
+          {reviews.length === 0 ? (
+            <EmptyState title="Todavía nadie escribió">
+              Sé el primero en decir algo sobre {artist.name}.
+            </EmptyState>
+          ) : (
+            reviews.map(r => (
+              <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+            ))
           )}
         </div>
       </section>

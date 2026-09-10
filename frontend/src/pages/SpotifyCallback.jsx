@@ -37,10 +37,34 @@ export default function SpotifyCallback() {
   }, [])
 
   return (
-    <div className="py-16 text-center">
-      <p className="text-gray-400">
-        {stuck ? 'Listo. Podés cerrar esta ventana.' : 'Conectando con Spotify...'}
-      </p>
+    <div className="py-16 grid place-items-center">
+      <div className="w-full max-w-[420px] rounded-xl overflow-hidden bg-rock-card shadow-card-hover">
+        {/* La barra de una ventana: dice que esto es una ventana aparte y no
+            una página del sitio, que es justo lo que confunde cuando queda
+            abierta. */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-rock-border">
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+          <span className="ml-2 font-mono text-[11px] text-gray-500 truncate">
+            letterrock.app/spotify-callback
+          </span>
+        </div>
+
+        <div className="px-7 py-14 text-center">
+          {!stuck && (
+            <span
+              aria-hidden="true"
+              className="inline-block w-7 h-7 rounded-full border-[3px] border-rock-border
+                         border-t-rock-accent animate-spin"
+              style={{ animationDuration: '0.9s' }}
+            />
+          )}
+          <p className="text-[15px] text-gray-300 mt-4">
+            {stuck ? 'Listo. Podés cerrar esta ventana.' : 'Conectando con Spotify…'}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -44,13 +44,13 @@ function TopTracks({ tracks }) {
   if (!tracks || tracks.length === 0) return null
 
   return (
-    <div className="border border-rock-border rounded-lg divide-y divide-rock-border">
+    <div className="card !p-0 overflow-hidden divide-y divide-rock-border">
       <p className="text-gray-500 text-xs uppercase tracking-widest px-3 py-2">
         Más escuchados
       </p>
       {tracks.map((track, i) => (
         <div key={track.id} className="flex items-center gap-3 px-3 py-2">
-          <span className="text-gray-600 text-xs w-4 flex-shrink-0">{i + 1}</span>
+          <span className="text-gray-500 text-xs w-4 flex-shrink-0">{i + 1}</span>
           <Link
             to={`/track/${track.id}`}
             target="_blank"
@@ -64,7 +64,7 @@ function TopTracks({ tracks }) {
           </span>
         </div>
       ))}
-      <p className="text-gray-600 text-[10px] px-3 py-1.5">
+      <p className="text-gray-500 text-[10px] px-3 py-1.5">
         Reproducciones en YouTube Music
       </p>
     </div>
@@ -88,11 +88,11 @@ function NarrativeEntry({ entry, standalone = false }) {
             src={entry.image_url}
             alt={entry.title || ''}
             loading="lazy"
-            className="w-full rounded-lg border border-rock-border mb-5"
+            className="w-full rounded-xl mb-5"
           />
         )}
         {entry.title && (
-          <h3 className="text-2xl font-bold text-rock-text mb-3">{entry.title}</h3>
+          <h3 className="font-display text-3xl mb-3">{entry.title}</h3>
         )}
         <Paragraphs text={entry.body_text} />
       </div>
@@ -143,7 +143,7 @@ function AlbumEntry({ entry, media, people, standalone = false }) {
               to={`/album/${album.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
+              className="font-display text-3xl hover:text-rock-accent block mt-1"
             >
               {album.title}
             </Link>
@@ -243,7 +243,7 @@ function TrackEntry({ entry, media, standalone = false }) {
             {standalone && album && <PreciseDate album={album} standalone />}
             <Link
               to={`/track/${track.id}`}
-              className="text-3xl font-bold text-rock-text hover:text-rock-accent block mt-1"
+              className="font-display text-3xl hover:text-rock-accent block mt-1"
             >
               {track.title}
             </Link>
@@ -312,7 +312,7 @@ function ArtistEntry({ entry }) {
         <div className="flex-1 min-w-0 space-y-4">
           <Link
             to={`/artist/${artist.slug}`}
-            className="text-3xl font-bold text-rock-text hover:text-rock-accent block"
+            className="font-display text-3xl hover:text-rock-accent block"
           >
             {artist.name}
           </Link>

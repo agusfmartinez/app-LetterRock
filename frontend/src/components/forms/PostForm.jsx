@@ -3,8 +3,7 @@ import { POST_MAX, useCatalogSearch, usePostMutations } from '../../hooks/usePos
 import { ENTITY_NOUN } from '../../services/entities'
 import { useAuthStore } from '../../store/authStore'
 
-const INPUT =
-  'w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 /**
  * Buscador para colgar el posteo de algo del catálogo.
@@ -17,7 +16,7 @@ function AttachPicker({ onPick, onClose }) {
   const { data: hits = [], isLoading } = useCatalogSearch(query)
 
   return (
-    <div className="border border-rock-border rounded p-2 space-y-2">
+    <div className="rounded-xl p-2.5 space-y-2 bg-rock-dark">
       <input
         autoFocus
         value={query}
@@ -39,7 +38,7 @@ function AttachPicker({ onPick, onClose }) {
               <li key={`${hit.entity_type}-${hit.entity_id}`}>
                 <button
                   onClick={() => onPick(hit)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-rock-dark"
+                  className="w-full text-left px-2 py-2 rounded hover:bg-rock-card"
                 >
                   <span className="text-rock-text text-sm">{hit.label}</span>
                   <span className="text-gray-500 text-xs ml-2">
@@ -105,13 +104,13 @@ export default function PostForm() {
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <form onSubmit={submit} className="card mb-6 space-y-3">
       <textarea
         value={body}
         onChange={e => setBody(e.target.value)}
         placeholder="¿Qué estás escuchando?"
-        rows={3}
-        className={INPUT}
+        rows={2}
+        className="input !min-h-[64px] resize-none"
       />
 
       {attached && (
@@ -121,7 +120,7 @@ export default function PostForm() {
           <button
             type="button"
             onClick={() => setAttached(null)}
-            className="text-gray-500 hover:text-red-400 text-xs"
+            className="text-gray-500 hover:text-rock-accent text-xs"
           >
             quitar
           </button>
@@ -138,13 +137,13 @@ export default function PostForm() {
         />
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="field-error">{error}</p>}
 
       <div className="flex items-center gap-3 flex-wrap">
         <button
           type="submit"
           disabled={!canSend}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Postear
         </button>
@@ -152,15 +151,15 @@ export default function PostForm() {
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="text-sm text-gray-500 hover:text-rock-accent"
+            className="text-sm font-semibold text-rock-accent hover:text-rock-accentBright"
           >
-            + Adjuntar algo
+            + Adjuntar un disco
           </button>
         )}
         {/* El contador aparece cerca del límite y no desde el carácter uno:
             antes de eso es ruido sobre un problema que nadie tiene. */}
         {left <= 80 && (
-          <span className={`text-xs ml-auto ${left < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+          <span className={`text-xs ml-auto ${left < 0 ? 'text-rock-accentBright' : 'text-gray-500'}`}>
             {left}
           </span>
         )}

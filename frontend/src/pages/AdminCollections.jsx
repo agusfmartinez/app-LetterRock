@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import RequireEditor from '../components/common/RequireEditor'
+import AdminLayout from '../components/common/AdminLayout'
+import { EmptyState, SkeletonRows } from '../components/common/States'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useAuthStore } from '../store/authStore'
@@ -40,26 +42,26 @@ function NewCollectionForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary">
         + Nueva colección
       </button>
     )
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h2 className="font-bold text-rock-text">Nueva colección</h2>
+    <form onSubmit={submit} className="card space-y-3">
+      <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500">NUEVA COLECCIÓN</p>
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Título"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="input"
       />
-      {title && <p className="text-gray-600 text-xs">/coleccion/{slugify(title)}</p>}
+      {title && <p className="font-mono text-gray-500 text-xs">/coleccion/{slugify(title)}</p>}
       <select
         value={type}
         onChange={e => setType(e.target.value)}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text"
+        className="input"
       >
         {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
       </select>
@@ -68,21 +70,21 @@ function NewCollectionForm() {
         onChange={e => setDescription(e.target.value)}
         placeholder="Descripción"
         rows={2}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="input"
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      <div className="flex items-center gap-3">
+      {error && <p className="field-error">{error}</p>}
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="submit"
           disabled={createCollection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Crear
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-sm text-gray-500 hover:text-rock-text"
+          className="btn btn-secondary"
         >
           Cancelar
         </button>
@@ -128,10 +130,10 @@ function ModerationButtons({ collection }) {
         onClick={toggleOfficial}
         disabled={updateCollection.isPending}
         title={collection.is_official ? 'Sacar de las de la app' : 'Fijar como de la app'}
-        className={`text-xs border rounded px-2 py-1 disabled:opacity-50 ${
+        className={`btn !min-h-0 !px-3 !py-1.5 !text-[12.5px] ${
           collection.is_official
             ? 'border-rock-accent text-rock-accent'
-            : 'border-rock-border text-gray-500 hover:text-rock-accent hover:border-rock-accent'
+            : 'btn-secondary !text-gray-400'
         }`}
       >
         {collection.is_official ? 'De la app' : 'Fijar'}
@@ -139,7 +141,7 @@ function ModerationButtons({ collection }) {
       <button
         onClick={toggleHidden}
         disabled={updateCollection.isPending}
-        className="text-xs text-gray-500 hover:text-red-400 disabled:opacity-50"
+        className="btn btn-ghost !min-h-0 !text-[12.5px] !text-gray-400 hover:!text-rock-accentBright"
       >
         {collection.hidden ? 'Restaurar' : 'Ocultar'}
       </button>
@@ -152,47 +154,42 @@ export default function AdminCollections() {
 
   return (
     <RequireEditor>
-      <div className="space-y-6 max-w-3xl">
-        <div>
-          <h1 className="text-2xl font-bold text-rock-text">Colecciones</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Todas las del sitio, propias y de la comunidad. "Fijar" las manda
-            arriba del índice como colecciones de LetterRock; "Ocultar" las baja
-            sin borrarlas.
-          </p>
-        </div>
-
+      <AdminLayout
+        title="Panel"
+        lead={'Todas las colecciones del sitio, propias y de la comunidad. «Fijar» las manda arriba del índice como colecciones de LetterRock; «Ocultar» las baja sin borrarlas.'}
+      >
         {isLoading ? (
-          <p className="text-gray-500">Cargando...</p>
+          <SkeletonRows count={4} avatar={false} />
         ) : collections.length === 0 ? (
-          <p className="text-gray-500 text-sm">Todavía no hay colecciones.</p>
+          <EmptyState title="Todavía no hay colecciones">
+            Creá la primera con el botón de abajo.
+          </EmptyState>
         ) : (
-          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+          <div className="card !p-0 overflow-hidden mb-5">
             {collections.map(c => (
-              <div key={c.id} className="flex items-center gap-3 p-3">
-                <div className="flex-1 min-w-0">
+              <div
+                key={c.id}
+                className="flex items-center gap-3 px-5 py-4 flex-wrap border-t border-rock-border first:border-t-0"
+              >
+                <div className="flex-1 min-w-[200px]">
                   <Link
                     to={`/coleccion/${c.slug}/editar`}
-                    className={`font-medium hover:text-rock-accent ${
-                      c.hidden ? 'text-gray-500 line-through' : 'text-rock-text'
+                    className={`text-[14.5px] font-semibold hover:text-rock-accent ${
+                      c.hidden ? 'text-gray-500 line-through' : ''
                     }`}
                   >
                     {c.title}
                   </Link>
-                  <p className="text-gray-500 text-xs">
+                  <p className="text-gray-500 text-xs mt-0.5">
                     {[c.type, `/${c.slug}`, c.author ? `por ${c.author.username}` : 'de la app']
                       .join(' · ')}
                   </p>
                 </div>
-                {!c.is_published && (
-                  <span className="text-xs uppercase tracking-widest text-gray-500 border border-rock-border rounded px-2 py-0.5">
-                    Borrador
-                  </span>
-                )}
+                {!c.is_published && <span className="tag tag-outline">Borrador</span>}
                 <ModerationButtons collection={c} />
                 <Link
                   to={`/coleccion/${c.slug}/editar`}
-                  className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+                  className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
                 >
                   Editar
                 </Link>
@@ -200,7 +197,7 @@ export default function AdminCollections() {
                   to={`/coleccion/${c.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-rock-accent text-sm"
+                  className="text-[12.5px] text-rock-accent hover:text-rock-accentBright whitespace-nowrap"
                 >
                   Ver →
                 </Link>
@@ -210,7 +207,7 @@ export default function AdminCollections() {
         )}
 
         <NewCollectionForm />
-      </div>
+      </AdminLayout>
     </RequireEditor>
   )
 }

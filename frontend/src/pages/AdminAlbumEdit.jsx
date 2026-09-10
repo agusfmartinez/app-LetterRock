@@ -15,8 +15,9 @@ import {
 } from '../hooks/useCatalogAdmin'
 import { useRole } from '../hooks/useRole'
 import { formatReleaseDate } from '../services/dates'
+import { SkeletonPanel } from '../components/common/States'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 const PRECISIONS = [
   { value: '', label: 'Sin definir' },
@@ -33,7 +34,7 @@ function Field({ label, field, manualFields, onRelease, hint, children }) {
         <ManualFieldMark field={field} manualFields={manualFields} onRelease={onRelease} />
       </span>
       {children}
-      {hint && <span className="block text-[11px] text-gray-600">{hint}</span>}
+      {hint && <span className="block text-[11px] text-gray-500">{hint}</span>}
     </label>
   )
 }
@@ -89,7 +90,7 @@ function AlbumForm({ album }) {
   const marks = { manualFields: album.manual_fields, onRelease }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <Field label="Título" field="title" {...marks}>
         <input value={form.title} onChange={set('title')} className={`w-full ${INPUT}`} />
       </Field>
@@ -141,13 +142,13 @@ function AlbumForm({ album }) {
         <textarea value={form.description} onChange={set('description')} rows={8} className={`w-full ${INPUT}`} />
       </Field>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Guardar
         </button>
@@ -226,11 +227,11 @@ function NewTrackForm({ albumId, nextNumber }) {
       <button
         type="submit"
         disabled={create.isPending || !title.trim()}
-        className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+        className="btn btn-primary !text-xs !px-3 !py-1.5"
       >
         Agregar
       </button>
-      {error && <span className="text-red-400 text-xs">{error}</span>}
+      {error && <span className="text-rock-accentBright text-xs">{error}</span>}
     </form>
   )
 }
@@ -272,11 +273,11 @@ function TrackRow({ track }) {
         className={`flex-1 ${INPUT}`}
       />
       <ManualFieldMark field="title" manualFields={track.manual_fields} />
-      {error && <span className="text-red-400 text-xs">{error}</span>}
+      {error && <span className="text-rock-accentBright text-xs">{error}</span>}
       <button
         onClick={save}
         disabled={!dirty || update.isPending}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-30"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Guardar
       </button>
@@ -290,7 +291,7 @@ function TrackRow({ track }) {
             if (ok) remove.mutate(track.id, { onError: e => setError(describeError(e)) })
           }}
           disabled={remove.isPending}
-          className="text-xs text-gray-500 hover:text-red-400 disabled:opacity-50"
+          className="text-xs text-gray-500 hover:text-rock-accentBright disabled:opacity-50"
         >
           ✕
         </button>
@@ -306,9 +307,9 @@ export default function AdminAlbumEdit() {
   return (
     <RequireEditor>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <SkeletonPanel />
       ) : !data ? (
-        <p className="text-red-400">Álbum no encontrado.</p>
+        <p className="text-rock-accentBright">Álbum no encontrado.</p>
       ) : (
         <div className="space-y-6 max-w-3xl">
           <div className="flex items-center gap-4 flex-wrap">
@@ -328,7 +329,7 @@ export default function AdminAlbumEdit() {
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold text-rock-text">{data.album.title}</h1>
+          <h1 className="font-display text-3xl">{data.album.title}</h1>
 
           <AlbumForm key={data.album.id} album={data.album} />
 
@@ -343,8 +344,8 @@ export default function AdminAlbumEdit() {
               : null
             if (!year) return null
             return (
-              <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
-                <h2 className="font-bold text-rock-text text-sm">
+              <div className="card space-y-2">
+                <h2 className="font-display text-lg text-sm">
                   Formación en {year}
                 </h2>
                 <AlbumLineup
@@ -357,13 +358,13 @@ export default function AdminAlbumEdit() {
           })()}
 
           <div>
-            <h2 className="text-lg font-bold text-rock-text mb-1">
+            <h2 className="font-display text-xl mb-1">
               Canciones ({data.tracks.length})
             </h2>
             <p className="text-gray-500 text-sm mb-3">
               Número, título y duración. Cada fila se guarda por separado.
             </p>
-            <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+            <div className="card !p-0 overflow-hidden divide-y divide-rock-border">
               {data.tracks.map(t => <TrackRow key={t.id} track={t} />)}
               <NewTrackForm
                 albumId={data.album.id}
@@ -372,7 +373,7 @@ export default function AdminAlbumEdit() {
             </div>
 
             {data.tracks.length === 0 && (
-              <p className="text-gray-600 text-xs mt-2">
+              <p className="text-gray-500 text-xs mt-2">
                 {data.album.external_spotify_id
                   ? 'Los discos de Spotify cargan su tracklist solos al entrar a la página del álbum.'
                   : 'Este disco no viene de Spotify: las canciones se cargan a mano.'}

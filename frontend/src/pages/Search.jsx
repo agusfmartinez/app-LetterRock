@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ArtistCard from '../components/common/ArtistCard'
 import FollowButton from '../components/common/FollowButton'
+import { EmptyState, ErrorState, SkeletonGrid } from '../components/common/States'
 import { searchArtists } from '../services/search'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -16,8 +17,10 @@ import { useAuthStore } from '../store/authStore'
  */
 function UserResult({ user }) {
   return (
-    <div className="flex items-center gap-3 p-3">
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white font-bold flex-shrink-0">
+    <div className="flex items-center gap-3.5 card !py-3">
+      <div className="w-10 h-10 flex-none rounded-full overflow-hidden bg-rock-accent/20
+                      border border-rock-accentDim grid place-items-center
+                      text-rock-accentBright font-bold">
         {user.avatar_url ? (
           <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
         ) : (
@@ -25,10 +28,10 @@ function UserResult({ user }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <Link to={`/user/${user.username}`} className="text-rock-text font-medium hover:text-rock-accent">
+        <Link to={`/user/${user.username}`} className="font-medium hover:text-rock-accent">
           {user.username}
         </Link>
-        {user.bio && <p className="text-gray-500 text-xs truncate">{user.bio}</p>}
+        {user.bio && <p className="text-gray-500 text-[12.5px] truncate">{user.bio}</p>}
       </div>
       <FollowButton userId={user.id} />
     </div>
@@ -46,10 +49,8 @@ export default function Search() {
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!query.trim()) return
-    setSearchParams({ q: query.trim() }, { replace: true })
+  const run = async (term) => {
+    setSearchParams({ q: term }, { replace: true })
     setLoading(true)
     setError('')
     setMessage('')
@@ -60,77 +61,94 @@ export default function Search() {
       // MusicBrainz) y los usuarios salen directo de Supabase, donde el SELECT
       // sobre `users` es público.
       const [artistResult, userResult] = await Promise.all([
-        searchArtists(query.trim()),
+        searchArtists(term),
         supabase
           .from('users')
           .select('id, username, avatar_url, bio')
-          .ilike('username', `%${query.trim()}%`)
+          .ilike('username', `%${term}%`)
           .limit(10),
       ])
       setResults(artistResult.artists)
       setMessage(artistResult.message || '')
       setUsers((userResult.data || []).filter(u => u.id !== sessionUser?.id))
     } catch {
-      setError('Error al buscar. Verificá que el backend esté corriendo.')
+      setError('No pudimos completar la búsqueda. Puede ser la conexión con el catálogo.')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (query.trim()) run(query.trim())
+  }
+
+  const nothing = !loading && searched && results.length === 0 && users.length === 0 && !error
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-rock-text mb-6">Buscar</h1>
+    <div className="animate-fade-up">
+      <div className="max-w-[52ch] py-10">
+        <h1 className="text-screen mb-4">¿Qué estás buscando?</h1>
+        <p className="text-base leading-relaxed text-gray-300 mb-6">
+          Bandas, músicos, discos o gente que escucha lo mismo que vos. Si no está en
+          el archivo, lo traemos del catálogo.
+        </p>
+        <form onSubmit={handleSubmit} className="flex gap-2.5 flex-wrap">
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Bandas, discos, gente"
+            aria-label="Buscar"
+            className="input flex-1 min-w-[240px] !min-h-[52px] !text-[17px]"
+          />
+          <button
+            type="submit"
+            disabled={!query.trim() || loading}
+            className="btn btn-primary !min-h-[52px] px-7 text-[15px]"
+          >
+            {loading ? 'Buscando…' : 'Buscar'}
+          </button>
+        </form>
+      </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 max-w-lg mb-8">
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Bandas, artistas o usuarios..."
-          className="flex-1 bg-rock-dark border border-rock-border rounded-lg px-4 py-3 text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent text-lg"
-        />
-        <button
-          type="submit"
-          disabled={!query.trim() || loading}
-          className="bg-rock-accent text-white px-5 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-        >
-          {loading ? '...' : 'Buscar'}
-        </button>
-      </form>
+      {error && <ErrorState title="La búsqueda falló." onRetry={() => run(query.trim())}>{error}</ErrorState>}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {/* El backend avisa cuando cayó a MusicBrainz o cuando acotó la consulta:
+          es contexto sobre el resultado, no un error. */}
+      {message && <p className="text-gray-500 text-sm italic mb-6">{message}</p>}
 
-      {message && <p className="text-gray-500 italic">{message}</p>}
+      {loading && <SkeletonGrid count={6} min={140} />}
 
       {users.length > 0 && (
-        <div className="mb-8 max-w-2xl">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-            Usuarios
-          </h2>
-          <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+        <section className="mb-12 max-w-[620px]">
+          <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">
+            GENTE · {users.length} {users.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
+          </p>
+          <div className="flex flex-col gap-2.5">
             {users.map(u => <UserResult key={u.id} user={u} />)}
           </div>
-        </div>
+        </section>
       )}
 
       {results.length > 0 && (
-        <div>
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-            Bandas y artistas
-          </h2>
-          <p className="text-gray-500 text-sm mb-4">
-            {results.length} resultado{results.length !== 1 ? 's' : ''}
+        <section className="mt-12">
+          <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">
+            BANDAS Y ARTISTAS · {results.length} {results.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))' }}>
             {results.map(a => (
-              <ArtistCard key={a.id || a.external_mb_id} artist={a} />
+              <ArtistCard key={a.id || a.external_mb_id} artist={a} variant="circle" />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {!loading && searched && results.length === 0 && users.length === 0 && !error && !message && (
-        <p className="text-gray-500">Sin resultados para &ldquo;{query}&rdquo;</p>
+      {nothing && !message && (
+        <EmptyState title={`Nada con “${query}”`}>
+          Ni en el archivo ni en el catálogo. Probá con menos palabras o con el nombre
+          de la banda en vez del disco.
+        </EmptyState>
       )}
     </div>
   )

@@ -22,7 +22,7 @@ function Avatar({ person }) {
   }
 
   return (
-    <span className="w-8 h-8 rounded-full bg-rock-dark border border-rock-border flex items-center justify-center flex-shrink-0 text-gray-600 text-xs">
+    <span className="w-8 h-8 rounded-full bg-rock-border grid place-items-center flex-none text-gray-500 text-xs">
       {person.name.charAt(0).toUpperCase()}
     </span>
   )

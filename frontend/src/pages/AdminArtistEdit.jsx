@@ -17,8 +17,9 @@ import {
 import { slugify } from '../hooks/useCollectionAdmin'
 import { linkArtistDiscography, refreshArtistFromSpotify } from '../services/api'
 import { formatReleaseDate, timeAgo } from '../services/dates'
+import { SkeletonPanel } from '../components/common/States'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 /**
  * Cuándo corrió esta ingesta por última vez.
@@ -28,10 +29,10 @@ const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm 
  */
 function LastRun({ at }) {
   if (!at) {
-    return <span className="text-gray-600 text-xs">nunca</span>
+    return <span className="text-gray-500 text-xs">nunca</span>
   }
   return (
-    <span className="text-gray-600 text-xs" title={new Date(at).toLocaleString('es-AR')}>
+    <span className="text-gray-500 text-xs" title={new Date(at).toLocaleString('es-AR')}>
       {timeAgo(at)}
     </span>
   )
@@ -103,7 +104,7 @@ function ArtistForm({ artist }) {
   const marks = { manualFields: artist.manual_fields, onRelease }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <Field label="Nombre" field="name" {...marks}>
         <input value={form.name} onChange={set('name')} className={`w-full ${INPUT}`} />
       </Field>
@@ -144,13 +145,13 @@ function ArtistForm({ artist }) {
         <textarea value={form.bio} onChange={set('bio')} rows={8} className={`w-full ${INPUT}`} />
       </Field>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Guardar
         </button>
@@ -172,14 +173,14 @@ function HiddenToggle({ artist }) {
   const [error, setError] = useState('')
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
-      <h2 className="font-bold text-rock-text text-sm">Visibilidad</h2>
-      <p className="text-gray-600 text-xs">
+    <div className="card space-y-2">
+      <h2 className="font-display text-lg text-sm">Visibilidad</h2>
+      <p className="text-gray-500 text-xs">
         {artist.hidden
           ? 'Oculto: no aparece en búsquedas, ni en la home, ni entre los resultados de MusicBrainz.'
           : 'Visible en toda la app. Ocultalo si no corresponde al catálogo de rock nacional.'}
       </p>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
       <button
         onClick={() => toggle.mutate(
           { id: artist.id, hidden: !artist.hidden },
@@ -189,7 +190,7 @@ function HiddenToggle({ artist }) {
         className={`text-xs border rounded px-2 py-1 disabled:opacity-50 ${
           artist.hidden
             ? 'border-rock-accent text-rock-accent'
-            : 'border-rock-border text-gray-400 hover:text-red-400 hover:border-red-400'
+            : 'border-rock-border text-gray-400 hover:text-rock-accentBright hover:border-rock-accentDim'
         }`}
       >
         {artist.hidden ? 'Volver a mostrar' : 'Ocultar del catálogo'}
@@ -246,9 +247,9 @@ function NewAlbumForm({ artistId }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h3 className="font-bold text-rock-text text-sm">Disco nuevo</h3>
-      <p className="text-gray-600 text-xs">
+    <form onSubmit={submit} className="card space-y-3">
+      <h3 className="font-display text-lg text-sm">Disco nuevo</h3>
+      <p className="text-gray-500 text-xs">
         Para discos que Spotify no tiene. Al no llevar id de Spotify, la ingesta
         nunca lo va a modificar.
       </p>
@@ -272,12 +273,12 @@ function NewAlbumForm({ artistId }) {
         folder="albums"
         placeholder="URL de portada (opcional)"
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={create.isPending || !form.title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Crear disco
         </button>
@@ -315,29 +316,29 @@ function SpotifyRefresh({ artist }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
+    <div className="card space-y-2">
       <div className="flex items-baseline gap-2">
-        <h2 className="font-bold text-rock-text text-sm">Spotify</h2>
+        <h2 className="font-display text-lg text-sm">Spotify</h2>
         <LastRun at={artist.spotify_refreshed_at} />
       </div>
-      <p className="text-gray-600 text-xs">
+      <p className="text-gray-500 text-xs">
         Vuelve a traer título, fecha, precisión de fecha, tipo y portada de todos los
         discos. Los campos que editaste a mano no se tocan.
       </p>
       <button
         onClick={run}
         disabled={busy}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Refrescar metadatos
       </button>
 
       {busy && <p className="text-gray-500 text-xs">Consultando Spotify...</p>}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
       {status && (
         <div className="text-xs space-y-1">
           <p className="text-gray-400">{status.saved} de {status.total} discos actualizados</p>
-          {status.errors?.map(e => <p key={e} className="text-gray-600">{e}</p>)}
+          {status.errors?.map(e => <p key={e} className="text-gray-500">{e}</p>)}
         </div>
       )}
     </div>
@@ -371,25 +372,25 @@ function YoutubeDiscography({ artist }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-2">
+    <div className="card space-y-2">
       <div className="flex items-baseline gap-2">
-        <h2 className="font-bold text-rock-text text-sm">YouTube Music</h2>
+        <h2 className="font-display text-lg text-sm">YouTube Music</h2>
         <LastRun at={artist.youtube_linked_at} />
       </div>
-      <p className="text-gray-600 text-xs">
+      <p className="text-gray-500 text-xs">
         Busca el canal del artista y vincula todos sus discos de una. Los tracklists que
         falten se traen de Spotify en el momento.
       </p>
       <button
         onClick={run}
         disabled={busy}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Vincular discografía
       </button>
 
       {busy && <p className="text-gray-500 text-xs">Consultando YouTube...</p>}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
 
       {status && (
         <div className="text-xs space-y-1">
@@ -401,7 +402,7 @@ function YoutubeDiscography({ artist }) {
                 {status.albums?.filter(a => a.matched).length} de {status.albums?.length} álbumes vinculados
               </p>
               {status.albums?.filter(a => a.skipped).map(a => (
-                <p key={a.album} className="text-gray-600">{a.album}: {a.skipped}</p>
+                <p key={a.album} className="text-gray-500">{a.album}: {a.skipped}</p>
               ))}
             </>
           )}
@@ -426,7 +427,7 @@ function AlbumRow({ album }) {
       <div className="flex-1 min-w-0">
         <Link
           to={`/admin/album/${album.id}`}
-          className={`hover:text-rock-accent ${album.hidden ? 'text-gray-600 line-through' : 'text-rock-text'}`}
+          className={`hover:text-rock-accent ${album.hidden ? 'text-gray-500 line-through' : 'text-rock-text'}`}
         >
           {album.title}
         </Link>
@@ -435,7 +436,7 @@ function AlbumRow({ album }) {
           {album.manual_fields?.length > 0 && (
             <span className="text-rock-accent"> · editado</span>
           )}
-          {album.hidden && <span className="text-red-400"> · oculto</span>}
+          {album.hidden && <span className="text-rock-accentBright"> · oculto</span>}
         </p>
       </div>
       <button
@@ -448,7 +449,7 @@ function AlbumRow({ album }) {
       </button>
       <Link
         to={`/admin/album/${album.id}`}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Editar
       </Link>
@@ -471,9 +472,9 @@ export default function AdminArtistEdit() {
   return (
     <RequireEditor>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <SkeletonPanel />
       ) : !data ? (
-        <p className="text-red-400">Artista no encontrado.</p>
+        <p className="text-rock-accentBright">Artista no encontrado.</p>
       ) : (
         <div className="space-y-6 max-w-3xl">
           <div className="flex items-center gap-4 flex-wrap">
@@ -491,9 +492,9 @@ export default function AdminArtistEdit() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-rock-text">{data.artist.name}</h1>
+            <h1 className="font-display text-3xl">{data.artist.name}</h1>
             {data.artist.hidden && (
-              <span className="text-xs uppercase tracking-widest border border-red-400 text-red-400 rounded px-2 py-0.5">
+              <span className="text-xs uppercase tracking-widest border border-rock-accentDim text-rock-accentBright rounded px-2 py-0.5">
                 Oculto
               </span>
             )}
@@ -510,13 +511,13 @@ export default function AdminArtistEdit() {
           <MembersPanel artist={data.artist} />
 
           <div>
-            <h2 className="text-lg font-bold text-rock-text mb-3">
+            <h2 className="font-display text-xl mb-3">
               Discos ({data.albums.length})
             </h2>
             {data.albums.length === 0 ? (
               <p className="text-gray-500 text-sm">Sin discos cargados.</p>
             ) : (
-              <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border mb-4">
+              <div className="card !p-0 overflow-hidden divide-y divide-rock-border mb-4">
                 {data.albums.map(a => <AlbumRow key={a.id} album={a} />)}
               </div>
             )}

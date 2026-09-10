@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useFavorite } from '../../hooks/useFavorite'
+import { IconHeart } from './Icons'
 
 export default function FavoriteButton({ entityType, entityId, className = '' }) {
   const navigate = useNavigate()
@@ -15,13 +16,15 @@ export default function FavoriteButton({ entityType, entityId, className = '' })
       onClick={handleClick}
       disabled={isPending}
       title={canFavorite ? (isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos') : 'Iniciá sesión para guardar'}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-50 ${
+      className={`btn ${
         isFavorite
           ? 'bg-rock-accent/10 border-rock-accent text-rock-accent'
-          : 'bg-rock-card border-rock-border text-gray-400 hover:text-rock-accent hover:border-rock-accent'
+          : 'btn-secondary !text-gray-400 hover:!text-rock-accent'
       } ${className}`}
     >
-      <span className="text-base leading-none">{isFavorite ? '♥' : '♡'}</span>
+      {/* Relleno cuando está guardado: el contorno solo, en un botón chico, no
+          se distingue del lleno de un vistazo. */}
+      <IconHeart size={16} filled={isFavorite} />
       {count > 0 && <span>{count}</span>}
     </button>
   )

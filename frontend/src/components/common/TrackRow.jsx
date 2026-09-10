@@ -1,47 +1,59 @@
 import { useNavigate } from 'react-router-dom'
 import { formatPlayCountCompact } from '../../hooks/useTopTracks'
+import { trackDuration } from '../../services/dates'
 
-function formatDuration(ms) {
-  if (!ms) return '—'
-  const s = Math.floor(ms / 1000)
-  const m = Math.floor(s / 60)
-  const rest = s % 60
-  return `${m}:${rest.toString().padStart(2, '0')}`
-}
-
-export default function TrackRow({ track, index, selected }) {
+/**
+ * Un renglón del tracklist.
+ *
+ * `selected` lo gobierna el mismo `activeTrack` que el vinilo: pasar el mouse
+ * por un surco resalta este renglón y pasar por este renglón resalta el surco.
+ * Por eso el hover no se resuelve en CSS — tiene que avisar hacia afuera.
+ */
+export default function TrackRow({ track, index, selected, onHover }) {
   const navigate = useNavigate()
   const views = track.view_count
+  const n = track.track_number ?? index + 1
 
   return (
     <div
       onClick={() => navigate(`/track/${track.id}`)}
-      className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer group transition-colors ${
-        selected
-          ? 'bg-rock-accent/10 border-l-2 border-rock-accent'
-          : 'hover:bg-rock-dark'
+      onMouseEnter={() => onHover?.(n)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          navigate(`/track/${track.id}`)
+        }
+      }}
+      className={`flex items-center gap-4 px-3.5 h-[46px] rounded-[14px] cursor-pointer
+                  border-b border-rock-border/60 transition-colors ${
+        selected ? 'bg-rock-accent/10' : 'hover:bg-rock-card'
       }`}
     >
-      <span className={`text-sm w-6 text-right flex-shrink-0 ${
-        selected ? 'text-rock-accent font-bold' : 'text-gray-500'
-      }`}>
-        {track.track_number ?? index + 1}
+      <span
+        className={`font-mono text-xs w-6 flex-none ${
+          selected ? 'text-rock-accent' : 'text-gray-500'
+        }`}
+      >
+        {n}
       </span>
-      <span className={`flex-1 truncate ${
-        selected ? 'text-rock-accent font-semibold' : 'text-rock-text group-hover:text-white'
-      }`}>
+
+      <span className={`flex-1 min-w-0 truncate text-[15.5px] ${selected ? 'text-rock-accent' : ''}`}>
         {track.title}
       </span>
+
       {views != null && (
         <span
-          className="text-gray-500 text-xs flex-shrink-0 tabular-nums"
+          className="text-gray-500 text-xs flex-none tabular-nums hidden sm:inline"
           title={`${views.toLocaleString('es-AR')} reproducciones en YouTube Music`}
         >
           ▶ {formatPlayCountCompact(views)}
         </span>
       )}
-      <span className="text-gray-500 text-sm flex-shrink-0">
-        {formatDuration(track.duration_ms)}
+
+      <span className="text-gray-500 text-[13px] flex-none tabular-nums">
+        {trackDuration(track) || '—'}
       </span>
     </div>
   )

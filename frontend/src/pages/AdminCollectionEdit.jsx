@@ -12,6 +12,7 @@ import {
 } from '../components/common/CollectionEntryEditor'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollection } from '../hooks/useCollections'
+import { SkeletonPanel } from '../components/common/States'
 
 function CollectionFields({ collection }) {
   const navigate = useNavigate()
@@ -62,18 +63,18 @@ function CollectionFields({ collection }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-rock-text focus:outline-none focus:border-rock-accent"
+        className="input"
       />
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder="Descripción"
         rows={3}
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="input"
       />
       <ImageField
         value={coverUrl}
@@ -83,27 +84,27 @@ function CollectionFields({ collection }) {
       />
       <PlaylistField value={playlistUrl} onChange={setPlaylistUrl} />
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={save}
           disabled={!dirty || updateCollection.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Guardar
         </button>
         <button
           onClick={togglePublished}
           disabled={updateCollection.isPending}
-          className="border border-rock-border text-rock-text px-4 py-1.5 rounded text-sm hover:border-rock-accent"
+          className="btn btn-secondary text-sm hover:border-rock-accent"
         >
           {collection.is_published ? 'Pasar a borrador' : 'Publicar'}
         </button>
         <span className="text-xs text-gray-500">
           {collection.is_published ? 'Visible para todos' : 'Sólo la ven los editores'}
         </span>
-        <button onClick={remove} className="ml-auto text-sm text-gray-500 hover:text-red-400">
+        <button onClick={remove} className="ml-auto text-sm text-gray-500 hover:text-rock-accentBright">
           Borrar colección
         </button>
       </div>
@@ -157,45 +158,45 @@ function NewSectionForm({ collection, nextPosition }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <h3 className="font-bold text-rock-text text-sm">Nueva sección</h3>
+    <form onSubmit={submit} className="card space-y-3">
+      <h3 className="font-display text-lg text-sm">Nueva sección</h3>
       <div className="flex gap-2 flex-wrap">
         <input
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder="Título (ej: Los 70)"
-          className="flex-1 min-w-[160px] bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          className="input flex-1 min-w-[160px]"
         />
         <input
           value={yearFrom}
           onChange={e => setYearFrom(e.target.value)}
           placeholder="Desde"
           type="number"
-          className="w-24 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500"
+          className="input !w-24 text-sm text-rock-text placeholder-gray-500"
         />
         <input
           value={yearTo}
           onChange={e => setYearTo(e.target.value)}
           placeholder="Hasta"
           type="number"
-          className="w-24 bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500"
+          className="input !w-24 text-sm text-rock-text placeholder-gray-500"
         />
       </div>
       <input
         value={subtitle}
         onChange={e => setSubtitle(e.target.value)}
         placeholder="Bajada (opcional)"
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+        className="input"
       />
-      <p className="text-gray-600 text-xs">
+      <p className="text-gray-500 text-xs">
         El rango de años alimenta las sugerencias de discos al cargar la sección.
       </p>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={createSection.isPending || !title.trim()}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Agregar sección
         </button>
@@ -226,7 +227,7 @@ function SectionRow({ collection, section }) {
 
   return (
     <div className="flex items-center gap-3 p-3">
-      <span className="text-gray-600 text-sm w-6 text-right">{section.position}</span>
+      <span className="text-gray-500 text-sm w-6 text-right">{section.position}</span>
       <div className="flex-1 min-w-0">
         <Link
           to={`/coleccion/${collection.slug}/${section.slug}/editar`}
@@ -241,7 +242,7 @@ function SectionRow({ collection, section }) {
       </div>
       <Link
         to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Editar
       </Link>
@@ -253,7 +254,7 @@ function SectionRow({ collection, section }) {
       >
         Ver →
       </Link>
-      <button onClick={remove} className="text-gray-500 hover:text-red-400 text-sm">
+      <button onClick={remove} className="text-gray-500 hover:text-rock-accentBright text-sm">
         Borrar
       </button>
     </div>
@@ -301,7 +302,7 @@ function FlatEntriesEditor({ collection, entries, sections }) {
     <div className="flex flex-col lg:flex-row gap-8 items-start">
       <div className="flex-1 min-w-0 space-y-4">
         {inSections && (
-          <div className="border border-rock-border rounded-lg p-3 text-sm">
+          <div className="bg-rock-card rounded-xl p-3 text-sm">
             <p className="text-gray-400">
               Esta colección tiene épocas, que son de las timelines. Acá los discos
               van en una sola secuencia.
@@ -317,7 +318,7 @@ function FlatEntriesEditor({ collection, entries, sections }) {
         )}
 
         <div>
-          <h2 className="text-lg font-bold text-rock-text mb-1">
+          <h2 className="font-display text-xl mb-1">
             {isRanking ? 'Puestos' : 'Entradas'} ({entries.length})
           </h2>
           <p className="text-gray-500 text-sm mb-3">
@@ -370,9 +371,9 @@ export default function AdminCollectionEdit() {
   return (
     <>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <SkeletonPanel />
       ) : !data ? (
-        <p className="text-red-400">Colección no encontrada.</p>
+        <p className="text-rock-accentBright">Colección no encontrada.</p>
       ) : (
         <RequireCollectionOwner collection={data.collection}>
         <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
@@ -394,9 +395,9 @@ export default function AdminCollectionEdit() {
 
           {data.collection.type === 'timeline' ? (
             <div>
-              <h2 className="text-lg font-bold text-rock-text mb-3">Épocas</h2>
+              <h2 className="font-display text-xl mb-3">Épocas</h2>
               {data.sections.length > 0 && (
-                <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border mb-4">
+                <div className="card !p-0 overflow-hidden divide-y divide-rock-border mb-4">
                   {data.sections.map(s => (
                     <SectionRow key={s.id} collection={data.collection} section={s} />
                   ))}

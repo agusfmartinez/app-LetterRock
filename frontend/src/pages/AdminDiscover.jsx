@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
+import AdminLayout from '../components/common/AdminLayout'
+import { IconArrowLeft } from '../components/common/Icons'
 import { useInvalidateCatalog } from '../hooks/useCatalogAdmin'
 import { discoverArtists, saveDiscovered } from '../services/api'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 const TYPE_LABEL = { group: 'banda', person: 'músico', other: 'otro' }
 
@@ -67,7 +69,7 @@ function CandidateRow({ candidate, checked, onToggle }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="text-gray-600 hover:text-rock-accent text-xs flex-shrink-0"
+        className="text-gray-500 hover:text-rock-accent text-xs flex-shrink-0"
       >
         MB →
       </a>
@@ -179,21 +181,20 @@ export default function AdminDiscover() {
 
   return (
     <RequireEditor>
-      <div className="space-y-6 max-w-3xl">
-        <div>
-          <Link to="/admin/catalogo" className="text-gray-400 hover:text-rock-accent text-sm">
-            ← Catálogo
-          </Link>
-          <h1 className="text-2xl font-bold text-rock-text mt-2">Descubrir bandas</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Buscar en MusicBrainz por nombre, por disco o por período. Lo que
-            agregues trae su discografía de Spotify en segundo plano.
-          </p>
-        </div>
+      <AdminLayout
+        title="Panel"
+        lead="Buscar en MusicBrainz por nombre, por disco o por período. Lo que agregues trae su discografía de Spotify en segundo plano."
+      >
+        <Link
+          to="/admin/catalogo"
+          className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent mb-5"
+        >
+          <IconArrowLeft size={14} /> Catálogo
+        </Link>
 
-        <form onSubmit={submit} className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-          <label className="block space-y-1">
-            <span className="text-xs text-gray-500">Artista o banda</span>
+        <form onSubmit={submit} className="card space-y-3">
+          <label className="field block">
+            <span>Artista o banda</span>
             <input
               value={form.artist}
               onChange={set('artist')}
@@ -202,23 +203,23 @@ export default function AdminDiscover() {
             />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs text-gray-500">Disco</span>
+          <label className="field block">
+            <span>Disco</span>
             <input
               value={form.album}
               onChange={set('album')}
               placeholder="Vida"
               className={`w-full ${INPUT}`}
             />
-            <span className="block text-[11px] text-gray-600">
+            <span className="block text-[11px] text-gray-500">
               Devuelve el artista al que pertenece. Un título común trae de todo:
               acotalo con el período.
             </span>
           </label>
 
           <div className="flex items-end gap-2 flex-wrap">
-            <label className="space-y-1">
-              <span className="block text-xs text-gray-500">Desde</span>
+            <label className="field block">
+              <span>Desde</span>
               <input
                 value={form.from}
                 onChange={set('from')}
@@ -227,8 +228,8 @@ export default function AdminDiscover() {
                 className={`w-24 ${INPUT}`}
               />
             </label>
-            <label className="space-y-1">
-              <span className="block text-xs text-gray-500">Hasta</span>
+            <label className="field block">
+              <span>Hasta</span>
               <input
                 value={form.to}
                 onChange={set('to')}
@@ -241,19 +242,19 @@ export default function AdminDiscover() {
             <button
               type="submit"
               disabled={busy || empty}
-              className="bg-rock-accent text-white px-4 py-2 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              className="btn btn-primary"
             >
-              {busy ? 'Buscando...' : 'Buscar'}
+              {busy ? 'Buscando…' : 'Buscar'}
             </button>
           </div>
 
-          <p className="text-[11px] text-gray-600">
+          <p className="text-[11px] text-gray-500">
             Sin disco, el período es el año en que el artista se formó — o el de
             nacimiento, si es una persona.
           </p>
         </form>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
         {saved && (
           <div className="border border-rock-accent rounded-lg p-3 text-sm">
@@ -277,7 +278,7 @@ export default function AdminDiscover() {
                 {shown}{result.total > shown ? ` de ${result.total}` : ''} · {nuevos.length} sin cargar
               </span>
               {result.filtered > 0 && (
-                <span className="text-gray-600 text-xs">
+                <span className="text-gray-500 text-xs">
                   {result.filtered} descartados por género
                 </span>
               )}
@@ -292,7 +293,7 @@ export default function AdminDiscover() {
               <button
                 onClick={save}
                 disabled={busy || selected.size === 0}
-                className="ml-auto bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-30"
+                className="ml-auto btn btn-primary"
               >
                 Agregar {selected.size > 0 ? `(${selected.size})` : ''}
               </button>
@@ -305,7 +306,7 @@ export default function AdminDiscover() {
             ) : (
               <div className="space-y-5">
                 {nuevos.length > 0 && (
-                  <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+                  <div className="card !p-0 overflow-hidden divide-y divide-rock-border">
                     {nuevos.map(c => (
                       <CandidateRow
                         key={c.mbId}
@@ -322,7 +323,7 @@ export default function AdminDiscover() {
                     <p className="text-gray-500 text-xs mb-2">
                       Ya en el catálogo ({cargados.length})
                     </p>
-                    <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+                    <div className="card !p-0 overflow-hidden divide-y divide-rock-border">
                       {cargados.map(c => (
                         <CandidateRow
                           key={c.mbId}
@@ -341,14 +342,14 @@ export default function AdminDiscover() {
               <button
                 onClick={() => search(result.nextOffset)}
                 disabled={busy}
-                className="text-gray-500 hover:text-rock-accent text-sm disabled:opacity-50"
+                className="btn btn-secondary"
               >
-                {busy ? 'Buscando...' : 'Traer más'}
+                {busy ? 'Buscando…' : 'Traer más'}
               </button>
             )}
           </div>
         )}
-      </div>
+      </AdminLayout>
     </RequireEditor>
   )
 }

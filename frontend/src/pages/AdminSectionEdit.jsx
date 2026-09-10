@@ -19,8 +19,9 @@ import {
 import { groupEntriesByYear, nextPositionInYear, useCollectionSection } from '../hooks/useCollections'
 import { albumYear, formatReleaseDate } from '../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
+import { SkeletonPanel } from '../components/common/States'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 function SectionFields({ section }) {
   const { updateSection } = useCollectionAdmin()
@@ -63,7 +64,7 @@ function SectionFields({ section }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <div className="flex gap-2 flex-wrap">
         <input value={form.title} onChange={set('title')} className={`flex-1 min-w-[160px] ${INPUT}`} />
         <input value={form.year_from} onChange={set('year_from')} placeholder="Desde" type="number" className={`w-24 ${INPUT}`} />
@@ -87,12 +88,12 @@ function SectionFields({ section }) {
         value={form.playlist_url}
         onChange={url => setForm(f => ({ ...f, playlist_url: url }))}
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={updateSection.isPending}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           Guardar sección
         </button>
@@ -119,9 +120,9 @@ export default function AdminSectionEdit() {
   return (
     <>
       {isLoading ? (
-        <p className="text-gray-500">Cargando...</p>
+        <SkeletonPanel />
       ) : !data?.section ? (
-        <p className="text-red-400">Sección no encontrada.</p>
+        <p className="text-rock-accentBright">Sección no encontrada.</p>
       ) : (
         <RequireCollectionOwner collection={data.collection}>
         <div className="space-y-6">
@@ -142,7 +143,7 @@ export default function AdminSectionEdit() {
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold text-rock-text">{data.section.title}</h1>
+          <h1 className="font-display text-3xl">{data.section.title}</h1>
 
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             {/* Contenido cargado */}
@@ -150,7 +151,7 @@ export default function AdminSectionEdit() {
               <SectionFields section={data.section} />
 
               <div>
-                <h2 className="text-lg font-bold text-rock-text mb-1">
+                <h2 className="font-display text-xl mb-1">
                   Entradas ({entries.length})
                 </h2>
                 <p className="text-gray-500 text-sm mb-3">

@@ -11,6 +11,7 @@ import ActivityItem from '../components/common/ActivityItem'
 import { useUserFavorites } from '../hooks/useFavorite'
 import { fetchEntities } from '../services/entities'
 import FollowButton from '../components/common/FollowButton'
+import { EmptyState, NotFoundLine, SkeletonFicha, SkeletonGrid, SkeletonRows } from '../components/common/States'
 import { useFollow, useUserProfiles } from '../hooks/useFollows'
 import { ROLE_LABEL } from '../hooks/useRole'
 import { ACCEPTED_IMAGE_TYPES, avatarFolder, uploadImage } from '../services/storage'
@@ -34,22 +35,22 @@ function FavoriteTrackRow({ track }) {
   return (
     <Link
       to={`/track/${track.id}`}
-      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-rock-dark transition-colors"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-rock-card transition-colors"
     >
-      <div className="w-10 h-10 rounded overflow-hidden bg-rock-dark flex-shrink-0">
+      <div className="w-10 h-10 rounded overflow-hidden bg-rock-border flex-none grid place-items-center">
         {track.album?.cover_url ? (
-          <img src={track.album.cover_url} alt="" className="w-full h-full object-cover" />
+          <img src={track.album.cover_url} alt="" className="w-full h-full object-cover washed" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">💿</div>
+          <span className="font-display text-sm text-gray-500">{track.title?.[0]?.toUpperCase()}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-rock-text truncate">{track.title}</p>
+        <p className="truncate">{track.title}</p>
         {track.album?.title && (
           <p className="text-gray-500 text-xs truncate">{track.album.title}</p>
         )}
       </div>
-      <span className="text-gray-500 text-sm flex-shrink-0">{formatDuration(track.duration_ms)}</span>
+      <span className="text-gray-500 text-sm flex-none tabular-nums">{formatDuration(track.duration_ms)}</span>
     </Link>
   )
 }
@@ -90,8 +91,10 @@ function Avatar({ profile, isOwn }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-1 flex-shrink-0">
-      <div className="w-16 h-16 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white text-2xl font-bold">
+    <div className="flex flex-col items-center gap-2.5 flex-none">
+      <div className="w-[104px] h-[104px] rounded-full overflow-hidden bg-rock-accent/20
+                      border border-rock-accentDim grid place-items-center
+                      font-display text-4xl text-rock-accentBright">
         {profile.avatar_url ? (
           <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
         ) : (
@@ -102,7 +105,7 @@ function Avatar({ profile, isOwn }) {
       {isOwn && (
         <>
           <AvatarUpload onUploaded={save} hasAvatar={!!profile.avatar_url} onClear={() => save('')} />
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          {error && <p className="text-rock-accentBright text-xs">{error}</p>}
         </>
       )}
     </div>
@@ -135,12 +138,12 @@ function AvatarUpload({ onUploaded, hasAvatar, onClear }) {
       <button
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
       >
         {busy ? 'Subiendo...' : hasAvatar ? 'Cambiar foto' : 'Subir foto'}
       </button>
       {hasAvatar && (
-        <button onClick={onClear} className="text-gray-500 hover:text-red-400">
+        <button onClick={onClear} className="text-gray-500 hover:text-rock-accentBright">
           Quitar
         </button>
       )}
@@ -151,7 +154,7 @@ function AvatarUpload({ onUploaded, hasAvatar, onClear }) {
         onChange={pick}
         className="hidden"
       />
-      {error && <span className="text-red-400">{error}</span>}
+      {error && <span className="text-rock-accentBright">{error}</span>}
     </div>
   )
 }
@@ -165,14 +168,16 @@ function AvatarUpload({ onUploaded, hasAvatar, onClear }) {
 function UserList({ ids, empty }) {
   const { data: users = [], isLoading } = useUserProfiles(ids)
 
-  if (ids.length === 0) return <p className="text-gray-500 text-sm">{empty}</p>
-  if (isLoading) return <p className="text-gray-500 text-sm">Cargando...</p>
+  if (isLoading) return <SkeletonRows count={3} />
+  if (ids.length === 0) return <EmptyState>{empty}</EmptyState>
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
+    <div className="flex flex-col gap-2.5 max-w-[620px]">
       {users.map(u => (
-        <div key={u.id} className="flex items-center gap-3 p-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white font-bold flex-shrink-0">
+        <div key={u.id} className="flex items-center gap-3.5 card !py-3">
+          <div className="w-10 h-10 flex-none rounded-full overflow-hidden bg-rock-accent/20
+                          border border-rock-accentDim grid place-items-center
+                          text-rock-accentBright font-bold">
             {u.avatar_url ? (
               <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
             ) : (
@@ -180,10 +185,10 @@ function UserList({ ids, empty }) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <Link to={`/user/${u.username}`} className="text-rock-text font-medium hover:text-rock-accent">
+            <Link to={`/user/${u.username}`} className="font-medium hover:text-rock-accent">
               {u.username}
             </Link>
-            {u.bio && <p className="text-gray-500 text-xs truncate">{u.bio}</p>}
+            {u.bio && <p className="text-gray-500 text-[12.5px] truncate">{u.bio}</p>}
           </div>
           <FollowButton userId={u.id} />
         </div>
@@ -252,38 +257,42 @@ function EditProfile({ profile, onClose }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
-      <label className="block space-y-1">
-        <span className="text-xs text-gray-500">Nombre de usuario</span>
+    <div className="card max-w-[560px] space-y-4">
+      <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500">EDITAR PERFIL</p>
+
+      <div className="field">
+        <label htmlFor="lr-pname">Nombre de usuario</label>
         <input
+          id="lr-pname"
           value={username}
           onChange={e => setUsername(e.target.value)}
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text focus:outline-none focus:border-rock-accent"
+          className={`input ${error ? 'border-rock-accent' : ''}`}
         />
-      </label>
+      </div>
 
-      <label className="block space-y-1">
-        <span className="text-xs text-gray-500">Bio</span>
+      <div className="field">
+        <label htmlFor="lr-pbio">Bio</label>
         <textarea
+          id="lr-pbio"
           value={bio}
           onChange={e => setBio(e.target.value)}
           rows={3}
           placeholder="Contá qué escuchás."
-          className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
+          className="input"
         />
-      </label>
+      </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="field-error">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={busy || !dirty}
-          className="bg-rock-accent text-white px-4 py-1.5 rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {busy ? 'Guardando...' : 'Guardar'}
         </button>
-        <button onClick={onClose} className="text-sm text-gray-500 hover:text-rock-text">
+        <button onClick={onClose} className="btn btn-secondary">
           Cancelar
         </button>
       </div>
@@ -335,8 +344,8 @@ export default function Profile() {
   const { data: collections = [] } = useUserCollections(profile?.id)
   const { data: posts = [] } = useUserPosts(profile?.id)
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
-  if (!profile) return <p className="text-red-400">Usuario no encontrado.</p>
+  if (isLoading) return <div className="py-11"><SkeletonFicha lines={4} /></div>
+  if (!profile) return <NotFoundLine>Usuario no encontrado.</NotFoundLine>
 
   const visibleFavorites = favorites.filter(
     f => f.entity && (favFilter === 'all' || f.entity_type === favFilter)
@@ -347,37 +356,32 @@ export default function Profile() {
   const isOwn = sessionUser?.id === profile.id
 
   return (
-    <div className="space-y-8 max-w-3xl">
-      {/* Avatar + info */}
-      <div className="flex items-start gap-4">
+    <div className="animate-fade-up">
+      {/* — Ficha — */}
+      <div className="flex flex-wrap items-start gap-7 py-9">
         <Avatar profile={profile} isOwn={isOwn} />
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-rock-text">{profile.username}</h1>
+
+        <div className="flex-1 min-w-[260px]">
+          <div className="flex items-center gap-3 flex-wrap mb-2">
+            <h1 className="text-screen">{profile.username}</h1>
             {profile.role && profile.role !== 'user' && (
-              <span className="text-xs uppercase tracking-widest px-2 py-0.5 rounded border border-rock-accent text-rock-accent">
-                {ROLE_LABEL[profile.role]}
-              </span>
-            )}
-            <FollowButton userId={profile.id} />
-            {isOwn && !editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
-              >
-                Editar perfil
-              </button>
+              <span className="tag tag-accent">{ROLE_LABEL[profile.role]}</span>
             )}
           </div>
-          {profile.bio && <p className="text-gray-400 text-sm mt-1">{profile.bio}</p>}
-          <p className="text-gray-500 text-xs mt-1">
+
+          {profile.bio && (
+            <p className="text-[15.5px] leading-relaxed text-gray-300 max-w-[54ch] mb-2.5">
+              {profile.bio}
+            </p>
+          )}
+
+          {/* Los contadores son navegación: cada uno lleva a la solapa que lo
+              explica, así que seguidores y siguiendo son botones de verdad. */}
+          <p className="text-[13.5px] text-gray-500 mb-4">
             {posts.length} {posts.length === 1 ? 'posteo' : 'posteos'} ·{' '}
             {reviews.length} opiniones · {favorites.length} favoritos ·{' '}
             {collections.length} {collections.length === 1 ? 'colección' : 'colecciones'} ·{' '}
-            <button
-              onClick={() => setTab('seguidores')}
-              className="hover:text-rock-accent"
-            >
+            <button onClick={() => setTab('seguidores')} className="hover:text-rock-accent">
               {follow.followerCount} {follow.followerCount === 1 ? 'seguidor' : 'seguidores'}
             </button>
             {' · '}
@@ -385,6 +389,15 @@ export default function Profile() {
               {follow.followingCount} siguiendo
             </button>
           </p>
+
+          <div className="flex gap-2 flex-wrap">
+            <FollowButton userId={profile.id} />
+            {isOwn && !editing && (
+              <button onClick={() => setEditing(true)} className="btn btn-secondary">
+                Editar perfil
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -396,17 +409,14 @@ export default function Profile() {
         />
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-rock-border">
+      {/* Las solapas scrollean en horizontal antes que envolver a dos
+          líneas: en un teléfono son seis y no entran. */}
+      <div className="tab-rail border-b border-rock-border mb-7">
         {['posteos', 'reviews', 'favoritos', 'colecciones', 'seguidores', 'siguiendo'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`pb-2 text-sm capitalize border-b-2 transition-colors ${
-              tab === t
-                ? 'border-rock-accent text-rock-text'
-                : 'border-transparent text-gray-500 hover:text-rock-text'
-            }`}
+            className={`tab capitalize ${tab === t ? 'tab-active' : ''}`}
           >
             {t}
           </button>
@@ -418,9 +428,11 @@ export default function Profile() {
       {tab === 'posteos' && (
         <div className="max-w-2xl">
           {posts.length === 0 ? (
-            <p className="text-gray-500 text-sm">Sin posteos aún.</p>
+            <EmptyState title="Sin posteos">
+              {isOwn ? 'Todavía no escribiste nada en el feed.' : 'Todavía no escribió nada.'}
+            </EmptyState>
           ) : (
-            <div className="bg-rock-card border border-rock-border rounded-lg px-4">
+            <div>
               {posts.map(p => (
                 <ActivityItem
                   key={p.id}
@@ -435,7 +447,9 @@ export default function Profile() {
       {tab === 'reviews' && (
         <div className="space-y-3">
           {reviews.length === 0 ? (
-            <p className="text-gray-500 text-sm">Sin opiniones aún.</p>
+            <EmptyState title="Sin opiniones">
+              {isOwn ? 'Todavía no puntuaste nada.' : 'Todavía no puntuó nada.'}
+            </EmptyState>
           ) : (
             reviews.map(r => <ReviewCard key={r.id} review={r} showEntity />)
           )}
@@ -444,41 +458,43 @@ export default function Profile() {
 
       {tab === 'favoritos' && (
         <div className="space-y-6">
-          <div className="flex gap-1 bg-rock-card border border-rock-border rounded-lg p-1 w-fit">
+          <div className="seg">
             {FAV_FILTERS.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setFavFilter(value)}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  favFilter === value
-                    ? 'bg-rock-accent text-black font-semibold'
-                    : 'text-gray-400 hover:text-rock-text'
-                }`}
-              >
-                {label}
-              </button>
+              <label key={value} className="seg-opt">
+                <input
+                  type="radio"
+                  name="fav-filter"
+                  checked={favFilter === value}
+                  onChange={() => setFavFilter(value)}
+                />
+                <span>{label}</span>
+              </label>
             ))}
           </div>
 
           {loadingFavorites ? (
-            <p className="text-gray-500 text-sm">Cargando favoritos...</p>
+            <SkeletonGrid count={4} min={150} />
           ) : visibleFavorites.length === 0 ? (
-            <p className="text-gray-500 text-sm">Sin favoritos aún.</p>
+            <EmptyState title="Sin favoritos">
+              {favFilter === 'all'
+                ? (isOwn ? 'Guardá lo que no querés perder de vista.' : 'Todavía no guardó nada.')
+                : 'Nada guardado de este tipo.'}
+            </EmptyState>
           ) : (
             <>
               {favArtists.length > 0 && (
                 <section>
-                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Artistas</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {favArtists.map(f => <ArtistCard key={f.id} artist={f.entity} />)}
+                  <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">ARTISTAS</p>
+                  <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))' }}>
+                    {favArtists.map(f => <ArtistCard key={f.id} artist={f.entity} variant="circle" />)}
                   </div>
                 </section>
               )}
 
               {favAlbums.length > 0 && (
                 <section>
-                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Álbumes</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">ÁLBUMES</p>
+                  <div className="grid gap-8" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(168px,1fr))' }}>
                     {favAlbums.map(f => <AlbumCard key={f.id} album={f.entity} />)}
                   </div>
                 </section>
@@ -486,8 +502,8 @@ export default function Profile() {
 
               {favTracks.length > 0 && (
                 <section>
-                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Canciones</h2>
-                  <div className="bg-rock-card border border-rock-border rounded-lg py-2">
+                  <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">CANCIONES</p>
+                  <div className="card !p-2 max-w-2xl">
                     {favTracks.map(f => <FavoriteTrackRow key={f.id} track={f.entity} />)}
                   </div>
                 </section>
@@ -499,21 +515,19 @@ export default function Profile() {
 
       {tab === 'colecciones' && (
         collections.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            {isOwn ? (
-              <>
-                Todavía no armaste ninguna.{' '}
-                <Link to="/colecciones" className="text-rock-accent hover:underline">
-                  Armá la primera →
-                </Link>
-              </>
-            ) : (
-              'Todavía no armó ninguna.'
+          <EmptyState
+            title="Sin colecciones"
+            action={isOwn && (
+              <Link to="/colecciones" className="btn btn-secondary">Armar la primera</Link>
             )}
-          </p>
+          >
+            {isOwn
+              ? 'Un recorrido propio: elegí discos y ordenalos como quieras.'
+              : 'Todavía no armó ninguna.'}
+          </EmptyState>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2">
-            {collections.map(c => <CollectionCard key={c.id} collection={c} />)}
+          <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))' }}>
+            {collections.map(c => <CollectionCard key={c.id} collection={c} variant="compact" />)}
           </div>
         )
       )}

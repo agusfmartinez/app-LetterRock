@@ -40,7 +40,7 @@ function Dialog({ request, onResolve }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] grid place-items-center p-4 bg-rock-dark/80 backdrop-blur-sm"
       onClick={() => onResolve(false)}
     >
       <div
@@ -49,10 +49,10 @@ function Dialog({ request, onResolve }) {
         aria-label={request.title || 'Confirmar'}
         // Sin esto, el click en la tarjeta llega al fondo y cierra el diálogo.
         onClick={e => e.stopPropagation()}
-        className="bg-rock-card border border-rock-border rounded-lg p-5 max-w-sm w-full space-y-4 shadow-xl"
+        className="card w-full max-w-[440px] space-y-4 shadow-card-hover"
       >
         {request.title && (
-          <h2 className="text-rock-text font-bold">{request.title}</h2>
+          <h2 className="font-display text-xl">{request.title}</h2>
         )}
         <p className="text-gray-300 text-sm leading-relaxed">{request.message}</p>
 
@@ -60,13 +60,13 @@ function Dialog({ request, onResolve }) {
           <button
             ref={cancelRef}
             onClick={() => onResolve(false)}
-            className="text-sm text-gray-400 hover:text-rock-text px-3 py-1.5"
+            className="btn btn-secondary"
           >
             {request.cancelLabel || 'Cancelar'}
           </button>
           <button
             onClick={() => onResolve(true)}
-            className="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded text-sm font-semibold"
+            className="btn btn-danger"
           >
             {request.confirmLabel || 'Borrar'}
           </button>

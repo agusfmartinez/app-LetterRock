@@ -7,6 +7,8 @@ import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
 import { useReviews } from '../hooks/useReviews'
+import { EmptyState, NotFoundLine, SkeletonRows } from '../components/common/States'
+import { IconArrowLeft } from '../components/common/Icons'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -16,20 +18,14 @@ import { useAlbumMedia } from '../hooks/useTopTracks'
 
 function SectionNav({ collectionSlug, prev, next }) {
   return (
-    <div className="flex justify-between gap-4 pt-8 border-t border-rock-border">
+    <div className="flex justify-between gap-4 pt-8 mt-12 border-t border-rock-border">
       {prev ? (
-        <Link
-          to={`/coleccion/${collectionSlug}/${prev.slug}`}
-          className="text-gray-400 hover:text-rock-accent text-sm"
-        >
+        <Link to={`/coleccion/${collectionSlug}/${prev.slug}`} className="btn btn-secondary">
           ← {prev.title}
         </Link>
       ) : <span />}
       {next ? (
-        <Link
-          to={`/coleccion/${collectionSlug}/${next.slug}`}
-          className="text-gray-400 hover:text-rock-accent text-sm text-right"
-        >
+        <Link to={`/coleccion/${collectionSlug}/${next.slug}`} className="btn btn-secondary">
           {next.title} →
         </Link>
       ) : <span />}
@@ -94,9 +90,9 @@ export default function CollectionSection() {
     yearRefs.current[label]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  if (isLoading) return <p className="text-gray-500">Cargando...</p>
-  if (!data?.collection) return <p className="text-red-400">Colección no encontrada.</p>
-  if (!data.section) return <p className="text-red-400">Sección no encontrada.</p>
+  if (isLoading) return <div className="py-11"><SkeletonRows count={4} avatar={false} /></div>
+  if (!data?.collection) return <NotFoundLine>Colección no encontrada.</NotFoundLine>
+  if (!data.section) return <NotFoundLine>Época no encontrada.</NotFoundLine>
 
   const { collection, section, entries, prev, next } = data
   const canEdit = isEditor || (!!user && collection.created_by === user.id)
@@ -106,30 +102,31 @@ export default function CollectionSection() {
     : null
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-up">
       <Link
         to={`/coleccion/${collection.slug}`}
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-rock-accent text-sm transition-colors"
+        className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent pt-4"
       >
-        ← {collection.title}
+        <IconArrowLeft size={14} /> {collection.title}
       </Link>
 
       {/* La misma portada que identifica a la época en la tarjeta de la
           colección. Sin esto sólo se veía en la grilla de la que venís. */}
       {section.cover_url && (
-        <div className="relative -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden aspect-[16/6] bg-rock-dark">
+        <div className="relative mt-5 rounded-3xl overflow-hidden aspect-[16/6] bg-rock-card shadow-card">
           <img
             src={section.cover_url}
-            alt={section.title}
-            className="w-full h-full object-cover opacity-60"
+            alt=""
+            className="w-full h-full object-cover washed opacity-70"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-rock-dark to-transparent" />
         </div>
       )}
 
-      <header className="max-w-2xl">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <h1 className="text-5xl font-black text-rock-text">{section.title}</h1>
+      <header className="max-w-2xl py-8">
+        {section.subtitle && <p className="kicker mb-3">{section.subtitle}</p>}
+        <div className="flex items-baseline gap-3 flex-wrap mb-4">
+          <h1 className="text-screen">{section.title}</h1>
           {canEdit && (
             <Link
               to={`/coleccion/${collection.slug}/${section.slug}/editar`}
@@ -139,10 +136,7 @@ export default function CollectionSection() {
             </Link>
           )}
         </div>
-        {section.subtitle && (
-          <p className="text-rock-accent mt-2 tracking-wide">{section.subtitle}</p>
-        )}
-        <div className="flex items-center gap-3 mt-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <FavoriteButton entityType="collection_section" entityId={section.id} />
           {average !== null && (
             <>
@@ -178,8 +172,8 @@ export default function CollectionSection() {
                 data-year={group.label}
                 className="scroll-mt-24"
               >
-                <div className="sticky top-16 z-10 bg-rock-dark/95 backdrop-blur py-3 -mx-2 px-2 border-b border-rock-border">
-                  <h2 className="text-4xl font-black text-rock-accent">{group.label}</h2>
+                <div className="sticky top-16 z-10 bg-rock-dark/95 backdrop-blur-md py-3 -mx-2 px-2 border-b border-rock-border">
+                  <h2 className="font-display text-4xl text-rock-accent">{group.label}</h2>
                 </div>
 
                 {group.entries.map(e => (
@@ -207,10 +201,8 @@ export default function CollectionSection() {
 
       {/* La opinión va en la época y no en la colección: en una timeline lo que
           se lee de corrido es esto, y la portada es apenas un índice de épocas. */}
-      <section className="max-w-2xl">
-        <h2 className="text-xl font-bold text-rock-text mb-4">
-          Opiniones sobre {section.title} ({reviews.length})
-        </h2>
+      <section className="max-w-2xl mt-12">
+        <h2 className="font-display text-3xl mb-5">Lo que escribieron sobre {section.title}</h2>
         <div className="space-y-4">
           <ReviewForm entityType="collection_section" entityId={section.id} onSubmit={createReview} />
           {reviews.length > 0 ? (
@@ -218,7 +210,9 @@ export default function CollectionSection() {
               <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
             ))
           ) : (
-            <p className="text-gray-500 text-sm">Todavía nadie opinó de esta época.</p>
+            <EmptyState title="Todavía nadie opinó">
+              Decí qué te parece esta selección.
+            </EmptyState>
           )}
         </div>
       </section>

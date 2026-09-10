@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useRole } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
+import { EmptyState } from './States'
 
 /**
  * Deja pasar al dueño de la colección o a un editor.
@@ -19,12 +20,12 @@ export default function RequireCollectionOwner({ collection, children }) {
 
   if (!allowed) {
     return (
-      <div className="max-w-2xl">
-        <p className="text-red-400">Esta colección no es tuya.</p>
-        <Link to="/colecciones" className="text-rock-accent hover:underline text-sm mt-2 block">
-          Ver las colecciones →
-        </Link>
-      </div>
+      <EmptyState
+        title="Esta colección no es tuya"
+        action={<Link to="/colecciones" className="btn btn-secondary">Ver las colecciones</Link>}
+      >
+        Sólo su dueño o un editor pueden cambiarla.
+      </EmptyState>
     )
   }
   return children

@@ -35,7 +35,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
             ? `${person.name} — ${person.roles.map(roleLabel).join(', ')}`
             : person.name
 
-          const className = 'text-xs border border-rock-border rounded-full px-2.5 py-1 text-gray-300'
+          const className = 'tag tag-neutral'
 
           return target ? (
             <Link
@@ -84,7 +84,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
       })}
 
       {editHref && (
-        <p className="text-gray-600 text-xs pt-2">
+        <p className="text-gray-500 text-xs pt-2">
           Sale de las fechas de cada etapa.{' '}
           <Link to={editHref} className="hover:text-rock-accent underline">
             Corregirlas en el artista

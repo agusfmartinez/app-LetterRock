@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import FollowButton from '../components/common/FollowButton'
+import { EmptyState, SkeletonGrid, SkeletonRows } from '../components/common/States'
+import { IconCheck, IconSearch } from '../components/common/Icons'
 import {
   MIN_FAVORITE_ARTISTS,
   useOnboardingArtists,
@@ -9,30 +11,50 @@ import {
 } from '../hooks/useOnboarding'
 import { useAuthStore } from '../store/authStore'
 
+/*
+ * Elegir una banda es marcarla, no abrirla: por eso el anillo de acento y el
+ * tilde, y no un borde de tarjeta. El retrato es redondo como en el resto del
+ * sitio — una banda siempre se ve igual, se la esté eligiendo o no.
+ */
 function ArtistTile({ artist, selected, onToggle }) {
   return (
     <button
       type="button"
       onClick={onToggle}
-      className={`text-left rounded-lg border overflow-hidden transition-colors ${
-        selected ? 'border-rock-accent' : 'border-rock-border hover:border-gray-500'
-      }`}
+      aria-pressed={selected}
+      className="text-center group"
     >
-      <div className="aspect-square bg-rock-dark relative">
-        {artist.image_url ? (
-          <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl text-gray-600">🎸</div>
-        )}
-        {selected && (
-          <div className="absolute inset-0 bg-rock-accent/30 flex items-center justify-center">
-            <span className="w-6 h-6 rounded-full bg-rock-accent text-white text-sm flex items-center justify-center">
-              ✓
+      <div
+        className={`relative aspect-square rounded-full p-1 transition-colors ${
+          selected ? 'bg-rock-accent' : 'bg-transparent'
+        }`}
+      >
+        <div className="w-full h-full rounded-full overflow-hidden bg-rock-border grid place-items-center">
+          {artist.image_url ? (
+            <img
+              src={artist.image_url}
+              alt=""
+              loading="lazy"
+              className={`w-full h-full object-cover transition-[filter] ${
+                selected ? '' : 'washed group-hover:filter-none'
+              }`}
+            />
+          ) : (
+            <span className="font-display text-2xl text-gray-500">
+              {artist.name?.[0]?.toUpperCase()}
             </span>
-          </div>
+          )}
+        </div>
+        {selected && (
+          <span className="absolute right-0.5 bottom-0.5 w-7 h-7 rounded-full bg-rock-accent
+                           text-rock-dark grid place-items-center border-2 border-rock-dark">
+            <IconCheck size={14} />
+          </span>
         )}
       </div>
-      <p className="text-xs text-rock-text px-2 py-1.5 truncate">{artist.name}</p>
+      <p className={`text-[13.5px] mt-2.5 leading-tight ${selected ? 'text-rock-accent' : 'text-gray-300'}`}>
+        {artist.name}
+      </p>
     </button>
   )
 }
@@ -52,52 +74,53 @@ function PickArtists({ selected, onToggle, onNext, onSkip }) {
   const canContinue = selected.size >= MIN_FAVORITE_ARTISTS
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-rock-text">¿Qué bandas escuchás?</h1>
-        <p className="text-gray-400 text-sm mt-1">
+    <div>
+      <div className="max-w-[640px] pb-7">
+        <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">PASO 1 DE 2</p>
+        <h1 className="text-screen mb-3.5">¿Qué bandas escuchás?</h1>
+        <p className="text-base leading-relaxed text-gray-300 max-w-[50ch]">
           Elegí al menos {MIN_FAVORITE_ARTISTS}. Las guardamos como favoritas y las
           usamos para sugerirte gente con gustos parecidos.
         </p>
       </div>
 
-      <input
-        value={term}
-        onChange={e => setTerm(e.target.value)}
-        placeholder="Buscar una banda..."
-        className="w-full bg-rock-dark border border-rock-border rounded px-3 py-2 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent"
-      />
+      <div className="relative flex items-center max-w-[360px] mb-8">
+        <IconSearch size={15} className="absolute left-4 text-gray-500 pointer-events-none" />
+        <input
+          value={term}
+          onChange={e => setTerm(e.target.value)}
+          placeholder="Buscar una banda"
+          aria-label="Buscar una banda"
+          className="input pl-10 !min-h-[46px]"
+        />
+      </div>
 
       {isLoading ? (
-        <p className="text-gray-500 text-sm">Cargando...</p>
+        <SkeletonGrid count={12} min={122} />
       ) : artists.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          Ninguna banda con ese nombre.{' '}
-          <Link to="/search" className="text-rock-accent hover:underline">
-            Buscala en el catálogo completo →
-          </Link>
-        </p>
+        <EmptyState
+          title="Ninguna banda con ese nombre"
+          action={<Link to="/search" className="btn btn-secondary">Buscar en el catálogo</Link>}
+        >
+          Puede que todavía no esté fichada en el archivo.
+        </EmptyState>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(122px,1fr))' }}>
           {artists.map(a => (
             <ArtistTile key={a.id} artist={a} selected={selected.has(a.id)} onToggle={() => onToggle(a.id)} />
           ))}
         </div>
       )}
 
-      <div className="flex items-center gap-4 pt-2">
-        <button
-          onClick={onNext}
-          disabled={!canContinue}
-          className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:opacity-90 disabled:opacity-50"
-        >
+      <div className="flex items-center gap-5 flex-wrap pt-6 mt-9 border-t border-rock-border max-w-[760px]">
+        <button onClick={onNext} disabled={!canContinue} className="btn btn-primary px-6 py-3">
           Continuar
         </button>
-        <span className="text-gray-500 text-sm">
+        <span className="font-mono text-[12.5px] text-gray-500">
           {selected.size} / {MIN_FAVORITE_ARTISTS}
         </span>
-        <button onClick={onSkip} className="ml-auto text-sm text-gray-500 hover:text-rock-text">
-          Saltear
+        <button onClick={onSkip} className="ml-auto btn btn-ghost text-[13.5px] !text-gray-400">
+          Saltear por ahora
         </button>
       </div>
     </div>
@@ -105,56 +128,61 @@ function PickArtists({ selected, onToggle, onNext, onSkip }) {
 }
 
 /** Paso 2: a partir de esos favoritos, gente con gustos parecidos. */
-function PickPeople({ onDone }) {
+function PickPeople({ onDone, onBack }) {
   const { data: suggestions = [], isLoading } = useSuggestedUsers(true)
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-rock-text">Gente con gustos parecidos</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Comparten bandas favoritas con vos. Seguilos para verlos en tu inicio.
+    <div>
+      <div className="max-w-[640px] pb-7">
+        <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">PASO 2 DE 2</p>
+        <h1 className="text-screen mb-3.5">Gente con gustos parecidos</h1>
+        <p className="text-base leading-relaxed text-gray-300 max-w-[50ch]">
+          Comparten bandas favoritas con vos. Seguilos y su actividad te aparece en el feed.
         </p>
       </div>
 
-      {isLoading ? (
-        <p className="text-gray-500 text-sm">Buscando...</p>
-      ) : suggestions.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          Todavía no hay coincidencias —la comunidad es chica—.{' '}
-          <Link to="/usuarios" className="text-rock-accent hover:underline">
-            Buscá a alguien igual →
-          </Link>
-        </p>
-      ) : (
-        <div className="bg-rock-card border border-rock-border rounded-lg divide-y divide-rock-border">
-          {suggestions.map(u => (
-            <div key={u.id} className="flex items-center gap-3 p-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-rock-accent flex items-center justify-center text-white font-bold flex-shrink-0">
-                {u.avatar_url ? (
-                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
-                ) : (
-                  u.username[0].toUpperCase()
-                )}
+      <div className="max-w-[620px]">
+        {isLoading ? (
+          <SkeletonRows count={3} />
+        ) : suggestions.length === 0 ? (
+          <EmptyState
+            title="Todavía no hay coincidencias"
+            action={<Link to="/usuarios" className="btn btn-secondary">Ver toda la gente</Link>}
+          >
+            La comunidad es chica y nadie comparte tus bandas todavía.
+          </EmptyState>
+        ) : (
+          <div className="flex flex-col gap-2.5 mb-8">
+            {suggestions.map(u => (
+              <div key={u.id} className="flex items-center gap-3.5 card !py-3">
+                <div className="w-11 h-11 flex-none rounded-full overflow-hidden bg-rock-accent/20
+                                border border-rock-accentDim grid place-items-center
+                                text-rock-accentBright font-bold">
+                  {u.avatar_url ? (
+                    <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                  ) : (
+                    u.username[0].toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[14.5px]">{u.username}</p>
+                  <p className="text-gray-500 text-[12.5px]">
+                    {u.shared_count} {u.shared_count === 1 ? 'banda en común' : 'bandas en común'}
+                  </p>
+                </div>
+                <FollowButton userId={u.id} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-rock-text font-medium">{u.username}</p>
-                <p className="text-gray-500 text-xs">
-                  {u.shared_count} {u.shared_count === 1 ? 'banda en común' : 'bandas en común'}
-                </p>
-              </div>
-              <FollowButton userId={u.id} />
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      <button
-        onClick={onDone}
-        className="bg-rock-accent text-white px-5 py-2 rounded font-semibold hover:opacity-90"
-      >
-        Ir al inicio
-      </button>
+        <div className="flex items-center gap-5 flex-wrap">
+          <button onClick={onDone} className="btn btn-primary px-6 py-3">Ir al inicio</button>
+          <button onClick={onBack} className="btn btn-ghost text-[13.5px] !text-gray-400">
+            ← Volver a las bandas
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -179,12 +207,12 @@ export default function Onboarding() {
   // sin `user.id` el guardado de favoritos no tiene a quién atribuírselos.
   if (!user) {
     return (
-      <div className="max-w-md mx-auto py-16 text-center">
-        <p className="text-gray-400">Este paso es parte del registro.</p>
-        <Link to="/auth/signup" className="text-rock-accent hover:underline text-sm mt-2 block">
-          Crear cuenta →
-        </Link>
-      </div>
+      <EmptyState
+        title="Este paso es parte del registro"
+        action={<Link to="/auth/signup" className="btn btn-primary">Crear cuenta</Link>}
+      >
+        Para guardar tus bandas favoritas hace falta una cuenta.
+      </EmptyState>
     )
   }
 
@@ -205,7 +233,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="py-8 animate-fade-up">
       {step === 'artists' ? (
         <PickArtists
           selected={selected}
@@ -214,7 +242,7 @@ export default function Onboarding() {
           onSkip={() => navigate('/')}
         />
       ) : (
-        <PickPeople onDone={() => navigate('/')} />
+        <PickPeople onDone={() => navigate('/')} onBack={() => setStep('artists')} />
       )}
     </div>
   )

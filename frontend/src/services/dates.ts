@@ -96,3 +96,18 @@ export function timeAgo(iso: string | null | undefined): string | null {
   }
   return 'recién'
 }
+
+/**
+ * La duración de un track como "3:02".
+ *
+ * Vive acá y no en `TrackRow` porque la usan tres lugares: la lista, la ficha
+ * de canción y el vinilo 3D, que genera el ancho de cada surco a partir de
+ * ella. Sin duración devuelve null y cada uno decide qué mostrar en su lugar.
+ */
+export function trackDuration(track: any): string | null {
+  const ms = track?.duration_ms
+  if (!ms) return null
+  const total = Math.floor(ms / 1000)
+  const min = Math.floor(total / 60)
+  return `${min}:${(total % 60).toString().padStart(2, '0')}`
+}

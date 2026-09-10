@@ -21,7 +21,7 @@ import { useInvalidateCatalog } from '../../hooks/useCatalogAdmin'
 import { importArtistMembers } from '../../services/api'
 import { timeAgo } from '../../services/dates'
 
-const INPUT = 'bg-rock-dark border border-rock-border rounded px-2 py-1 text-sm text-rock-text placeholder-gray-500 focus:outline-none focus:border-rock-accent'
+const INPUT = 'input'
 
 /** Los roles se editan como texto separado por comas: es un array en la base. */
 const rolesToText = (roles) => (roles || []).join(', ')
@@ -81,7 +81,7 @@ function StageFields({ stage }) {
           placeholder="Desde"
           className={`w-20 ${INPUT}`}
         />
-        <span className="text-gray-600 text-xs">–</span>
+        <span className="text-gray-500 text-xs">–</span>
         <input
           value={form.year_to}
           onChange={e => set('year_to', e.target.value)}
@@ -101,7 +101,7 @@ function StageFields({ stage }) {
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="ml-auto bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-30"
+          className="ml-auto btn btn-primary !text-xs !px-3 !py-1.5 disabled:opacity-30"
         >
           Guardar
         </button>
@@ -116,7 +116,7 @@ function StageFields({ stage }) {
             if (ok) remove.mutate(stage.id, { onError: e => setError(describeError(e)) })
           }}
           title="Quitar sólo esta etapa"
-          className="text-gray-600 hover:text-red-400 text-xs"
+          className="text-gray-500 hover:text-rock-accentBright text-xs"
         >
           ✕
         </button>
@@ -141,7 +141,7 @@ function StageFields({ stage }) {
           {stage.manual_fields.length} campo(s) editado(s): la importación no los toca.
         </p>
       )}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
     </div>
   )
 }
@@ -179,11 +179,11 @@ function MemberName({ person }) {
           { onError: e => setError(describeError(e)) }
         )}
         disabled={!dirty || rename.isPending}
-        className="text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-30"
+        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
       >
         Renombrar
       </button>
-      {error && <span className="text-red-400 text-xs">{error}</span>}
+      {error && <span className="text-rock-accentBright text-xs">{error}</span>}
     </span>
   )
 }
@@ -211,7 +211,7 @@ function AddStage({ person, groupId }) {
       >
         + Agregar etapa
       </button>
-      {error && <span className="text-red-400 text-xs ml-2">{error}</span>}
+      {error && <span className="text-rock-accentBright text-xs ml-2">{error}</span>}
     </div>
   )
 }
@@ -265,7 +265,7 @@ function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
           <span className="flex items-baseline gap-2 ml-auto">
             <Link
               to={`/admin/artista/${catalogId}`}
-              className="text-xs border border-rock-border rounded px-2 py-0.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+              className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
             >
               Editar artista
             </Link>
@@ -279,14 +279,14 @@ function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
             </Link>
           </span>
         ) : (
-          <span className="text-gray-700 text-xs ml-auto">sin ficha</span>
+          <span className="text-gray-500 text-xs ml-auto">sin ficha</span>
         )}
 
         <button
           onClick={remove}
           disabled={removePerson.isPending}
           title="Quitar al músico con todas sus etapas"
-          className="text-gray-600 hover:text-red-400 text-xs disabled:opacity-50"
+          className="text-gray-500 hover:text-rock-accentBright text-xs disabled:opacity-50"
         >
           ✕
         </button>
@@ -298,7 +298,7 @@ function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
         </span>
         <button
           onClick={() => setEditingKey(open ? null : person.key)}
-          className="text-xs border border-rock-border rounded px-2 py-0.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+          className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
         >
           {open ? 'Cerrar' : 'Editar'}
         </button>
@@ -310,7 +310,7 @@ function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
         </p>
       )}
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
 
       {open && (
         <div className="mt-2 pl-3 border-l-2 border-rock-accent divide-y divide-rock-border">
@@ -361,7 +361,7 @@ function NewMemberForm({ groupId }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-rock-dark border border-rock-border rounded p-3 space-y-2">
+    <form onSubmit={submit} className="bg-rock-dark rounded-xl rounded p-3 space-y-2">
       <input
         value={form.member_name}
         onChange={e => setForm({ ...form, member_name: e.target.value })}
@@ -390,12 +390,12 @@ function NewMemberForm({ groupId }) {
           className={`flex-1 min-w-[140px] ${INPUT}`}
         />
       </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={create.isPending || !form.member_name.trim()}
-          className="bg-rock-accent text-white px-3 py-1 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+          className="btn btn-primary !text-xs !px-3 !py-1.5"
         >
           Agregar
         </button>
@@ -461,18 +461,18 @@ export default function MembersPanel({ artist }) {
   }
 
   return (
-    <div className="bg-rock-card border border-rock-border rounded-lg p-4 space-y-3">
+    <div className="card space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="font-bold text-rock-text text-sm">
+        <h2 className="font-display text-lg text-sm">
           {isPerson ? 'Bandas' : 'Formación'}
         </h2>
         {people.length > 0 && (
-          <span className="text-gray-600 text-xs">
+          <span className="text-gray-500 text-xs">
             {people.length} músicos · {members.length} etapas
           </span>
         )}
         <span
-          className="text-gray-600 text-xs"
+          className="text-gray-500 text-xs"
           title={artist.members_imported_at ? new Date(artist.members_imported_at).toLocaleString('es-AR') : ''}
         >
           {artist.members_imported_at ? timeAgo(artist.members_imported_at) : 'nunca importado'}
@@ -481,20 +481,20 @@ export default function MembersPanel({ artist }) {
           onClick={runImport}
           disabled={busy || !artist.external_mb_id}
           title={artist.external_mb_id ? '' : 'Este artista no está vinculado a MusicBrainz'}
-          className="ml-auto text-xs border border-rock-border rounded px-2 py-1 text-gray-400 hover:text-rock-accent hover:border-rock-accent disabled:opacity-50"
+          className="ml-auto btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
         >
           {busy ? 'Consultando...' : 'Importar de MusicBrainz'}
         </button>
         <button
           onClick={() => setShowHelp(!showHelp)}
-          className="text-gray-600 hover:text-rock-accent text-xs"
+          className="text-gray-500 hover:text-rock-accent text-xs"
         >
           ?
         </button>
       </div>
 
       {showHelp && (
-        <div className="text-gray-600 text-xs space-y-1 border-l-2 border-rock-border pl-3">
+        <div className="text-gray-500 text-xs space-y-1 border-l-2 border-rock-border pl-3">
           <p>
             Una etapa por paso: quien entró, se fue y volvió tiene varias, y se
             editan todas juntas abriendo al músico.
@@ -510,7 +510,7 @@ export default function MembersPanel({ artist }) {
         </div>
       )}
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rock-accentBright text-xs">{error}</p>}
       {status && (
         <div className="text-xs space-y-1">
           <p className="text-gray-400">
@@ -519,13 +519,13 @@ export default function MembersPanel({ artist }) {
               : `${status.saved} ${status.saved === 1 ? 'etapa' : 'etapas'} de ${status.people} ${status.people === 1 ? 'músico' : 'músicos'} · ${status.linked} con ficha en el catálogo`}
           </p>
           {status.artistType && (
-            <p className="text-gray-600">
+            <p className="text-gray-500">
               Tipo completado desde MusicBrainz:{' '}
               {status.artistType === 'group' ? 'banda' : status.artistType === 'person' ? 'músico' : 'otro'}.
             </p>
           )}
           {status.skipped > 0 && (
-            <p className="text-gray-600">
+            <p className="text-gray-500">
               {status.skipped} salteadas: son bandas que todavía no están en el
               catálogo. Cargalas y volvé a importar.
             </p>
@@ -560,7 +560,7 @@ export default function MembersPanel({ artist }) {
       )}
 
       {isPerson ? (
-        <p className="text-gray-600 text-xs">
+        <p className="text-gray-500 text-xs">
           Para sumarlo a una banda entrá a la ficha de esa banda: la etapa vive
           del lado del grupo, no del músico.
         </p>
@@ -587,12 +587,12 @@ export default function MembersPanel({ artist }) {
                 {band.roles.length > 0 && (
                   <span className="text-gray-500">{band.roles.map(roleLabel).join(' · ')}</span>
                 )}
-                <span className="text-gray-600 font-mono">
+                <span className="text-gray-500 font-mono">
                   {band.periods.map(p => `(${p})`).join(' ')}
                 </span>
                 <Link
                   to={`/admin/artista/${band.key}`}
-                  className="ml-auto border border-rock-border rounded px-2 py-0.5 text-gray-400 hover:text-rock-accent hover:border-rock-accent"
+                  className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
                 >
                   Editar en {band.name}
                 </Link>
