@@ -110,7 +110,7 @@ export default function PostForm() {
         onChange={e => setBody(e.target.value)}
         placeholder="¿Qué estás escuchando?"
         rows={2}
-        className="input !min-h-[64px] resize-none"
+        className="input resize-none !min-h-[88px]"
       />
 
       {attached && (

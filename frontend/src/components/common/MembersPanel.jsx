@@ -20,6 +20,7 @@ import {
 import { useInvalidateCatalog } from '../../hooks/useCatalogAdmin'
 import { importArtistMembers } from '../../services/api'
 import { timeAgo } from '../../services/dates'
+import ArrowLink from './ArrowLink'
 
 const INPUT = 'input'
 
@@ -269,14 +270,7 @@ function PersonBlock({ person, groupId, editingKey, setEditingKey }) {
             >
               Editar artista
             </Link>
-            <Link
-              to={`/artist/${person.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-xs"
-            >
-              ficha →
-            </Link>
+            <ArrowLink to={`/artist/${person.slug}`} target="_blank" rel="noopener noreferrer">Ficha</ArrowLink>
           </span>
         ) : (
           <span className="text-gray-500 text-xs ml-auto">sin ficha</span>
@@ -354,7 +348,7 @@ function NewMemberForm({ groupId }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
         + Agregar integrante a mano
       </button>
     )

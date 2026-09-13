@@ -38,7 +38,9 @@ export default function PlatformBadges({ links = {}, fallbacks = {}, className =
           href={p.url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex items-center gap-1 text-xs border rounded-full px-3 py-1 transition-colors ${p.className}`}
+          // `.btn` y no un chip propio: al lado del botón de favorito tienen que
+          // medir lo mismo, si no la fila queda escalonada.
+          className={`btn !text-[13px] ${p.className}`}
         >
           {p.label}
           <span aria-hidden="true">↗</span>

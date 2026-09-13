@@ -700,7 +700,7 @@ export function NewNarrativeForm({ collection, section = null, entries, isRankin
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
         + Agregar bloque de texto
       </button>
     )

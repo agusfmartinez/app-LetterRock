@@ -20,6 +20,7 @@ import { groupEntriesByYear, nextPositionInYear, useCollectionSection } from '..
 import { albumYear, formatReleaseDate } from '../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
 import { SkeletonPanel } from '../components/common/States'
+import ArrowLink from '../components/common/ArrowLink'
 
 const INPUT = 'input'
 
@@ -57,7 +58,7 @@ function SectionFields({ section }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
         Editar datos de la época ▾
       </button>
     )
@@ -133,14 +134,7 @@ export default function AdminSectionEdit() {
             >
               ← {data.collection.title}
             </Link>
-            <Link
-              to={`/coleccion/${data.collection.slug}/${data.section.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
-            >
-              Ver la página →
-            </Link>
+            <ArrowLink to={`/coleccion/${data.collection.slug}/${data.section.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
           <h1 className="font-display text-3xl">{data.section.title}</h1>

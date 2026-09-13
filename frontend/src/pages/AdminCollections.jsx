@@ -7,6 +7,7 @@ import { EmptyState, SkeletonRows } from '../components/common/States'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useAuthStore } from '../store/authStore'
+import ArrowLink from '../components/common/ArrowLink'
 
 const TYPES = [
   { value: 'timeline', label: 'Timeline (secciones por época)' },
@@ -193,14 +194,7 @@ export default function AdminCollections() {
                 >
                   Editar
                 </Link>
-                <Link
-                  to={`/coleccion/${c.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[12.5px] text-rock-accent hover:text-rock-accentBright whitespace-nowrap"
-                >
-                  Ver →
-                </Link>
+                <ArrowLink to={`/coleccion/${c.slug}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
               </div>
             ))}
           </div>

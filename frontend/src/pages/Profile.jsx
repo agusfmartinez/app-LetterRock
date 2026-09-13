@@ -526,8 +526,8 @@ export default function Profile() {
               : 'Todavía no armó ninguna.'}
           </EmptyState>
         ) : (
-          <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))' }}>
-            {collections.map(c => <CollectionCard key={c.id} collection={c} variant="compact" />)}
+          <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))' }}>
+            {collections.map(c => <CollectionCard key={c.id} collection={c} />)}
           </div>
         )
       )}

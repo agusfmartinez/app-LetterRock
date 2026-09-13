@@ -16,6 +16,7 @@ import {
 import { useRole } from '../hooks/useRole'
 import { formatReleaseDate } from '../services/dates'
 import { SkeletonPanel } from '../components/common/States'
+import ArrowLink from '../components/common/ArrowLink'
 
 const INPUT = 'input'
 
@@ -319,14 +320,7 @@ export default function AdminAlbumEdit() {
             >
               ← {data.album.artist?.name}
             </Link>
-            <Link
-              to={`/album/${data.album.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
-            >
-              Ver la página →
-            </Link>
+            <ArrowLink to={`/album/${data.album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
           <h1 className="font-display text-3xl">{data.album.title}</h1>

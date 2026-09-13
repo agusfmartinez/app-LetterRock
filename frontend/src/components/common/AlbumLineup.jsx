@@ -20,10 +20,15 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
 
   // En la ficha del álbum la formación es un dato al margen, no el contenido:
   // en fila y compacta, para que no compita con el tracklist.
+  //
+  // El título va en su propio renglón: en la misma fila que los nombres, con
+  // la columna angosta de la timeline, "Integrantes" quedaba colgado entre dos
+  // chips y se leía como uno más.
   if (variant === 'badges') {
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-gray-500 text-xs uppercase tracking-wide">Integrantes</span>
+      <div>
+        <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-2.5">INTEGRANTES</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
         {lineup.map(person => {
           const target = person.slug
             ? `/artist/${person.slug}`
@@ -52,6 +57,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
             </span>
           )
         })}
+        </div>
       </div>
     )
   }

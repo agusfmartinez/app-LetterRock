@@ -4,6 +4,7 @@ import RequireEditor from '../components/common/RequireEditor'
 import AdminLayout from '../components/common/AdminLayout'
 import { EmptyState, SkeletonRows } from '../components/common/States'
 import { IconArrowLeft } from '../components/common/Icons'
+import ArrowLink from '../components/common/ArrowLink'
 import {
   ARTISTS_PAGE_SIZE,
   useAdminArtists,
@@ -66,14 +67,9 @@ function ArtistRow({ artist, hidden }) {
           >
             Editar
           </Link>
-          <Link
-            to={`/artist/${artist.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[12.5px] text-rock-accent hover:text-rock-accentBright whitespace-nowrap"
-          >
-            Ver →
-          </Link>
+          <ArrowLink to={`/artist/${artist.slug}`} target="_blank" rel="noopener noreferrer">
+            Ver
+          </ArrowLink>
         </>
       )}
     </div>
@@ -205,12 +201,7 @@ export default function AdminArtists({ hidden = false }) {
         )}
 
         {!hidden && hiddenCount > 0 && (
-          <Link
-            to="/admin/catalogo/ocultos"
-            className="inline-block text-sm text-gray-500 hover:text-rock-accent mt-5"
-          >
-            Ver ocultos ({hiddenCount}) →
-          </Link>
+          <ArrowLink to="/admin/catalogo/ocultos" className="mt-5">Ver ocultos ({hiddenCount})</ArrowLink>
         )}
       </AdminLayout>
     </RequireEditor>

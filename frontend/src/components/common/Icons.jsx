@@ -97,6 +97,21 @@ export const IconChevronRight = (p) => (
   </Svg>
 )
 
+export const IconArrowRight = (p) => (
+  <Svg {...p}>
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <polyline points="14,6 20,12 14,18" />
+  </Svg>
+)
+
+/** Sale del sitio: la flecha en diagonal de "abre en otra pestaña". */
+export const IconExternal = (p) => (
+  <Svg {...p}>
+    <line x1="7" y1="17" x2="17" y2="7" />
+    <polyline points="9,7 17,7 17,15" />
+  </Svg>
+)
+
 export const IconPlus = (p) => (
   <Svg {...p}>
     <line x1="12" y1="5" x2="12" y2="19" />

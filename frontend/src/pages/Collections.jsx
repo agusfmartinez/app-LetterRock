@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EmptyState, ErrorState, SkeletonGrid } from '../components/common/States'
+import { IconPlus } from '../components/common/Icons'
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -80,7 +81,7 @@ function NewCollectionButton() {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn btn-primary px-6 py-3">
-        + Armar la mía
+        <IconPlus size={15} /> Nueva colección
       </button>
     )
   }
@@ -115,7 +116,7 @@ function NewCollectionButton() {
   )
 }
 
-/** Los carteles de estado, iguales en las dos variantes de tarjeta. */
+/** Los carteles de estado de una colección. */
 function StatusTags({ collection }) {
   return (
     <>
@@ -128,54 +129,32 @@ function StatusTags({ collection }) {
 }
 
 /**
- * La tarjeta de una colección.
+ * "Timeline · 7 épocas", "Ranking · 50 discos".
  *
- * `variant="wide"` es la de LetterRock: tapa apaisada y descripción, porque
- * son la portada del sitio y tienen que invitar a entrar. `variant="compact"`
- * es la de la comunidad, que son muchas y entran de a tres por fila.
+ * Una timeline se mide en épocas y una lista en entradas: contar las entradas
+ * de una timeline no dice nada, porque viven repartidas adentro de cada época.
  */
-export function CollectionCard({ collection, variant = 'wide' }) {
-  const count = collection.section_count
-  const meta = [
-    TYPE_LABEL[collection.type] || null,
-    collection.type === 'timeline'
-      ? count === 0
-        ? 'sin épocas todavía'
-        : `${count} ${count === 1 ? 'época' : 'épocas'}`
-      : null,
-  ].filter(Boolean).join(' · ')
+export function collectionMeta(collection) {
+  const type = TYPE_LABEL[collection.type] || null
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
-  if (variant === 'compact') {
-    return (
-      <Link
-        to={`/coleccion/${collection.slug}`}
-        className="card card-hover flex flex-col gap-2.5"
-      >
-        <span className="w-14 h-14 rounded-lg overflow-hidden bg-rock-border grid place-items-center flex-none">
-          {collection.cover_url ? (
-            <img src={collection.cover_url} alt="" className="w-full h-full object-cover washed" />
-          ) : (
-            <span className="font-display text-xl text-gray-500">
-              {collection.title?.[0]?.toUpperCase()}
-            </span>
-          )}
-        </span>
-        <p className="font-display text-lg leading-tight mt-1">{collection.title}</p>
-        {collection.author && (
-          <p className="text-[12.5px] text-gray-500">por {collection.author.username}</p>
-        )}
-        {collection.description && (
-          <p className="text-[13.5px] text-gray-400 leading-relaxed line-clamp-3">
-            {collection.description}
-          </p>
-        )}
-        <div className="flex gap-2 flex-wrap mt-auto pt-1">
-          {meta && <span className="tag tag-neutral">{meta}</span>}
-          <StatusTags collection={collection} />
-        </div>
-      </Link>
-    )
-  }
+  const size = collection.type === 'timeline'
+    ? (collection.section_count ? plural(collection.section_count, 'época', 'épocas') : 'sin épocas todavía')
+    : (collection.entry_count ? plural(collection.entry_count, 'entrada', 'entradas') : 'sin entradas todavía')
+
+  return [type, size].filter(Boolean).join(' · ')
+}
+
+/**
+ * La tarjeta de una colección. Una sola para todas.
+ *
+ * Antes las de la comunidad tenían una versión chica, sin tapa. Pero lo que
+ * separa a las de LetterRock de las de la comunidad ya lo dice el bloque en el
+ * que caen: marcar esa diferencia también en la forma de la tarjeta hacía que
+ * las de la comunidad se vieran de segunda.
+ */
+export function CollectionCard({ collection }) {
+  const meta = collectionMeta(collection)
 
   return (
     <Link
@@ -183,20 +162,30 @@ export function CollectionCard({ collection, variant = 'wide' }) {
       className="group card card-hover !p-0 overflow-hidden flex flex-col"
     >
       <div className="aspect-[16/9] bg-rock-border overflow-hidden relative flex items-end p-6">
-        {collection.cover_url ? (
-          <img
-            src={collection.cover_url}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover washed
-                       transition-[filter,transform] duration-500
-                       group-hover:filter-none group-hover:scale-[1.04]"
-          />
-        ) : null}
+        {collection.cover_url && (
+          <>
+            <img
+              src={collection.cover_url}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover washed
+                         transition-[filter,transform] duration-500
+                         group-hover:filter-none group-hover:scale-[1.04]"
+            />
+            {/* Un velo de abajo hacia arriba detrás del título. La sombra de
+                texto sola no alcanzaba: sobre una tapa clara o con mucho
+                detalle, el blanco se perdía igual. El velo oscurece sólo la
+                franja donde va el texto y deja la parte de arriba intacta. */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent"
+            />
+          </>
+        )}
         {/* El título va sobre la tapa: sin él, una tapa sin texto no dice cuál
             colección es hasta leer el cuerpo. */}
-        <span className="relative font-display text-[27px] leading-tight max-w-[20ch]
-                         [text-shadow:0_2px_12px_rgba(0,0,0,0.8)]">
+        <span className="relative font-display text-[27px] leading-tight max-w-[20ch] text-white
+                         [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]">
           {collection.title}
         </span>
       </div>
@@ -256,11 +245,11 @@ export default function Collections() {
   return (
     <div className="animate-fade-up">
       <header className="max-w-[56ch] py-10">
-        <p className="kicker mb-3.5">Recorridos armados a mano</p>
+        <p className="kicker mb-3.5">Para escuchar en orden</p>
         <h1 className="text-screen mb-4">Colecciones</h1>
         <p className="text-[16.5px] leading-relaxed text-gray-300 mb-6">
-          La historia disco por disco, listas y rankings. Las nuestras arrancan el
-          recorrido; las de la comunidad lo siguen.
+          Timelines por época, listas y rankings. Elegí una y escuchala de
+          principio a fin, o armá la tuya.
         </p>
         <div className="flex items-center gap-4 flex-wrap">
           {user ? (
@@ -271,7 +260,7 @@ export default function Collections() {
             </Link>
           )}
           {isEditor && (
-            <Link to="/admin/colecciones" className="text-sm text-gray-500 hover:text-rock-accent">
+            <Link to="/admin/colecciones" className="btn btn-secondary px-6 py-3">
               Administrar
             </Link>
           )}
@@ -290,7 +279,7 @@ export default function Collections() {
                 DE LETTERROCK
               </p>
               <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}>
-                {official.map(c => <CollectionCard key={c.id} collection={c} variant="wide" />)}
+                {official.map(c => <CollectionCard key={c.id} collection={c} />)}
               </div>
             </section>
           )}
@@ -333,8 +322,8 @@ export default function Collections() {
                   : 'Con una cuenta podés armar tus propios recorridos.'}
               </EmptyState>
             ) : (
-              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))' }}>
-                {community.map(c => <CollectionCard key={c.id} collection={c} variant="compact" />)}
+              <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))' }}>
+                {community.map(c => <CollectionCard key={c.id} collection={c} />)}
               </div>
             )}
           </section>

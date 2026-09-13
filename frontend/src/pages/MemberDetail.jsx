@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import MemberTimeline from '../components/common/MemberTimeline'
 import { EmptyState, SkeletonFicha } from '../components/common/States'
 import { groupByBand, roleLabel, useMemberTrajectory } from '../hooks/useArtistMembers'
+import ArrowLink from '../components/common/ArrowLink'
 
 /**
  * El paso de un músico por las bandas.
@@ -40,14 +41,7 @@ export default function MemberDetail() {
           {bands.length === 1 ? '1 banda' : `${bands.length} bandas`}
           {allRoles.length > 0 && ` · ${allRoles.join(' · ')}`}
         </p>
-        <a
-          href={`https://musicbrainz.org/artist/${mbId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[13px] text-rock-accent hover:text-rock-accentBright"
-        >
-          Ver en MusicBrainz →
-        </a>
+        <ArrowLink href={`https://musicbrainz.org/artist/${mbId}`}>Ver en MusicBrainz</ArrowLink>
         <p className="text-[14.5px] leading-relaxed text-gray-400 mt-5">
           No tiene ficha propia de artista: la mayoría de los integrantes no tiene
           discografía a su nombre. Lo que sí se puede ver es por dónde anduvo.

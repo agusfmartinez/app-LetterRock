@@ -16,20 +16,38 @@ import { useAuthStore } from '../store/authStore'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useAlbumMedia } from '../hooks/useTopTracks'
 
+/*
+ * Pasar a la época de al lado.
+ *
+ * Dos tarjetas y no dos links sueltos: al terminar de leer una época lo que
+ * sigue es la otra, y merece el mismo peso que el resto de la página. Cuando
+ * falta una de las dos, la que queda no se estira: conserva su lado.
+ */
 function SectionNav({ collectionSlug, prev, next }) {
+  if (!prev && !next) return null
+
+  const card = 'card card-hover flex-1 min-w-[240px] !py-5 !px-6 group'
+
   return (
-    <div className="flex justify-between gap-4 pt-8 mt-12 border-t border-rock-border">
+    <nav aria-label="Otras épocas" className="flex flex-wrap gap-4 mt-14">
       {prev ? (
-        <Link to={`/coleccion/${collectionSlug}/${prev.slug}`} className="btn btn-secondary">
-          ← {prev.title}
+        <Link to={`/coleccion/${collectionSlug}/${prev.slug}`} className={card}>
+          <p className="font-mono text-[10px] tracking-[0.16em] text-gray-500 mb-2">← ÉPOCA ANTERIOR</p>
+          <p className="font-display text-[26px] leading-none group-hover:text-rock-accent transition-colors">
+            {prev.title}
+          </p>
         </Link>
-      ) : <span />}
+      ) : <span className="flex-1 min-w-[240px] hidden sm:block" />}
+
       {next ? (
-        <Link to={`/coleccion/${collectionSlug}/${next.slug}`} className="btn btn-secondary">
-          {next.title} →
+        <Link to={`/coleccion/${collectionSlug}/${next.slug}`} className={`${card} text-right`}>
+          <p className="font-mono text-[10px] tracking-[0.16em] text-gray-500 mb-2">ÉPOCA SIGUIENTE →</p>
+          <p className="font-display text-[26px] leading-none group-hover:text-rock-accent transition-colors">
+            {next.title}
+          </p>
         </Link>
-      ) : <span />}
-    </div>
+      ) : <span className="flex-1 min-w-[240px] hidden sm:block" />}
+    </nav>
   )
 }
 
@@ -130,7 +148,7 @@ export default function CollectionSection() {
           {canEdit && (
             <Link
               to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-              className="text-sm text-gray-500 hover:text-rock-accent"
+              className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
             >
               Editar
             </Link>
@@ -150,30 +168,55 @@ export default function CollectionSection() {
         {section.intro_text && (
           <div className="mt-5 space-y-3">
             {section.intro_text.split(/\n+/).filter(Boolean).map((p, i) => (
-              <p key={i} className="text-gray-300 leading-relaxed">{p}</p>
+              <p key={i} className="text-[17px] leading-[1.7] text-gray-300 max-w-[62ch]">{p}</p>
             ))}
           </div>
         )}
       </header>
 
-      {entries.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          Todavía no hay discos cargados en esta época.
-        </p>
-      ) : (
-        <div className="flex gap-10">
+      {/*
+        Todo lo que viene después del encabezado vive en la misma columna: las
+        entradas, la playlist, las opiniones y el paso a la otra época. Así
+        comparten borde izquierdo y ancho — antes la playlist y las opiniones
+        quedaban afuera del riel de años y arrancaban en otra línea.
+      */}
+      <div className="flex gap-10">
+        {entries.length > 0 && (
           <YearRail groups={groups} activeLabel={activeLabel} onSelect={goToYear} />
+        )}
 
-          <div className="flex-1 min-w-0 max-w-4xl">
-            {groups.map(group => (
+        <div className="flex-1 min-w-0">
+          {entries.length === 0 ? (
+            <EmptyState
+              title="Todavía sin entradas"
+              action={canEdit && (
+                <Link
+                  to={`/coleccion/${collection.slug}/${section.slug}/editar`}
+                  className="btn btn-secondary"
+                >
+                  Agregar discos
+                </Link>
+              )}
+            >
+              Esta época está creada pero vacía.
+            </EmptyState>
+          ) : (
+            groups.map(group => (
               <section
                 key={group.label}
                 ref={el => { yearRefs.current[group.label] = el }}
                 data-year={group.label}
                 className="scroll-mt-24"
               >
-                <div className="sticky top-16 z-10 bg-rock-dark/95 backdrop-blur-md py-3 -mx-2 px-2 border-b border-rock-border">
-                  <h2 className="font-display text-4xl text-rock-accent">{group.label}</h2>
+                <div className="sticky top-[61px] z-10 bg-rock-dark/95 backdrop-blur-md py-3
+                                flex items-center gap-5">
+                  <h2
+                    className="font-display text-rock-accent leading-none"
+                    style={{ fontSize: 'clamp(38px, 4.6vw, 54px)', letterSpacing: '-0.03em' }}
+                  >
+                    {group.label}
+                  </h2>
+                  <span className="flex-1 h-px bg-rock-border" />
                 </div>
 
                 {group.entries.map(e => (
@@ -185,39 +228,43 @@ export default function CollectionSection() {
                   />
                 ))}
               </section>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* La playlist de la época, no la de la colección: "Los 70" no suena como
-          toda la historia del rock argentino. */}
-      <PlaylistPanel
-        playlistUrl={section.playlist_url}
-        entries={entries}
-        media={albumMedia}
-        title={`${collection.title} · ${section.title}`}
-      />
-
-      {/* La opinión va en la época y no en la colección: en una timeline lo que
-          se lee de corrido es esto, y la portada es apenas un índice de épocas. */}
-      <section className="max-w-2xl mt-12">
-        <h2 className="font-display text-3xl mb-5">Lo que escribieron sobre {section.title}</h2>
-        <div className="space-y-4">
-          <ReviewForm entityType="collection_section" entityId={section.id} onSubmit={createReview} />
-          {reviews.length > 0 ? (
-            reviews.map(r => (
-              <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
             ))
-          ) : (
-            <EmptyState title="Todavía nadie opinó">
-              Decí qué te parece esta selección.
-            </EmptyState>
           )}
-        </div>
-      </section>
 
-      <SectionNav collectionSlug={collection.slug} prev={prev} next={next} />
+          {/* La playlist de la época, no la de la colección: "Los 70" no suena
+              como toda la historia del rock argentino. */}
+          <PlaylistPanel
+            playlistUrl={section.playlist_url}
+            entries={entries}
+            media={albumMedia}
+            title={`${collection.title} · ${section.title}`}
+          />
+
+          {/* La opinión va en la época y no en la colección: en una timeline lo
+              que se lee de corrido es esto, y la portada es apenas un índice de
+              épocas. */}
+          <section className="w-full mt-14">
+            <h2 className="font-display text-[34px] leading-none mb-5">
+              Opiniones sobre {section.title}
+              {reviews.length > 0 && <span className="text-gray-500"> ({reviews.length})</span>}
+            </h2>
+            <div className="space-y-4">
+              <ReviewForm entityType="collection_section" entityId={section.id} onSubmit={createReview} />
+              {reviews.length > 0 ? (
+                reviews.map(r => (
+                  <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+                ))
+              ) : (
+                <EmptyState title="Todavía nadie opinó">
+                  Decí qué te dejó esta época.
+                </EmptyState>
+              )}
+            </div>
+          </section>
+
+          <SectionNav collectionSlug={collection.slug} prev={prev} next={next} />
+        </div>
+      </div>
     </div>
   )
 }

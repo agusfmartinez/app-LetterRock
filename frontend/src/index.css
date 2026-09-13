@@ -119,7 +119,12 @@
     @apply border-rock-accent;
     outline-offset: 0;
   }
-  textarea.input {
+  /*
+   * `:where()` deja estas reglas con la especificidad de `.input` sola. Escritas
+   * como `textarea.input` pesaban más que cualquier utilidad, y un
+   * `resize-none` en el componente no hacía nada: la manija seguía ahí.
+   */
+  .input:where(textarea) {
     @apply min-h-[96px] resize-y rounded-[20px];
   }
   @media (max-width: 767px) {
@@ -127,7 +132,7 @@
       @apply min-h-[48px];
     }
   }
-  select.input {
+  .input:where(select) {
     @apply rounded-full pr-9;
   }
 

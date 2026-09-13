@@ -90,8 +90,7 @@ export default function Search() {
       <div className="max-w-[52ch] py-10">
         <h1 className="text-screen mb-4">¿Qué estás buscando?</h1>
         <p className="text-base leading-relaxed text-gray-300 mb-6">
-          Bandas, músicos, discos o gente que escucha lo mismo que vos. Si no está en
-          el archivo, lo traemos del catálogo.
+          Bandas, músicos, discos o gente que escucha lo mismo que vos.
         </p>
         <form onSubmit={handleSubmit} className="flex gap-2.5 flex-wrap">
           <input

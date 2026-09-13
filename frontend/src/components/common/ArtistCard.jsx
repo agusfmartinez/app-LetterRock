@@ -23,15 +23,19 @@ function Placeholder({ name, round }) {
  * `variant="circle"` es la del home — retrato redondo y el texto centrado
  * debajo, sin caja. `variant="card"` (por defecto) es la del catálogo y la
  * búsqueda, donde las fichas conviven con discos y necesitan borde.
+ *
+ * `showOrigin={false}` saca el "Formado en…". En la búsqueda sirve para
+ * distinguir dos bandas con el mismo nombre; en la home es ruido debajo de
+ * una cara que ya se reconoce.
  */
-export default function ArtistCard({ artist, variant = 'card' }) {
+export default function ArtistCard({ artist, variant = 'card', showOrigin = true }) {
   // Las bandas de la base tienen `id` de Supabase → van por slug. Las que
   // todavía no se guardaron vienen de MusicBrainz → van por su id externo.
   const to = `/artist/${artist.id ? artist.slug : artist.external_mb_id}`
 
   // El año de formación ubica a una banda; la fecha de nacimiento de un músico
   // no dice nada de su obra y queda para su ficha.
-  const origin = !isPerson(artist) ? originLabel(artist) : null
+  const origin = showOrigin && !isPerson(artist) ? originLabel(artist) : null
   const rating = artist.avg_rating ? parseFloat(artist.avg_rating).toFixed(1) : null
 
   if (variant === 'circle') {

@@ -5,6 +5,7 @@ import AdminLayout from '../components/common/AdminLayout'
 import { IconArrowLeft } from '../components/common/Icons'
 import { useInvalidateCatalog } from '../hooks/useCatalogAdmin'
 import { discoverArtists, saveDiscovered } from '../services/api'
+import ArrowLink from '../components/common/ArrowLink'
 
 const INPUT = 'input'
 
@@ -54,25 +55,17 @@ function CandidateRow({ candidate, checked, onToggle }) {
       </div>
 
       {candidate.slug && (
-        <Link
-          to={`/artist/${candidate.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-500 hover:text-rock-accent text-xs flex-shrink-0"
-        >
-          ver →
-        </Link>
+        <ArrowLink to={`/artist/${candidate.slug}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
       )}
 
-      <a
+      {/* stopPropagation: la fila entera es un <label> que tilda el candidato,
+          y abrir MusicBrainz no debería marcarlo. */}
+      <ArrowLink
         href={`https://musicbrainz.org/artist/${candidate.mbId}`}
-        target="_blank"
-        rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="text-gray-500 hover:text-rock-accent text-xs flex-shrink-0"
       >
-        MB →
-      </a>
+        MusicBrainz
+      </ArrowLink>
     </label>
   )
 }

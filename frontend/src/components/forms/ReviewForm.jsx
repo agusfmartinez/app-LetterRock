@@ -45,7 +45,7 @@ export default function ReviewForm({ entityType, entityId, existingReview, onSub
         onChange={e => setText(e.target.value)}
         placeholder="Escribí qué te pasa con esto (opcional)"
         rows={3}
-        className="input resize-y"
+        className="input resize-none !min-h-[88px]"
       />
       {error && <p className="field-error">{error}</p>}
       <div className="flex gap-2 flex-wrap">

@@ -189,7 +189,7 @@ export default function CollectionDetail() {
             {canEdit && (
               <Link
                 to={`/coleccion/${collection.slug}/editar`}
-                className="text-sm text-gray-500 hover:text-rock-accent"
+                className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]"
               >
                 Editar
               </Link>

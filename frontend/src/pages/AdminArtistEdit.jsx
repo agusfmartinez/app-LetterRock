@@ -18,6 +18,7 @@ import { slugify } from '../hooks/useCollectionAdmin'
 import { linkArtistDiscography, refreshArtistFromSpotify } from '../services/api'
 import { formatReleaseDate, timeAgo } from '../services/dates'
 import { SkeletonPanel } from '../components/common/States'
+import ArrowLink from '../components/common/ArrowLink'
 
 const INPUT = 'input'
 
@@ -240,7 +241,7 @@ function NewAlbumForm({ artistId }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
         + Agregar disco a mano
       </button>
     )
@@ -453,14 +454,7 @@ function AlbumRow({ album }) {
       >
         Editar
       </Link>
-      <Link
-        to={`/album/${album.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-gray-500 hover:text-rock-accent text-sm"
-      >
-        Ver →
-      </Link>
+      <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
     </div>
   )
 }
@@ -481,14 +475,7 @@ export default function AdminArtistEdit() {
             <Link to="/admin/catalogo" className="text-gray-400 hover:text-rock-accent text-sm">
               ← Catálogo
             </Link>
-            <Link
-              to={`/artist/${data.artist.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
-            >
-              Ver la página →
-            </Link>
+            <ArrowLink to={`/artist/${data.artist.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">

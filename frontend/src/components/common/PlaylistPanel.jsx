@@ -13,7 +13,9 @@ import { redirectUri, spotifyConfigured } from '../../services/spotifyAuth'
 import { createSpotifyPlaylist } from '../../services/spotifyPlaylist'
 
 const SPOTIFY_PILL =
-  'text-xs border rounded-full px-3 py-1 transition-colors text-[#1DB954] border-[#1DB954]/40 hover:bg-[#1DB954]/10 disabled:opacity-50'
+  'btn !text-[13px] text-[#1DB954] border-[#1DB954]/40 hover:bg-[#1DB954]/10'
+const YOUTUBE_PILL =
+  'btn !text-[13px] text-[#FF4E45] border-[#FF4E45]/40 hover:bg-[#FF4E45]/10'
 
 /**
  * Crear la playlist en la cuenta de quien está mirando.
@@ -153,58 +155,63 @@ export default function PlaylistPanel({ playlistUrl, entries = [], media = {}, t
   if (!attached && tracks.length === 0) return null
 
   return (
-    <section className="space-y-4">
-      <h2 className="font-display text-2xl">Escuchar</h2>
+    <section className="w-full mt-12">
+      <h2 className="font-display text-[34px] leading-none mb-5">Escuchar</h2>
 
-      {attached && (
-        <div className="max-w-2xl space-y-2">
-          <MediaEmbed {...playlistEmbedProps(attached)} />
-          <a
-            href={attached.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-500 hover:text-rock-accent text-xs"
-          >
-            {playlistLabel(attached)} ↗
-          </a>
-        </div>
-      )}
-
-      {tracks.length > 0 && (
-        <div className="space-y-2">
-          {attached && (
-            <p className="text-gray-500 text-sm">
-              O con los {tracks.length} temas de esta página:
-            </p>
-          )}
-          <div className="flex items-start gap-3 flex-wrap">
-            {youtubeUrl && (
-              <a
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs border rounded-full px-3 py-1 transition-colors text-[#FF4E45] border-[#FF4E45]/40 hover:bg-[#FF4E45]/10"
-              >
-                Escuchar {youtubeCount} temas en YouTube ↗
-              </a>
-            )}
-            {canCreate && (
-              <CreateInSpotify
-                tracks={tracks}
-                name={title || 'Playlist de LetterRock'}
-                description={`${title} · armada en LetterRock`}
-              />
-            )}
-            {/* Con el botón que la crea sola, copiar pasa a ser el plan B. */}
-            <CopySpotify tracks={tracks} subdued={canCreate} />
+      {/* A todo el ancho de la columna, como las entradas de arriba: una caja
+          angosta al final de una página ancha parecía un resto. */}
+      <div className="card w-full space-y-5">
+        {attached && (
+          <div className="space-y-2.5">
+            <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500">PLAYLIST</p>
+            <MediaEmbed {...playlistEmbedProps(attached)} />
+            <a
+              href={attached.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-rock-accent text-xs"
+            >
+              {playlistLabel(attached)} ↗
+            </a>
           </div>
-          {tracks.filter(t => t.youtubeId).length > YOUTUBE_TEMP_LIMIT && (
-            <p className="text-gray-500 text-xs">
-              YouTube corta en {YOUTUBE_TEMP_LIMIT} temas: van los primeros.
-            </p>
-          )}
-        </div>
-      )}
+        )}
+
+        {tracks.length > 0 && (
+          <div className={`space-y-3 ${attached ? 'pt-5 border-t border-rock-border' : ''}`}>
+            {attached && (
+              <p className="text-gray-400 text-sm">
+                O con los {tracks.length} temas de esta página:
+              </p>
+            )}
+            <div className="flex items-start gap-2.5 flex-wrap">
+              {youtubeUrl && (
+                <a
+                  href={youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={YOUTUBE_PILL}
+                >
+                  Escuchar {youtubeCount} temas en YouTube ↗
+                </a>
+              )}
+              {canCreate && (
+                <CreateInSpotify
+                  tracks={tracks}
+                  name={title || 'Playlist de LetterRock'}
+                  description={`${title} · armada en LetterRock`}
+                />
+              )}
+              {/* Con el botón que la crea sola, copiar pasa a ser el plan B. */}
+              <CopySpotify tracks={tracks} subdued={canCreate} />
+            </div>
+            {tracks.filter(t => t.youtubeId).length > YOUTUBE_TEMP_LIMIT && (
+              <p className="text-gray-500 text-xs">
+                YouTube corta en {YOUTUBE_TEMP_LIMIT} temas: van los primeros.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   )
 }

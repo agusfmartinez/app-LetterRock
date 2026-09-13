@@ -95,22 +95,41 @@ export function useUserCollections(userId: string | undefined) {
         .eq('created_by', userId)
         .order('created_at', { ascending: false })
 
-      const list = data || []
-      if (list.length === 0) return []
-
-      const { data: sections } = await supabase
-        .from('collection_sections')
-        .select('collection_id')
-        .in('collection_id', list.map(c => c.id))
-
-      const counts = new Map<string, number>()
-      for (const s of sections || []) {
-        counts.set(s.collection_id, (counts.get(s.collection_id) || 0) + 1)
-      }
-      return list.map(c => ({ ...c, section_count: counts.get(c.id) || 0 }))
+      return withCounts(data || [])
     },
     enabled: !!userId,
   })
+}
+
+/**
+ * Suma a cada colección cuántas épocas y cuántas entradas tiene.
+ *
+ * Las dos cuentan: una timeline se mide en épocas y una lista o un ranking en
+ * entradas, y la tarjeta necesita la que corresponda para no prometer algo
+ * vacío. Dos consultas en paralelo para toda la lista, no dos por colección.
+ */
+async function withCounts(list: any[]) {
+  if (list.length === 0) return []
+  const ids = list.map(c => c.id)
+
+  const [{ data: sections }, { data: entries }] = await Promise.all([
+    supabase.from('collection_sections').select('collection_id').in('collection_id', ids),
+    supabase.from('collection_entries').select('collection_id').in('collection_id', ids),
+  ])
+
+  const tally = (rows: { collection_id: string }[] | null) => {
+    const counts = new Map<string, number>()
+    for (const r of rows || []) counts.set(r.collection_id, (counts.get(r.collection_id) || 0) + 1)
+    return counts
+  }
+  const sectionCounts = tally(sections)
+  const entryCounts = tally(entries)
+
+  return list.map(c => ({
+    ...c,
+    section_count: sectionCounts.get(c.id) || 0,
+    entry_count: entryCounts.get(c.id) || 0,
+  }))
 }
 
 /**
@@ -252,20 +271,7 @@ export function useCollections() {
         .order('is_official', { ascending: false })
         .order('created_at', { ascending: false })
 
-      const list = data || []
-      if (list.length === 0) return []
-
-      const { data: sections } = await supabase
-        .from('collection_sections')
-        .select('collection_id')
-        .in('collection_id', list.map(c => c.id))
-
-      const counts = new Map<string, number>()
-      for (const s of sections || []) {
-        counts.set(s.collection_id, (counts.get(s.collection_id) || 0) + 1)
-      }
-
-      return list.map(c => ({ ...c, section_count: counts.get(c.id) || 0 }))
+      return withCounts(data || [])
     },
   })
 }

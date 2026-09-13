@@ -13,6 +13,7 @@ import {
 import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollection } from '../hooks/useCollections'
 import { SkeletonPanel } from '../components/common/States'
+import ArrowLink from '../components/common/ArrowLink'
 
 function CollectionFields({ collection }) {
   const navigate = useNavigate()
@@ -151,7 +152,7 @@ function NewSectionForm({ collection, nextPosition }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-500 hover:text-rock-accent">
+      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
         + Nueva sección
       </button>
     )
@@ -246,14 +247,7 @@ function SectionRow({ collection, section }) {
       >
         Editar
       </Link>
-      <Link
-        to={`/coleccion/${collection.slug}/${section.slug}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-gray-500 hover:text-rock-accent text-sm"
-      >
-        Ver →
-      </Link>
+      <ArrowLink to={`/coleccion/${collection.slug}/${section.slug}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
       <button onClick={remove} className="text-gray-500 hover:text-rock-accentBright text-sm">
         Borrar
       </button>
@@ -310,9 +304,9 @@ function FlatEntriesEditor({ collection, entries, sections }) {
             <button
               onClick={flatten}
               disabled={flattenCollection.isPending}
-              className="text-rock-accent hover:underline text-xs mt-1 disabled:opacity-50"
+              className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] mt-2"
             >
-              Sacar los discos de las épocas →
+              Sacar los discos de las épocas
             </button>
           </div>
         )}
@@ -330,9 +324,9 @@ function FlatEntriesEditor({ collection, entries, sections }) {
             <button
               onClick={() => setRanks.mutate(entries)}
               disabled={setRanks.isPending}
-              className="text-rock-accent hover:underline text-xs mb-2 disabled:opacity-50"
+              className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] mb-2"
             >
-              Numerar de 1 a {entries.length} →
+              Numerar de 1 a {entries.length}
             </button>
           )}
           <EntriesFlat
@@ -381,14 +375,7 @@ export default function AdminCollectionEdit() {
             <Link to="/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
               ← Colecciones
             </Link>
-            <Link
-              to={`/coleccion/${data.collection.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-sm ml-auto"
-            >
-              Ver la página →
-            </Link>
+            <ArrowLink to={`/coleccion/${data.collection.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
           <CollectionFields collection={data.collection} />
