@@ -42,9 +42,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const C = {
   sleeve: '#2a211b',
   cover: '#231c17',
-  stripe: '#2c231d',
   muted: '#8a7a6c',
-  text: '#efe8e1',
 };
 
 // Reparte los surcos por duración real: el track 1 ocupa el borde exterior.
@@ -77,37 +75,6 @@ function roundedShape(w, h, r) {
   s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
   s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
   return s;
-}
-
-// Portada placeholder: las mismas rayas a 135° de las maquetas, con el título.
-function coverTexture(title) {
-  const S = 768, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const g = c.getContext('2d');
-  g.fillStyle = C.cover;
-  g.fillRect(0, 0, S, S);
-  g.strokeStyle = C.stripe;
-  g.lineWidth = S / 46;
-  g.save(); g.translate(S / 2, S / 2); g.rotate(-45 * DEG); g.translate(-S, -S);
-  for (let y = 0; y < S * 2; y += S / 23) { g.beginPath(); g.moveTo(0, y); g.lineTo(S * 2, y); g.stroke(); }
-  g.restore();
-  g.textAlign = 'left';
-  g.fillStyle = C.text;
-  const size = S * 0.07;
-  g.font = `${size}px Caprasimo, Georgia, serif`;
-  const words = String(title || '').split(' ');
-  const lines = []; let line = '';
-  words.forEach((w) => {
-    if (g.measureText((line + ' ' + w).trim()).width > S * 0.78 && line) { lines.push(line.trim()); line = w; }
-    else line += ' ' + w;
-  });
-  if (line.trim()) lines.push(line.trim());
-  const shown = lines.slice(0, 3);
-  shown.forEach((l, i) => g.fillText(l, S * 0.09, S * 0.9 - (shown.length - 1 - i) * size * 1.06));
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 8; tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
 }
 
 function grooveTexture(bands) {
@@ -207,7 +174,7 @@ class Shelf3D extends HTMLElement {
   _watchdog() {
     if (this._watch) return;
     this._watch = setInterval(() => {
-      if (this.isConnected && performance.now() - (this._tick || 0) > 400) this._start();
+      if (this.isConnected && this._onscreen && performance.now() - (this._tick || 0) > 400) this._start();
     }, 400);
   }
 
@@ -216,6 +183,7 @@ class Shelf3D extends HTMLElement {
     if (this._dead) return;
     if (this._up) {
       if (this._ro) this._ro.observe(this);
+      if (this._io) this._io.observe(this);
       this._watchdog();
       this._start();
       return;
@@ -244,9 +212,11 @@ class Shelf3D extends HTMLElement {
     this._camTgtY = 0;
     this._camDir = new THREE.Vector3(0, 0.14, 1).normalize();
     this._build();
+    // El sello del vinilo lleva texto en Caprasimo/Figtree: se redibuja cuando
+    // terminan de cargar. Las fundas ya no tienen texto y no se rearman.
     document.fonts.ready.then(() => {
       if (this._dead) return;
-      this._retexture(); this._rebuildAlbums(); this._bandsFor = -1;
+      this._retexture(); this._bandsFor = -1;
     });
   }
 
@@ -263,6 +233,7 @@ class Shelf3D extends HTMLElement {
     this._dead = true;
     clearInterval(this._watch);
     if (this._ro) this._ro.disconnect();
+    if (this._io) this._io.disconnect();
     if (!this._scene) return;
     this._scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
@@ -305,7 +276,10 @@ class Shelf3D extends HTMLElement {
   _build() {
     const w = this.clientWidth || 900, h = this.clientHeight || 560;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // En pantallas táctiles, 1.5 como máximo: los teléfonos suelen ser 3x, y
+    // a esa densidad la diferencia no se ve pero la placa dibuja el doble.
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, touch ? 1.5 : 2));
     renderer.setSize(w, h);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
@@ -346,6 +320,15 @@ class Shelf3D extends HTMLElement {
     this._wire();
     this._ro = new ResizeObserver(() => this._resize());
     this._ro.observe(this);
+    // Fuera de pantalla no se dibuja: la pila flota todo el tiempo, y seguir
+    // a 60 cuadros mientras se leen las opiniones de abajo gasta batería por
+    // nada. Al volver a verse, retoma.
+    this._onscreen = true;
+    this._io = new IntersectionObserver(([entry]) => {
+      this._onscreen = entry.isIntersecting;
+      if (this._onscreen && !this._dead) this._start();
+    });
+    this._io.observe(this);
     this._resize();
     this._camDist = this._dist();
     this._watchdog();
@@ -383,15 +366,18 @@ class Shelf3D extends HTMLElement {
         color: new THREE.Color(C.sleeve), roughness: 0.88, transparent: true,
       }));
       const face = new THREE.Mesh(faceGeo.clone(), new THREE.MeshStandardMaterial({
-        map: coverTexture(a.title), roughness: 0.72, transparent: true,
+        // Sin tapa de relleno: todos los discos tienen imagen, y dibujar una
+        // por disco costaba ~3MB de memoria de video cada una. Mientras baja
+        // la imagen (o si falla) la cara queda del color de la funda.
+        color: new THREE.Color(C.cover), roughness: 0.72, transparent: true,
       }));
       /*
        * La tapa brilla un poco por sí sola y no pasa por el tone mapping: así
        * se ve casi igual que la imagen de la grilla, y el pase entre las dos
-       * vistas no cambia de color. La luz sigue sumando el volumen.
+       * vistas no cambia de color. La luz sigue sumando el volumen. El brillo
+       * se enciende recién con la imagen puesta (ver `_cover`).
        */
-      face.material.emissive = new THREE.Color(0xffffff);
-      face.material.emissiveMap = face.material.map;
+      face.material.emissive = new THREE.Color(0x000000);
       face.material.emissiveIntensity = 0.55;
       face.material.toneMapped = false;
       if (a.cover) this._cover(a.cover, face.material);
@@ -494,13 +480,14 @@ class Shelf3D extends HTMLElement {
     this._camera.updateMatrixWorld();
   }
 
-  // Pone la tapa real sobre la de relleno cuando termina de bajar. Si falla
-  // (CORS, 404), queda la de relleno: el título se sigue leyendo.
+  // Pone la tapa cuando termina de bajar. Si falla (CORS, 404), la cara queda
+  // del color liso de la funda.
   _cover(url, mat) {
     const apply = (tex) => {
       if (this._dead || !tex) return;
-      if (mat.map && !mat.map.userData.cached) mat.map.dispose();
+      mat.color.set(0xffffff);
       mat.map = tex;
+      mat.emissive.set(0xffffff);
       mat.emissiveMap = tex;
       mat.needsUpdate = true;
     };
@@ -784,9 +771,27 @@ class Shelf3D extends HTMLElement {
     };
   }
 
+  /*
+   * El vinilo espera guardado detrás de la funda abierta, para salir de ahí al
+   * pasar a `split`. Pero la funda tarda en llegar al centro, y si el vinilo
+   * aparecía apenas se abría, se lo veía asomar mientras ella todavía volaba.
+   * Por eso en `focus` recién se hace visible con la funda ya en su lugar,
+   * cuando queda tapado del todo (mide 0.46 de radio contra 0.62 de funda).
+   */
+  _sleeveSettled() {
+    const it = this._items[this._focus];
+    if (!it) return false;
+    const tg = this._target(this._focus), c = it.cur;
+    return c.o > 0.99 && Math.abs(tg.x - c.x) + Math.abs(tg.y - c.y) + Math.abs(tg.z - c.z) + Math.abs(tg.s - c.s) < 0.03;
+  }
+
   _vinylTarget() {
     if (this._mode === 'split') return { x: 0.74, z: 0.48, s: 0.48, o: 1 };
-    if (this._mode === 'focus') return { x: 0, z: 0.46, s: 0.46, o: 1 };
+    // Si ya estaba afuera (volviendo de `split`), sigue visible y se guarda
+    // deslizándose detrás de la funda, en vez de desaparecer de golpe.
+    if (this._mode === 'focus' && (this._vcur.o > 0.02 || this._sleeveSettled())) {
+      return { x: 0, z: 0.46, s: 0.46, o: 1 };
+    }
     return { x: 0, z: 0.2, s: 0.2, o: 0 };
   }
 
@@ -845,6 +850,9 @@ class Shelf3D extends HTMLElement {
   }
 
   _loop = () => {
+    // Fuera de pantalla el loop se corta solo; el IntersectionObserver lo
+    // vuelve a arrancar.
+    if (!this._onscreen) { this._raf = 0; return; }
     this._raf = requestAnimationFrame(this._loop);
     const now = performance.now();
     // Interpolación por tiempo, no por frame: si el navegador estrangula el
@@ -895,6 +903,9 @@ class Shelf3D extends HTMLElement {
     const vt = this._vinylTarget(), vc = this._vcur;
     vc.x += (vt.x - vc.x) * k; vc.z += (vt.z - vc.z) * k;
     vc.s += (vt.s - vc.s) * k; vc.o += (vt.o - vc.o) * k;
+    // Lo mismo al cerrar: si se desvanecía de a poco, quedaba a la vista
+    // cuando la funda se iba. Mientras no está afuera (`split`), se apaga ya.
+    if (vt.o === 0 && this._mode !== 'split') { vc.o = 0; vc.x = vt.x; vc.z = vt.z; vc.s = vt.s; }
     this._vinyl.position.set(vc.x, Math.sin(t * 0.7 + 0.9) * 0.03 * calm, vc.z);
     this._vinyl.rotation.set(Math.sin(t * 0.46) * 0.018 * calm, Math.sin(t * 0.38) * 0.03 * calm, 0);
     this._vinyl.scale.setScalar(vc.s);

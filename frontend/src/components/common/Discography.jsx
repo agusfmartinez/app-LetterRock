@@ -298,12 +298,6 @@ export default function Discography({ albums, ingesting, artistName }) {
         </div>
       </div>
 
-      <p className="text-[12.5px] text-gray-500 mb-6">
-        {view === 'stack'
-          ? 'Scrolleá o arrastrá para bajar por la pila. Un clic abre la funda; otro, saca el vinilo.'
-          : <span className="hidden md:inline">Pasá el mouse por un disco para sacarlo de la funda.</span>}
-      </p>
-
       {ingesting ? (
         <SkeletonGrid count={5} min={168} />
       ) : filtered.length === 0 ? (
