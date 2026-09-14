@@ -27,8 +27,10 @@ function Placeholder({ name, round }) {
  * `showOrigin={false}` saca el "Formado en…". En la búsqueda sirve para
  * distinguir dos bandas con el mismo nombre; en la home es ruido debajo de
  * una cara que ya se reconoce.
+ *
+ * `compact` achica el nombre para columnas angostas.
  */
-export default function ArtistCard({ artist, variant = 'card', showOrigin = true }) {
+export default function ArtistCard({ artist, variant = 'card', showOrigin = true, compact = false }) {
   // Las bandas de la base tienen `id` de Supabase → van por slug. Las que
   // todavía no se guardaron vienen de MusicBrainz → van por su id externo.
   const to = `/artist/${artist.id ? artist.slug : artist.external_mb_id}`
@@ -54,7 +56,11 @@ export default function ArtistCard({ artist, variant = 'card', showOrigin = true
             <Placeholder name={artist.name} round />
           )}
         </div>
-        <p className="font-display text-base mt-3 leading-tight group-hover:text-rock-accent transition-colors">
+        {/* `compact`: en una columna angosta (el costado de la home) el nombre
+            a 16px partía "Los Fabulosos Cadillacs" en tres renglones. */}
+        <p className={`font-display leading-tight group-hover:text-rock-accent transition-colors ${
+          compact ? 'text-[13px] mt-2 line-clamp-2' : 'text-base mt-3'
+        }`}>
           {artist.name}
         </p>
         {origin && <p className="text-[11.5px] text-gray-500 mt-0.5">{origin}</p>}
