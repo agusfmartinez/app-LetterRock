@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { ConfirmProvider } from './components/common/ConfirmDialog'
 import Navbar from './components/common/Navbar'
@@ -7,7 +7,6 @@ import Footer from './components/common/Footer'
 import Home from './pages/Home'
 import Search from './pages/Search'
 import ArtistDetail from './pages/ArtistDetail'
-import ArtistShelf from './pages/ArtistShelf'
 import AlbumDetail from './pages/AlbumDetail'
 import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
@@ -40,6 +39,12 @@ function ScrollToTop() {
   return null
 }
 
+/** La vitrina 3D fue una pantalla aparte; ahora es la pila dentro de la ficha. */
+function ShelfRedirect() {
+  const { slug } = useParams()
+  return <Navigate replace to={`/artist/${slug}?vista=pila`} />
+}
+
 export default function App() {
   useAuth()
 
@@ -54,7 +59,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/artist/:slug" element={<ArtistDetail />} />
-            <Route path="/artist/:slug/vitrina" element={<ArtistShelf />} />
+            <Route path="/artist/:slug/vitrina" element={<ShelfRedirect />} />
             <Route path="/album/:id" element={<AlbumDetail />} />
             <Route path="/musico/:mbId" element={<MemberDetail />} />
             <Route path="/track/:id" element={<TrackDetail />} />

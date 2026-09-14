@@ -10,6 +10,15 @@ import * as THREE from 'three';
  *    ficha termina de cargarse, sin rearmar las fundas;
  *  - se libera el contexto WebGL al salir de la pantalla: en una SPA cada
  *    visita crea un elemento nuevo y el navegador corta a los ~16 contextos.
+ *
+ * Y vive dentro de la ficha del artista, en el lugar de la grilla 2D:
+ *  - la pila es vertical: el primer disco arriba, la rueda hacia abajo baja
+ *    por la pila y hacia arriba vuelve al primero;
+ *  - `intro(rects)` arranca cada funda exactamente donde estaba su tapa en la
+ *    grilla y `outro(rects)` las devuelve ahí: la grilla se transforma en la
+ *    pila y vuelve, sin sentirse otra pantalla;
+ *  - la rueda sólo se toma con el panel entero a la vista, y en los extremos
+ *    de la pila se suelta: se puede atravesar la sección scrolleando.
  */
 
 const DEG = Math.PI / 180;
@@ -19,7 +28,7 @@ const FOV = 30;
 
 // Ancho/alto de escena que la cámara tiene que abarcar en cada modo.
 const SPAN = {
-  stack: { w: 2.5, h: 1.35 },
+  stack: { w: 1.3, h: 1.9 },
   row: { w: 3.2, h: 1.35 },
   focus: { w: 2.4, h: 2.6 },
   split: { w: 3.3, h: 2.3 },
@@ -308,8 +317,10 @@ class Shelf3D extends HTMLElement {
     const camera = new THREE.PerspectiveCamera(FOV, w / h, 0.1, 60);
     this._camera = camera;
 
-    scene.add(new THREE.HemisphereLight(0xfff3e0, 0x241f1c, 0.5));
-    const key = new THREE.DirectionalLight(0xfff6e6, 1.05);
+    // Más luz que en la maqueta: sobre fondo oscuro y con tapas reales, las
+    // fundas se veían bastante más apagadas que las mismas tapas en la grilla.
+    scene.add(new THREE.HemisphereLight(0xfff3e0, 0x3a302a, 1.0));
+    const key = new THREE.DirectionalLight(0xfff6e6, 1.5);
     key.position.set(-2.2, 3.0, 4.2);
     scene.add(key);
     const rim = new THREE.DirectionalLight(0xf4e6d2, 0.5);
@@ -362,6 +373,10 @@ class Shelf3D extends HTMLElement {
     for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / AL + 0.5, pos.getY(i) / AL + 0.5);
     uv.needsUpdate = true;
 
+    // Las posiciones actuales sobreviven al rearmado (cargan las fuentes,
+    // cambia el filtro): si no, una funda en pleno vuelo desde la grilla
+    // saltaría al centro.
+    const prev = this._items;
     this._items = this._albums.map((a, i) => {
       const g = new THREE.Group();
       const sleeve = new THREE.Mesh(sleeveGeo.clone(), new THREE.MeshStandardMaterial({
@@ -370,14 +385,113 @@ class Shelf3D extends HTMLElement {
       const face = new THREE.Mesh(faceGeo.clone(), new THREE.MeshStandardMaterial({
         map: coverTexture(a.title), roughness: 0.72, transparent: true,
       }));
+      /*
+       * La tapa brilla un poco por sí sola y no pasa por el tone mapping: así
+       * se ve casi igual que la imagen de la grilla, y el pase entre las dos
+       * vistas no cambia de color. La luz sigue sumando el volumen.
+       */
+      face.material.emissive = new THREE.Color(0xffffff);
+      face.material.emissiveMap = face.material.map;
+      face.material.emissiveIntensity = 0.55;
+      face.material.toneMapped = false;
       if (a.cover) this._cover(a.cover, face.material);
       face.position.z = 0.018;
       face.userData.index = i;
       g.add(sleeve, face);
       this._shelf.add(g);
-      return { g, face, mats: [sleeve.material, face.material], cur: { x: 0, y: 0, z: 0, ry: 0, rz: 0, s: 1, o: 0 } };
+      const old = prev[i];
+      return {
+        g, face, mats: [sleeve.material, face.material],
+        cur: old ? old.cur : { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, s: 1, o: 0 },
+        hold: old ? old.hold : 0,
+      };
     });
     sleeveGeo.dispose(); faceGeo.dispose();
+  }
+
+  /** Un disco para adelante (1) o para atrás (-1) en la pila. Lo usan las flechas. */
+  step(delta) {
+    if (!this._up || this._dead || this._mode !== 'browse' || !this._albums.length) return;
+    this._cursor = clamp(Math.round(this._cursor) + delta, 0, this._albums.length - 1);
+  }
+
+  /** Resuelve cuando bajaron las tapas pendientes, o a los `ms` igual. */
+  coversReady(ms = 900) {
+    const pending = [...(this._covers?.values() || [])].filter((v) => v && v.then);
+    return Promise.race([Promise.all(pending), new Promise((r) => setTimeout(r, ms))]);
+  }
+
+  /**
+   * Arranca las fundas donde están las tapas de la grilla (`rects` en px,
+   * relativos al elemento, en el mismo orden que `albums`) y las deja volar a
+   * la pila, un poco escalonadas para que se lea el movimiento.
+   */
+  intro(rects = []) {
+    if (!this._up || this._dead) return;
+    this._outro = null;
+    this._mode = 'browse';
+    this._focus = 0;
+    this._cursor = 0;
+    this._snapCamera();
+    const now = performance.now();
+    this._items.forEach((it, i) => {
+      const r = rects[i];
+      if (!r) return;
+      Object.assign(it.cur, this._screenPose(r));
+      it.hold = now + 40 + Math.min(i * 26, 520);
+    });
+  }
+
+  /** Lo inverso: cada funda vuelve al lugar de su tapa en la grilla. */
+  outro(rects = []) {
+    if (!this._up || this._dead) return;
+    this._mode = 'browse';
+    this._setHover(0);
+    this._outro = rects;
+    this._items.forEach((it) => { it.hold = 0; });
+  }
+
+  // Dónde tiene que estar una funda para verse exactamente sobre un rectángulo
+  // de pantalla: en el plano paralelo a la imagen que pasa por el punto al que
+  // mira la cámara, girada igual que la cámara (así no hay deformación) y con
+  // la escala que da ese ancho en px a esa distancia.
+  _screenPose(r) {
+    const w = this.clientWidth || this._w || 1, h = this.clientHeight || this._h || 1;
+    const cam = this._camera;
+    cam.updateMatrixWorld();
+    const fwd = new THREE.Vector3();
+    cam.getWorldDirection(fwd);
+    const dist = new THREE.Vector3(0, this._camTgtY, 0).sub(cam.position).dot(fwd);
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    const ray = new THREE.Vector3((cx / w) * 2 - 1, -(cy / h) * 2 + 1, 0.5).unproject(cam).sub(cam.position).normalize();
+    const p = cam.position.clone().addScaledVector(ray, dist / ray.dot(fwd));
+    const worldPerPx = (2 * dist * Math.tan((FOV * DEG) / 2)) / h;
+    return {
+      x: p.x, y: p.y, z: p.z,
+      rx: cam.rotation.x, ry: cam.rotation.y, rz: cam.rotation.z,
+      s: (r.w * worldPerPx) / AL, o: 1,
+    };
+  }
+
+  _camPose() {
+    if (this._mode !== 'browse') return { dir: new THREE.Vector3(0, 0.03, 1).normalize(), tgtY: -0.34 };
+    if (this._layout === 'row') return { dir: new THREE.Vector3(0, 0.13, 1).normalize(), tgtY: 0 };
+    // Un poco desde arriba y de costado: se ven los lomos de la pila.
+    // tgtY más arriba que el centro de la pila: abajo va el nombre del disco
+    // con las flechas, y los últimos de la pila, casi transparentes, pueden
+    // quedar debajo.
+    return { dir: new THREE.Vector3(0.2, 0.28, 1).normalize(), tgtY: -0.25 };
+  }
+
+  _snapCamera() {
+    this._resize();
+    const pose = this._camPose();
+    this._camDir.copy(pose.dir);
+    this._camDist = this._dist();
+    this._camTgtY = pose.tgtY;
+    this._camera.position.copy(this._camDir).multiplyScalar(this._camDist);
+    this._camera.lookAt(0, this._camTgtY, 0);
+    this._camera.updateMatrixWorld();
   }
 
   // Pone la tapa real sobre la de relleno cuando termina de bajar. Si falla
@@ -387,6 +501,7 @@ class Shelf3D extends HTMLElement {
       if (this._dead || !tex) return;
       if (mat.map && !mat.map.userData.cached) mat.map.dispose();
       mat.map = tex;
+      mat.emissiveMap = tex;
       mat.needsUpdate = true;
     };
     const hit = this._covers.get(url);
@@ -553,7 +668,10 @@ class Shelf3D extends HTMLElement {
         const dx = ev.clientX - d.x, dy = ev.clientY - d.y;
         if (Math.abs(dx) > 4 || Math.abs(dy) > 4) d.moved = true;
         if (this._mode === 'browse' && this._albums.length) {
-          this._cursor = clamp(d.cursor - (dx + dy * 0.6) / 110, 0, this._albums.length - 1);
+          // En la pila manda el gesto vertical, como scrollear: arrastrar
+          // hacia arriba trae los discos de abajo.
+          const moved = this._layout === 'row' ? dx + dy * 0.6 : dy + dx * 0.4;
+          this._cursor = clamp(d.cursor - moved / (this._layout === 'row' ? 110 : 90), 0, this._albums.length - 1);
         }
         return;
       }
@@ -605,6 +723,10 @@ class Shelf3D extends HTMLElement {
     el.addEventListener('wheel', (ev) => {
       if (this._drag) return;
       if (this._mode !== 'browse' || !this._albums.length) return;
+      // Con el panel cortado por el borde de la ventana, la rueda es de la
+      // página: si no, pasar por encima scrolleando te atrapa a mitad de camino.
+      const box = this.getBoundingClientRect();
+      if (box.top < -8 || box.bottom > window.innerHeight + 8) return;
       // En los extremos de la pila dejo que siga scrolleando la página.
       const next = clamp(this._cursor + ev.deltaY * 0.0042, 0, this._albums.length - 1);
       if (next === this._cursor) return;
@@ -617,27 +739,49 @@ class Shelf3D extends HTMLElement {
       const last = this._albums.length - 1;
       if (ev.key === 'Escape' && this._mode !== 'browse') { this._setMode(this._mode === 'split' ? 'focus' : 'browse'); ev.preventDefault(); }
       if (this._mode !== 'browse') return;
-      if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { this._cursor = clamp(Math.round(this._cursor) + 1, 0, last); ev.preventDefault(); }
-      if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { this._cursor = clamp(Math.round(this._cursor) - 1, 0, last); ev.preventDefault(); }
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { this.step(1); ev.preventDefault(); }
+      if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { this.step(-1); ev.preventDefault(); }
+      // Sin discos no hay nada que abrir.
+      if (last < 0) return;
       if (ev.key === 'Enter') { this._setMode('focus', Math.round(this._cursor)); ev.preventDefault(); }
     });
   }
 
   _target(i) {
+    if (this._outro) {
+      const r = this._outro[i];
+      return r ? this._screenPose(r) : { x: 0, y: -2, z: 0, rx: 0, ry: 0, rz: 0, s: 1, o: 0 };
+    }
     const m = this._mode, d = i - this._cursor;
     if (m !== 'browse') {
-      if (i !== this._focus) return { x: d < 0 ? -3.6 : 3.6, y: 0, z: -2.4, ry: 0, rz: 0, s: 0.9, o: 0 };
-      if (m === 'focus') return { x: 0, y: 0, z: 0.55, ry: 0, rz: 0, s: 1.55, o: 1 };
-      return { x: -0.74, y: 0, z: 0.5, ry: 0.17, rz: 0, s: 1.18, o: 1 };
+      if (i !== this._focus) return { x: d < 0 ? -3.6 : 3.6, y: 0, z: -2.4, rx: 0, ry: 0, rz: 0, s: 0.9, o: 0 };
+      if (m === 'focus') return { x: 0, y: 0, z: 0.55, rx: 0, ry: 0, rz: 0, s: 1.55, o: 1 };
+      return { x: -0.74, y: 0, z: 0.5, rx: 0, ry: 0.17, rz: 0, s: 1.18, o: 1 };
     }
     if (this._layout === 'row') {
       return {
-        x: d * 1.06, y: 0, z: -Math.abs(d) * 0.26, ry: -d * 0.085, rz: 0, s: 1,
+        x: d * 1.06, y: 0, z: -Math.abs(d) * 0.26, rx: 0, ry: -d * 0.085, rz: 0, s: 1,
         o: clamp(2.7 - Math.abs(d), 0, 1),
       };
     }
-    if (d < 0) return { x: -1.35 + d * 0.28, y: 0.05, z: 0.55 - d * 0.06, ry: 0.7, rz: 0.02, s: 1, o: clamp(1 + d * 0.75, 0, 1) };
-    return { x: d * 0.34, y: -d * 0.05, z: -d * 0.34, ry: 0.44, rz: -0.03, s: 1, o: clamp(1.85 - d * 0.45, 0, 1) };
+    /*
+     * La pila vertical, como discos parados en un cajón visto desde arriba: el
+     * de adelante casi derecho, los siguientes más abajo, más atrás y más
+     * reclinados. Los que ya pasaste se levantan hacia arriba y se desvanecen,
+     * como sacarlos del cajón. Continua en d = 0: arrastrando, el cursor pasa
+     * por valores intermedios y no puede haber saltos.
+     */
+    if (d < 0) {
+      return {
+        x: 0, y: 0.18 - d * 0.95, z: -d * 0.35, rx: -0.12 - d * 0.7, ry: 0, rz: 0, s: 1,
+        o: clamp(1 + d * 1.15, 0, 1),
+      };
+    }
+    return {
+      x: Math.min(d, 6) * 0.045, y: 0.18 - d * 0.24, z: -d * 0.36,
+      rx: -0.12 - Math.min(d, 1) * 0.46, ry: 0, rz: 0, s: 1,
+      o: clamp(2.4 - d * 0.42, 0, 1),
+    };
   }
 
   _vinylTarget() {
@@ -715,14 +859,26 @@ class Shelf3D extends HTMLElement {
     const k = ease(7.5);
     const calm = this._mode === 'browse' ? 1 : 0.34;
 
+    // El dedo en la pila mueve discos, no la página; con un disco abierto el
+    // gesto vertical vuelve a ser scroll.
+    const touch = this._mode === 'browse' ? 'none' : 'pan-y';
+    if (this._renderer.domElement.style.touchAction !== touch) this._renderer.domElement.style.touchAction = touch;
+
     this._items.forEach((it, i) => {
-      const tg = this._target(i), c = it.cur;
-      c.x += (tg.x - c.x) * k; c.y += (tg.y - c.y) * k; c.z += (tg.z - c.z) * k;
-      c.ry += (tg.ry - c.ry) * k; c.rz += (tg.rz - c.rz) * k;
-      c.s += (tg.s - c.s) * k; c.o += (tg.o - c.o) * k;
-      // Flotan: cada funda con su propia fase, nunca al unísono.
-      it.g.position.set(c.x, c.y + Math.sin(t * 0.78 + i * 1.7) * 0.042 * calm, c.z);
-      it.g.rotation.set(Math.sin(t * 0.52 + i * 2.1) * 0.022 * calm, c.ry, c.rz + Math.sin(t * 0.63 + i) * 0.014 * calm);
+      const c = it.cur;
+      // Esperando su turno en la salida escalonada desde la grilla: quieta.
+      if (!(it.hold && now < it.hold)) {
+        const tg = this._target(i);
+        const ki = it.hold || this._outro ? ease(6) : k;
+        c.x += (tg.x - c.x) * ki; c.y += (tg.y - c.y) * ki; c.z += (tg.z - c.z) * ki;
+        c.rx += (tg.rx - c.rx) * ki; c.ry += (tg.ry - c.ry) * ki; c.rz += (tg.rz - c.rz) * ki;
+        c.s += (tg.s - c.s) * ki; c.o += (tg.o - c.o) * ki;
+      }
+      // Flotan: cada funda con su propia fase, nunca al unísono. Quietas
+      // mientras van o vienen de la grilla, para calzar justo con la tapa 2D.
+      const bob = this._outro || (it.hold && now < it.hold + 400) ? 0 : calm;
+      it.g.position.set(c.x, c.y + Math.sin(t * 0.78 + i * 1.7) * 0.042 * bob, c.z);
+      it.g.rotation.set(c.rx + Math.sin(t * 0.52 + i * 2.1) * 0.022 * bob, c.ry, c.rz + Math.sin(t * 0.63 + i) * 0.014 * bob);
       it.g.scale.setScalar(c.s);
       it.g.visible = c.o > 0.01;
       // Sólo mezclo cuando de verdad hace falta: una funda opaca no puede
@@ -755,16 +911,22 @@ class Shelf3D extends HTMLElement {
     rm.opacity += ((this._ringTarget || 0) * vc.o - rm.opacity) * kg;
     this._edges.forEach((e) => { e.material.opacity += ((this._edgeTarget || 0) * vc.o - e.material.opacity) * kg; });
 
-    const dir = this._mode !== 'browse'
-      ? new THREE.Vector3(0, 0.03, 1)
-      : (this._layout === 'row' ? new THREE.Vector3(0, 0.13, 1) : new THREE.Vector3(0.17, 0.12, 1));
+    const pose = this._camPose();
     const kc = ease(4.5);
-    this._camDir.lerp(dir.normalize(), kc);
+    this._camDir.lerp(pose.dir, kc);
     this._camDist += (this._dist() - this._camDist) * kc;
     this._camera.position.copy(this._camDir).normalize().multiplyScalar(this._camDist);
     // Con el disco abierto subo el encuadre: abajo va el nombre y el año.
-    this._camTgtY += ((this._mode === 'browse' ? 0 : -0.34) - this._camTgtY) * kc;
+    this._camTgtY += (pose.tgtY - this._camTgtY) * kc;
     this._camera.lookAt(0, this._camTgtY, 0);
+
+    // Avisa qué disco quedó adelante, para mostrar su nombre abajo. Sólo
+    // cuando cambia: el cursor se mueve en fracciones mientras se arrastra.
+    const idx = Math.round(this._cursor);
+    if (idx !== this._lastIdx) {
+      this._lastIdx = idx;
+      this.dispatchEvent(new CustomEvent('shelf-cursor', { bubbles: true, composed: true, detail: { index: idx } }));
+    }
 
     this._renderer.render(this._scene, this._camera);
     this._place();

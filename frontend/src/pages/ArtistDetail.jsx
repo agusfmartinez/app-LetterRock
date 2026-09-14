@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import AlbumCard from '../components/common/AlbumCard'
-import ArrowLink from '../components/common/ArrowLink'
+import Discography from '../components/common/Discography'
 import FavoriteButton from '../components/common/FavoriteButton'
 import MemberList from '../components/common/MemberList'
 import MemberTimeline from '../components/common/MemberTimeline'
@@ -13,7 +12,6 @@ import {
   ErrorState,
   NotFoundLine,
   SkeletonFicha,
-  SkeletonGrid,
 } from '../components/common/States'
 import { getArtist } from '../services/api'
 import { originLabel } from '../services/artists'
@@ -77,7 +75,6 @@ function Bio({ text }) {
 
 export default function ArtistDetail() {
   const { slug } = useParams()
-  const [albumFilter, setAlbumFilter] = useState('album')
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['artist', slug],
@@ -109,7 +106,6 @@ export default function ArtistDetail() {
   if (error) return <ErrorState title="No pudimos traer esta banda." onRetry={refetch} />
   if (!artist) return <NotFoundLine>Artista no encontrado.</NotFoundLine>
 
-  const filtered = albums.filter(a => a.album_type === albumFilter)
   const rating = artist.avg_rating ? parseFloat(artist.avg_rating).toFixed(1) : null
 
   return (
@@ -149,48 +145,8 @@ export default function ArtistDetail() {
         </div>
       </div>
 
-      {/* — Discografía — */}
-      <section className="mb-16">
-        <div className="flex items-baseline gap-4 flex-wrap mb-3">
-          <h2 className="font-display text-3xl">Discografía</h2>
-          {albums.length > 0 && !data?.ingestingAlbums && (
-            <ArrowLink to={`/artist/${slug}/vitrina`}>Ver en 3D</ArrowLink>
-          )}
-          <div className="seg ml-auto">
-            {[
-              { value: 'album', label: 'Álbumes' },
-              { value: 'single', label: 'Sencillos y EP' },
-            ].map(({ value, label }) => (
-              <label key={value} className="seg-opt">
-                <input
-                  type="radio"
-                  name="disco"
-                  checked={albumFilter === value}
-                  onChange={() => setAlbumFilter(value)}
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <p className="text-[12.5px] text-gray-500 mb-6 hidden md:block">
-          Pasá el mouse por un disco para sacarlo de la funda.
-        </p>
-
-        {data?.ingestingAlbums ? (
-          <SkeletonGrid count={5} min={168} />
-        ) : filtered.length === 0 ? (
-          <EmptyState title="Nada por acá">
-            {albumFilter === 'album'
-              ? 'Esta banda todavía no tiene álbumes fichados.'
-              : 'No hay sencillos ni EP cargados.'}
-          </EmptyState>
-        ) : (
-          <div className="grid gap-8" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(168px,1fr))' }}>
-            {filtered.map(a => <AlbumCard key={a.id} album={a} />)}
-          </div>
-        )}
-      </section>
+      {/* — Discografía — grilla o pila 3D, ver Discography */}
+      <Discography albums={albums} ingesting={!!data?.ingestingAlbums} artistName={artist.name} />
 
       {/* — Formación — */}
       {people.length > 0 && (

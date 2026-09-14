@@ -20,7 +20,9 @@ export default function AlbumCard({ album }) {
 
   return (
     <Link to={`/album/${album.id}`} className="group block">
-      <div className="relative aspect-square">
+      {/* `data-album-cover`: la pila 3D mide esto para arrancar cada funda
+          justo encima de su tapa. */}
+      <div className="relative aspect-square" data-album-cover>
         {/* El vinilo. Decorativo y detrás de todo: no compite con la tapa. */}
         <span
           aria-hidden="true"
@@ -56,13 +58,14 @@ export default function AlbumCard({ album }) {
         </div>
       </div>
 
-      <p className="font-display text-[15px] mt-3.5 leading-tight truncate group-hover:text-rock-accent transition-colors">
+      {/* Más chico en el teléfono, donde la grilla va de a dos tapas. */}
+      <p className="font-display text-[13.5px] sm:text-[15px] mt-2.5 sm:mt-3.5 leading-tight truncate group-hover:text-rock-accent transition-colors">
         {album.title}
       </p>
-      <p className="text-[13px] text-gray-500 mt-0.5">
+      <p className="text-[12px] sm:text-[13px] text-gray-500 mt-0.5">
         {[year, kind].filter(Boolean).join(' · ') || '—'}
       </p>
-      {rating && <p className="text-[13px] text-rock-accent mt-0.5">★ {rating}</p>}
+      {rating && <p className="text-[12px] sm:text-[13px] text-rock-accent mt-0.5">★ {rating}</p>}
     </Link>
   )
 }
