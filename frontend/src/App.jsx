@@ -7,6 +7,7 @@ import Footer from './components/common/Footer'
 import Home from './pages/Home'
 import Search from './pages/Search'
 import ArtistDetail from './pages/ArtistDetail'
+import ArtistShelf from './pages/ArtistShelf'
 import AlbumDetail from './pages/AlbumDetail'
 import TrackDetail from './pages/TrackDetail'
 import Profile from './pages/Profile'
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/artist/:slug" element={<ArtistDetail />} />
+            <Route path="/artist/:slug/vitrina" element={<ArtistShelf />} />
             <Route path="/album/:id" element={<AlbumDetail />} />
             <Route path="/musico/:mbId" element={<MemberDetail />} />
             <Route path="/track/:id" element={<TrackDetail />} />

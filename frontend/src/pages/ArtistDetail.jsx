@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from '../components/common/AlbumCard'
+import ArrowLink from '../components/common/ArrowLink'
 import FavoriteButton from '../components/common/FavoriteButton'
 import MemberList from '../components/common/MemberList'
 import MemberTimeline from '../components/common/MemberTimeline'
@@ -152,6 +153,9 @@ export default function ArtistDetail() {
       <section className="mb-16">
         <div className="flex items-baseline gap-4 flex-wrap mb-3">
           <h2 className="font-display text-3xl">Discografía</h2>
+          {albums.length > 0 && !data?.ingestingAlbums && (
+            <ArrowLink to={`/artist/${slug}/vitrina`}>Ver en 3D</ArrowLink>
+          )}
           <div className="seg ml-auto">
             {[
               { value: 'album', label: 'Álbumes' },
