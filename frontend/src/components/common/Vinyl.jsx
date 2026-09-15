@@ -49,8 +49,8 @@ export default function Vinyl({ tracks = [], album, activeTrack, onSelect, onHov
     }
   }, [onSelect, onHover])
 
-  /* Los surcos se generan por la duración real de cada track: cambiar la lista
-     obliga a redibujar la textura, y eso lo dispara el atributo. */
+  /* Un surco por track: cambiar la lista obliga a redibujar la textura, y eso
+     lo dispara el atributo. */
   useEffect(() => {
     const el = ref.current
     if (!el) return

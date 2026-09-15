@@ -35,7 +35,6 @@ const SPAN = {
   split: { w: 3.3, h: 2.3 },
 };
 
-const secs = (d) => { const p = String(d || '0:0').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Colores de la paleta rock (tailwind.config.js). La maqueta los leía de
@@ -46,20 +45,20 @@ const C = {
   muted: '#8a7a6c',
 };
 
-// Reparte los surcos por duración real: el track 1 ocupa el borde exterior.
+/*
+ * Reparte los surcos, el track 1 en el borde exterior. Todos del mismo ancho:
+ * por duración real era más fiel a un disco, pero las franjas quedaban muy
+ * dispares (un tema de 6 minutos, el triple que uno de 2) y los cortos eran
+ * difíciles de apuntar con el mouse.
+ */
 function makeBands(tracks) {
   const list = tracks || [];
-  const total = list.reduce((a, t) => a + secs(t.dur), 0) || 1;
-  const span = R_PLAY_OUT - R_PLAY_IN;
-  let cum = 0;
-  const out = list.map((t, i) => {
-    const a = cum; cum += secs(t.dur);
-    return {
-      n: t.n != null ? t.n : i + 1, title: t.title || '', dur: t.dur || '',
-      rOut: R_PLAY_OUT - (a / total) * span,
-      rIn: R_PLAY_OUT - (cum / total) * span,
-    };
-  });
+  const span = (R_PLAY_OUT - R_PLAY_IN) / (list.length || 1);
+  const out = list.map((t, i) => ({
+    n: t.n != null ? t.n : i + 1, title: t.title || '', dur: t.dur || '',
+    rOut: R_PLAY_OUT - i * span,
+    rIn: R_PLAY_OUT - (i + 1) * span,
+  }));
   const n = out.length;
   return out.map((b, i) => ({
     ...b,

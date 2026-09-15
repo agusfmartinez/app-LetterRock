@@ -24,11 +24,11 @@ import * as THREE from 'three';
  *  edge — el canto y la cara de atrás del disco.
  */
 export const VINYL = {
-  grooveCenter: '#3d3739',
-  grooveMid: '#282426',
-  grooveEdge: '#1a1819',
-  grooveLight: { base: 0.08, wave: 0.07 },
-  grooveShadow: 0.5,
+  grooveCenter: '#4f484a',
+  grooveMid: '#413b3e',
+  grooveEdge: '#5e585b',
+  grooveLight: { base: 0.10, wave: 0.04 },
+  grooveShadow: 0.85,
   trackGap: 0.2,
   edge: 0x262223,
 };

@@ -5,21 +5,16 @@ const R_OUT = 1.0, R_PLAY_OUT = 0.955, R_PLAY_IN = 0.335, R_LABEL = 0.3;
 const ARM = { x: 1.02, z: 1.02, len: 1.12 };
 const DEG = Math.PI / 180;
 
-const secs = (d) => { const p = String(d || '0:0').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); };
 
-// Reparte los surcos por duración real: el track 1 ocupa el borde exterior.
+// Reparte los surcos, el track 1 en el borde exterior. Todos del mismo ancho,
+// igual que en la pila (ver makeBands en shelf3d.js).
 function bands(tracks) {
-  const total = tracks.reduce((a, t) => a + secs(t.dur), 0) || 1;
-  const span = R_PLAY_OUT - R_PLAY_IN;
-  let cum = 0;
-  return tracks.map((t) => {
-    const a = cum; cum += secs(t.dur);
-    return {
-      n: t.n, title: t.title, dur: t.dur,
-      rOut: R_PLAY_OUT - (a / total) * span,
-      rIn: R_PLAY_OUT - (cum / total) * span,
-    };
-  }).map((b) => ({ ...b, rMid: (b.rIn + b.rOut) / 2 }));
+  const span = (R_PLAY_OUT - R_PLAY_IN) / (tracks.length || 1);
+  return tracks.map((t, i) => ({
+    n: t.n, title: t.title, dur: t.dur,
+    rOut: R_PLAY_OUT - i * span,
+    rIn: R_PLAY_OUT - (i + 1) * span,
+  })).map((b) => ({ ...b, rMid: (b.rIn + b.rOut) / 2 }));
 }
 
 // Ángulos de anclaje: primera mitad a la izquierda, segunda a la derecha.
@@ -207,8 +202,10 @@ class Vinyl3D extends HTMLElement {
     // El disco negro se perdía en la página negra. Lo recorta un halo tibio
     // debajo; el barniz queda oscuro (con reflejos se veía plateado).
     const halo = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.6, 3.6),
-      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false })
+      // Más chico que en la pila: acá el disco está acostado y cerca de la
+      // cámara, y a 3.6 el halo se salía del lienzo y se veía cortado en recto.
+      new THREE.PlaneGeometry(2.7, 2.7),
+      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false })
     );
     halo.rotation.x = -Math.PI / 2;
     halo.position.y = -0.08;
