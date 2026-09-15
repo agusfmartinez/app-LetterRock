@@ -38,15 +38,12 @@ export default function AuthPages({ mode = 'login' }) {
             todavía, y un giro infinito al lado de un formulario distrae. */}
         <div
           aria-hidden="true"
-          className="rounded-full shadow-card-hover hidden sm:block"
+          className="vinyl-disc hidden sm:block"
           style={{
             width: 'min(250px, 54vw)',
             aspectRatio: '1',
-            background: `
-              radial-gradient(circle at 50% 50%, #100d0b 0 4%, transparent 5%),
-              radial-gradient(circle at 50% 50%, #c1592c 5% 27%, transparent 27.5%),
-              repeating-radial-gradient(circle at 50% 50%, #241d18 0 2.5px, #17120f 2.5px 5px)
-            `,
+            '--vinyl-hole': '4%',
+            '--vinyl-label-r': '27%',
           }}
         />
       </div>

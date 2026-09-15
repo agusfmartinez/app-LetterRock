@@ -101,15 +101,8 @@ export default function AlbumDetail() {
         <div className="w-52 md:w-[286px] flex-none relative aspect-square group">
           <span
             aria-hidden="true"
-            className="absolute top-[4%] left-0 w-[92%] aspect-square rounded-full shadow-card-hover
-                       transition-transform duration-[600ms] ease-out group-hover:translate-x-[26%]"
-            style={{
-              background: `
-                radial-gradient(circle at 50% 50%, #100d0b 0 3.4%, transparent 3.6%),
-                radial-gradient(circle at 50% 50%, #c1592c 3.6% 26%, transparent 26.5%),
-                repeating-radial-gradient(circle at 50% 50%, #241d18 0 2.5px, #17120f 2.5px 5px)
-              `,
-            }}
+            className="vinyl-disc vinyl-disc--quiet absolute top-[4%] left-0 w-[92%] aspect-square
+                       duration-[600ms] ease-out group-hover:translate-x-[26%]"
           />
           <div className="absolute inset-0 rounded-xl overflow-hidden bg-rock-card shadow-card">
             {album.cover_url ? (

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VINYL, haloTexture, labelTexture } from './vinylLook.js';
 
 /*
  * La vitrina 3D de la discografía (`<shelf-3d>`). Viene de la maqueta de
@@ -83,20 +84,21 @@ function grooveTexture(bands) {
   const g = c.getContext('2d'), C = S / 2, px = (r) => r * C;
   g.fillStyle = '#0b0a0b'; g.fillRect(0, 0, S, S);
   const grad = g.createRadialGradient(C, C, px(0.3), C, C, px(1));
-  grad.addColorStop(0, '#242124'); grad.addColorStop(0.55, '#141315'); grad.addColorStop(1, '#0a0a0b');
+  // Colores: VINYL, en vinylLook.js (compartidos con la ficha del disco).
+  grad.addColorStop(0, VINYL.grooveCenter); grad.addColorStop(0.55, VINYL.grooveMid); grad.addColorStop(1, VINYL.grooveEdge);
   g.fillStyle = grad; g.beginPath(); g.arc(C, C, px(R_OUT), 0, Math.PI * 2); g.fill();
 
   g.lineWidth = 1;
   for (let r = R_LABEL; r < R_OUT; r += 0.0021) {
     const t = (r - R_LABEL) / (R_OUT - R_LABEL);
-    g.strokeStyle = `rgba(255,252,246,${0.05 + 0.05 * Math.sin(t * 140)})`;
+    g.strokeStyle = `rgba(255,252,246,${VINYL.grooveLight.base + VINYL.grooveLight.wave * Math.sin(t * 140)})`;
     g.beginPath(); g.arc(C, C, px(r), 0, Math.PI * 2); g.stroke();
-    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.strokeStyle = `rgba(0,0,0,${VINYL.grooveShadow})`;
     g.beginPath(); g.arc(C, C, px(r + 0.001), 0, Math.PI * 2); g.stroke();
   }
   // Separación lisa entre tracks, como en un disco real.
   bands.forEach((b) => {
-    g.strokeStyle = 'rgba(255,250,242,0.2)'; g.lineWidth = 4;
+    g.strokeStyle = `rgba(255,250,242,${VINYL.trackGap})`; g.lineWidth = 4;
     g.beginPath(); g.arc(C, C, px(b.rIn), 0, Math.PI * 2); g.stroke();
     g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 2.4;
     g.beginPath(); g.arc(C, C, px(b.rIn - 0.004), 0, Math.PI * 2); g.stroke();
@@ -111,34 +113,9 @@ function grooveTexture(bands) {
   return tex;
 }
 
-function labelTexture(accent, title, artist, year) {
-  const S = 768, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const g = c.getContext('2d'), C = S / 2, u = C / 1.06;
-  g.fillStyle = accent;
-  g.beginPath(); g.arc(C, C, u, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = 'rgba(20,18,17,0.32)'; g.lineWidth = 5;
-  g.beginPath(); g.arc(C, C, u, 0, Math.PI * 2); g.stroke();
-  g.save(); g.translate(C, C); g.textAlign = 'center'; g.fillStyle = '#1a1817';
-  g.font = `${u * 0.28}px Caprasimo, Georgia, serif`;
-  g.fillText(String(artist || '').toUpperCase(), 0, -u * 0.3);
-  g.font = `600 ${u * 0.13}px Figtree, system-ui, sans-serif`;
-  const words = String(title || '').split(' ');
-  const lines = []; let line = '';
-  words.forEach((w) => {
-    if ((line + ' ' + w).trim().length > 18) { lines.push(line.trim()); line = w; } else line += ' ' + w;
-  });
-  if (line.trim()) lines.push(line.trim());
-  lines.slice(0, 2).forEach((l, i) => g.fillText(l, 0, u * 0.32 + i * u * 0.18));
-  g.font = `${u * 0.1}px ui-monospace, monospace`;
-  g.fillStyle = 'rgba(26,24,23,0.72)';
-  g.fillText(String(year || ''), 0, u * 0.82);
-  g.beginPath(); g.arc(0, 0, u * 0.085, 0, Math.PI * 2); g.fillStyle = '#0d0c0d'; g.fill();
-  g.restore();
-  const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 8; tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
+// El sello (artista palabra por palabra, que se achica hasta entrar), el halo
+// y los colores se comparten con el vinilo de la ficha del disco.
+const LABEL_SIZE = 768;
 
 function sheenTexture() {
   const S = 768, c = document.createElement('canvas');
@@ -512,13 +489,26 @@ class Shelf3D extends HTMLElement {
     this._scene.add(vg);
     this._vinyl = vg;
 
+    // Resplandor detrás del disco: lo que recorta su silueta contra el fondo.
+    // Sólo con el vinilo afuera; guardado en la funda asomaría por los bordes.
+    this._halo = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.4, 3.4),
+      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
+    );
+    this._halo.position.z = -0.03;
+    vg.add(this._halo);
+    this._haloK = 0;
+
+    // El barniz queda oscuro, como el original: con reflejos de entorno y filo
+    // claro el disco se veía plateado. El resplandor alcanza para recortarlo.
     this._grooveMat = new THREE.MeshPhysicalMaterial({
       map: grooveTexture([]), roughness: 0.26, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.12, transparent: true,
     });
-    const edgeMat = new THREE.MeshPhysicalMaterial({ color: 0x121112, roughness: 0.4, clearcoat: 0.7, transparent: true });
+    const edgeMat = new THREE.MeshPhysicalMaterial({ color: VINYL.edge, roughness: 0.4, clearcoat: 0.7, transparent: true });
+    const backMat = edgeMat.clone();
     const disc = new THREE.Mesh(
       new THREE.CylinderGeometry(R_OUT, R_OUT, 0.016, 192, 1, false),
-      [edgeMat, this._grooveMat, edgeMat.clone()]
+      [edgeMat, this._grooveMat, backMat]
     );
     disc.rotation.x = Math.PI / 2;
     vg.add(disc);
@@ -532,7 +522,7 @@ class Shelf3D extends HTMLElement {
     vg.add(sheen);
     this._sheen = sheen;
 
-    this._labelMat = new THREE.MeshStandardMaterial({ map: labelTexture(this._accent(), '', '', ''), roughness: 0.82, transparent: true });
+    this._labelMat = new THREE.MeshStandardMaterial({ map: labelTexture(this._accent(), '', '', '', LABEL_SIZE), roughness: 0.82, transparent: true });
     const sello = new THREE.Mesh(new THREE.CircleGeometry(R_LABEL + 0.004, 72), this._labelMat);
     sello.position.z = 0.0105;
     vg.add(sello);
@@ -552,7 +542,7 @@ class Shelf3D extends HTMLElement {
     });
 
     sheen.material.name = 'sheen';
-    this._vinylMats = [this._grooveMat, edgeMat, this._labelMat, sheen.material];
+    this._vinylMats = [this._grooveMat, edgeMat, backMat, this._labelMat, sheen.material];
     vg.scale.setScalar(0.2);
     vg.visible = false;
     this._vcur = { x: 0, z: 0, s: 0.2, o: 0 };
@@ -565,7 +555,7 @@ class Shelf3D extends HTMLElement {
     this._grooveMat.map = grooveTexture(this._bands);
     this._grooveMat.needsUpdate = true;
     if (this._labelMat.map) this._labelMat.map.dispose();
-    this._labelMat.map = labelTexture(this._accent(), a.title, this._attr('artist') || '', a.year);
+    this._labelMat.map = labelTexture(this._accent(), a.title, this._attr('artist') || '', a.year, LABEL_SIZE);
     this._labelMat.needsUpdate = true;
     this._lines.forEach((l) => l.remove());
     this._lines = this._bands.map(() => {
@@ -916,6 +906,8 @@ class Shelf3D extends HTMLElement {
       if (m.name !== 'sheen' && m.transparent !== vblend) { m.transparent = vblend; m.needsUpdate = true; }
     });
     this._sheen.rotation.z = t * 0.12;
+    this._haloK += ((this._mode === 'split' ? 1 : 0) - this._haloK) * ease(5);
+    this._halo.material.opacity = this._haloK * vc.o;
 
     const kg = ease(9.5);
     const rm = this._ring.material;

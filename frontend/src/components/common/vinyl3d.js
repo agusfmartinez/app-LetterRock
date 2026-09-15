@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VINYL, haloTexture, labelTexture } from './vinylLook.js';
 
 const R_OUT = 1.0, R_PLAY_OUT = 0.955, R_PLAY_IN = 0.335, R_LABEL = 0.3;
 const ARM = { x: 1.02, z: 1.02, len: 1.12 };
@@ -36,21 +37,22 @@ function grooveTexture(bs, accent, title, artist, year) {
   g.fillStyle = '#0b0a0b'; g.fillRect(0, 0, S, S);
 
   const grad = g.createRadialGradient(C, C, px(0.3), C, C, px(1));
-  grad.addColorStop(0, '#242124'); grad.addColorStop(0.55, '#141315'); grad.addColorStop(1, '#0a0a0b');
+  // Colores: VINYL, en vinylLook.js (compartidos con la pila).
+  grad.addColorStop(0, VINYL.grooveCenter); grad.addColorStop(0.55, VINYL.grooveMid); grad.addColorStop(1, VINYL.grooveEdge);
   g.fillStyle = grad; g.beginPath(); g.arc(C, C, px(R_OUT), 0, Math.PI * 2); g.fill();
 
   g.lineWidth = 1;
   for (let r = R_LABEL; r < R_OUT; r += 0.0016) {
     const t = (r - R_LABEL) / (R_OUT - R_LABEL);
-    g.strokeStyle = `rgba(255,252,246,${0.05 + 0.05 * Math.sin(t * 140)})`;
+    g.strokeStyle = `rgba(255,252,246,${VINYL.grooveLight.base + VINYL.grooveLight.wave * Math.sin(t * 140)})`;
     g.beginPath(); g.arc(C, C, px(r), 0, Math.PI * 2); g.stroke();
-    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.strokeStyle = `rgba(0,0,0,${VINYL.grooveShadow})`;
     g.beginPath(); g.arc(C, C, px(r + 0.0008), 0, Math.PI * 2); g.stroke();
   }
 
   // Separación lisa entre tracks, como en un disco real.
   bs.forEach((b) => {
-    g.strokeStyle = 'rgba(255,250,242,0.2)'; g.lineWidth = 5;
+    g.strokeStyle = `rgba(255,250,242,${VINYL.trackGap})`; g.lineWidth = 5;
     g.beginPath(); g.arc(C, C, px(b.rIn), 0, Math.PI * 2); g.stroke();
     g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 3;
     g.beginPath(); g.arc(C, C, px(b.rIn - 0.004), 0, Math.PI * 2); g.stroke();
@@ -67,35 +69,9 @@ function grooveTexture(bs, accent, title, artist, year) {
   return tex;
 }
 
-// El sello no gira con el disco: el texto tiene que quedar legible.
-function labelTexture(accent, title, artist, year) {
-  const S = 1024, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const g = c.getContext('2d'), C = S / 2, u = C / 1.06;
-  g.fillStyle = accent;
-  g.beginPath(); g.arc(C, C, u, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = 'rgba(20,18,17,0.32)'; g.lineWidth = 6;
-  g.beginPath(); g.arc(C, C, u, 0, Math.PI * 2); g.stroke();
-  g.save(); g.translate(C, C); g.textAlign = 'center'; g.fillStyle = '#1a1817';
-  g.font = `${u * 0.3}px Caprasimo, Georgia, serif`;
-  g.fillText(String(artist || '').toUpperCase(), 0, -u * 0.3);
-  g.font = `600 ${u * 0.135}px Figtree, system-ui, sans-serif`;
-  const words = String(title || '').split(' ');
-  const lines = []; let line = '';
-  words.forEach((w) => {
-    if ((line + ' ' + w).trim().length > 18) { lines.push(line.trim()); line = w; } else line += ' ' + w;
-  });
-  if (line.trim()) lines.push(line.trim());
-  lines.slice(0, 2).forEach((l, i) => g.fillText(l, 0, u * 0.32 + i * u * 0.185));
-  g.font = `${u * 0.105}px ui-monospace, monospace`;
-  g.fillStyle = 'rgba(26,24,23,0.72)';
-  g.fillText(String(year || ''), 0, u * 0.82);
-  g.beginPath(); g.arc(0, 0, u * 0.085, 0, Math.PI * 2); g.fillStyle = '#0d0c0d'; g.fill();
-  g.restore();
-  const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 8; tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
+// El sello no gira con el disco: el texto tiene que quedar legible. Se arma en
+// vinylLook.js (compartido con la pila): artista palabra por renglón, y todo
+// se achica hasta entrar en el círculo.
 
 function sheenTexture() {
   const S = 1024, c = document.createElement('canvas');
@@ -226,7 +202,18 @@ class Vinyl3D extends HTMLElement {
         this._attr('label-artist'), this._attr('label-year')),
       roughness: 0.26, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.12,
     });
-    const edgeMat = new THREE.MeshPhysicalMaterial({ color: 0x121112, roughness: 0.4, clearcoat: 0.7 });
+    const edgeMat = new THREE.MeshPhysicalMaterial({ color: VINYL.edge, roughness: 0.4, clearcoat: 0.7 });
+
+    // El disco negro se perdía en la página negra. Lo recorta un halo tibio
+    // debajo; el barniz queda oscuro (con reflejos se veía plateado).
+    const halo = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.6, 3.6),
+      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false })
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = -0.08;
+    scene.add(halo);
+    this._halo = halo;
     const body = new THREE.Mesh(new THREE.CylinderGeometry(R_OUT, R_OUT, 0.018, 256, 1, false),
       [edgeMat, this._grooveMat, edgeMat]);
     body.name = 'disc';
@@ -258,6 +245,7 @@ class Vinyl3D extends HTMLElement {
     sello.rotation.x = -Math.PI / 2;
     sello.position.y = 0.0115;
     anchors.add(sello);
+
 
     const glowMat = (op) => new THREE.MeshBasicMaterial({ color: new THREE.Color(this._accent()), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     this._ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.6, 192), glowMat());
@@ -404,6 +392,11 @@ class Vinyl3D extends HTMLElement {
     if (this._ring) {
       this._ring.material.color = new THREE.Color(this._accent());
       this._edges.forEach((e) => { e.material.color = new THREE.Color(this._accent()); });
+    }
+    if (this._halo) {
+      this._halo.material.map.dispose();
+      this._halo.material.map = haloTexture(this._accent());
+      this._halo.material.needsUpdate = true;
     }
   }
 

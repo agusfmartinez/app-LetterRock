@@ -248,6 +248,53 @@
   .tab-active {
     @apply text-rock-text border-rock-accent;
   }
+
+  /*
+   * Vinilo dibujado con CSS (el que asoma de la funda, login, 404).
+   *
+   * Un disco negro sobre la página casi negra no se veía. Lo que lo despega,
+   * igual que en el hero y en los vinilos 3D: surcos con más contraste, un filo
+   * claro en el borde, un resplandor tibio en vez de la sombra negra (que acá
+   * no existe) y un brillo de barniz que no depende de la luz.
+   *
+   * Se ajusta con variables: agujero, radio y color del sello, paso de surco.
+   * `.vinyl-disc--quiet` saca el resplandor en reposo — para los que viven
+   * detrás de una tapa y sólo asoman al pasar el mouse: si no, cada tapa de la
+   * grilla tendría un aura naranja alrededor.
+   */
+  .vinyl-disc {
+    --vinyl-hole: 3.4%;
+    --vinyl-label-r: 26%;
+    --vinyl-label: #c1592c;
+    --vinyl-groove: 5px;
+    position: relative;
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle at 50% 50%, #100d0b 0 var(--vinyl-hole), transparent calc(var(--vinyl-hole) + 0.2%)),
+      radial-gradient(circle at 50% 50%, var(--vinyl-label) var(--vinyl-hole) var(--vinyl-label-r), transparent calc(var(--vinyl-label-r) + 0.5%)),
+      repeating-radial-gradient(circle at 50% 50%, #2e251f 0 calc(var(--vinyl-groove) * 0.4), #0f0c0a calc(var(--vinyl-groove) * 0.4) var(--vinyl-groove));
+    box-shadow: 0 0 0 1px rgba(239, 232, 225, 0.14), 0 22px 60px rgba(193, 89, 44, 0.28);
+  }
+  .vinyl-disc::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(from 20deg,
+      transparent 0deg, rgba(255, 240, 225, 0.13) 25deg, transparent 60deg,
+      transparent 180deg, rgba(255, 240, 225, 0.08) 205deg, transparent 240deg);
+    -webkit-mask: radial-gradient(circle, transparent calc(var(--vinyl-label-r) + 1%), #000 calc(var(--vinyl-label-r) + 2%));
+    mask: radial-gradient(circle, transparent calc(var(--vinyl-label-r) + 1%), #000 calc(var(--vinyl-label-r) + 2%));
+  }
+  .vinyl-disc--quiet {
+    box-shadow: 0 0 0 1px rgba(239, 232, 225, 0.12), 0 10px 28px rgba(0, 0, 0, 0.45);
+    transition-property: transform, box-shadow;
+  }
+  .group:hover .vinyl-disc--quiet,
+  .group:focus-visible .vinyl-disc--quiet {
+    box-shadow: 0 0 0 1px rgba(239, 232, 225, 0.16), 0 14px 40px rgba(193, 89, 44, 0.32);
+  }
 }
 
 @layer utilities {

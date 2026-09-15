@@ -11,15 +11,15 @@ export default function NotFound() {
       {/* Un disco apagado, sin el acento: acá no hay nada que celebrar. */}
       <div
         aria-hidden="true"
-        className="rounded-full mb-8 shadow-card opacity-90"
+        // Sin resplandor (--quiet, y acá no hay grupo que lo encienda): apagado,
+        // pero con el filo y los surcos para que se lea como disco.
+        className="vinyl-disc vinyl-disc--quiet mb-8"
         style={{
           width: 'min(180px, 44vw)',
           aspectRatio: '1',
-          background: `
-            radial-gradient(circle at 50% 50%, #100d0b 0 5%, transparent 6%),
-            radial-gradient(circle at 50% 50%, #4a382c 6% 26%, transparent 27%),
-            repeating-radial-gradient(circle at 50% 50%, #241d18 0 3px, #17120f 3px 6px)
-          `,
+          '--vinyl-hole': '5%',
+          '--vinyl-label': '#4a382c',
+          '--vinyl-groove': '6px',
         }}
       />
 

@@ -154,7 +154,7 @@ export default function Discography({ albums, ingesting, artistName }) {
   }, [albumData, current])
 
   const albumsAttr = useMemo(
-    () => JSON.stringify(filtered.map(a => ({ title: a.title, cover: a.cover_url || null }))),
+    () => JSON.stringify(filtered.map(a => ({ title: a.title, year: albumYear(a) || '', cover: a.cover_url || null }))),
     [filtered]
   )
   // `n` es la posición y no `track_number`: en un disco doble la numeración
