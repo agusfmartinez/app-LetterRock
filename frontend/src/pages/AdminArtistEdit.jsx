@@ -402,6 +402,14 @@ function YoutubeDiscography({ artist }) {
               <p className="text-gray-400">
                 {status.albums?.filter(a => a.matched).length} de {status.albums?.length} álbumes vinculados
               </p>
+              {/* Los rescatados por tema: el canal no publica el disco, pero
+                  sí sus canciones dentro de otro. Vale avisar, porque el video
+                  puede ser de una edición distinta. */}
+              {status.albums?.filter(a => a.loose).map(a => (
+                <p key={a.album} className="text-gray-500">
+                  {a.album}: {a.matched} de {a.total} vinculados por nombre de tema
+                </p>
+              ))}
               {status.albums?.filter(a => a.skipped).map(a => (
                 <p key={a.album} className="text-gray-500">{a.album}: {a.skipped}</p>
               ))}

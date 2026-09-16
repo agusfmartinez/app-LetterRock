@@ -244,6 +244,35 @@ function matchAlbumTracks(tracks, catalog, albumTitle) {
   return { matches, albumFound: true }
 }
 
+/*
+ * Rescate para lanzamientos que el canal no publica como disco propio: busca
+ * cada tema por nombre exacto en todo el catálogo, sin importar a qué disco lo
+ * haya asignado YouTube. Entre varios homónimos gana el más reproducido.
+ *
+ * Es sólo para sencillos y EP (ver el uso en youtubeLinker): en un álbum entero
+ * esto vincularía versiones de otros discos, que es justo lo que el cruce por
+ * disco evita. No cuesta cuota: el catálogo ya está bajado.
+ */
+function matchTracksAnywhere(tracks, catalog) {
+  const byTitle = new Map()
+  for (const video of catalog) {
+    const key = normalizeTitle(video.title)
+    const current = byTitle.get(key)
+    if (!current || (video.views || 0) > (current.views || 0)) byTitle.set(key, video)
+  }
+
+  const matches = []
+  const used = new Set()
+  for (const track of tracks) {
+    const hit = byTitle.get(normalizeTitle(track.title))
+    if (hit && !used.has(hit.videoId)) {
+      used.add(hit.videoId)
+      matches.push({ track, video: hit, matchedBy: 'catalogo' })
+    }
+  }
+  return matches
+}
+
 /** Reproducciones por video. 1 unidad cada 50 ids: es la llamada barata de refrescar. */
 async function getVideoStats(videoIds) {
   const stats = new Map()
@@ -276,6 +305,7 @@ module.exports = {
   findArtistTopicChannel,
   getChannelCatalog,
   matchAlbumTracks,
+  matchTracksAnywhere,
   getVideoStats,
   albumsInCatalog,
   albumFromDescription,

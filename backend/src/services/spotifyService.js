@@ -98,14 +98,31 @@ async function searchArtist(name) {
   return counted[0].candidate
 }
 
-async function getArtistAlbums(spotifyArtistId) {
+/*
+ * La discografía de un artista, por tipo de lanzamiento.
+ *
+ * Un pedido por tipo y no `include_groups=album,single` en uno solo: pidiendo
+ * los dos juntos, Spotify devuelve únicamente los álbumes — con Spinetta, 22
+ * álbumes y ninguno de sus 3 sencillos, que sí aparecen al pedir `single` a
+ * secas. Por eso los sencillos y EP nunca entraban al catálogo.
+ */
+async function getArtistAlbums(spotifyArtistId, groups = ['album', 'single']) {
   const albums = []
-  let url = `/artists/${spotifyArtistId}/albums?include_groups=album,single&limit=10`
+  const seen = new Set()
 
-  while (url) {
-    const data = await spotifyRequest(url)
-    albums.push(...(data.items || []))
-    url = data.next ? data.next.replace(BASE_URL, '') : null
+  for (const group of groups) {
+    let url = `/artists/${spotifyArtistId}/albums?include_groups=${group}&limit=10`
+    while (url) {
+      const data = await spotifyRequest(url)
+      for (const item of data.items || []) {
+        // Un mismo disco puede volver en dos grupos (reediciones): que entre una vez.
+        if (item?.id && !seen.has(item.id)) {
+          seen.add(item.id)
+          albums.push(item)
+        }
+      }
+      url = data.next ? data.next.replace(BASE_URL, '') : null
+    }
   }
 
   return albums

@@ -71,6 +71,22 @@ async function ensureTracks(album) {
   return { tracks: saved, ingested: true }
 }
 
+// Los discos en vivo comparten los nombres de los temas con los de estudio:
+// buscarlos sueltos por el canal les pegaría la versión equivocada.
+const LIVE = /(en vivo|vivo|live|directo|unplugged|acustico|acústico)/i
+
+/**
+ * Si vale buscar los temas de este lanzamiento por todo el canal.
+ *
+ * Sólo sencillos y EP cortos: en un álbum entero, cazar tema por tema termina
+ * mezclando versiones de otros discos, que es lo que el cruce por disco evita.
+ */
+function canMatchAnywhere(album, tracks) {
+  if (album.album_type === 'album') return false
+  if (tracks.length > 3) return false
+  return !LIVE.test(album.title || '')
+}
+
 /** Guarda los links de un álbum ya cruzado contra el catálogo. */
 async function saveAlbumMatches(matches) {
   if (!matches.length) return
@@ -125,8 +141,18 @@ async function linkArtistDiscography(artist, { auto = false } = {}) {
         continue
       }
 
-      const { matches, albumFound } = youtube.matchAlbumTracks(tracks, catalog, album.title)
-      if (!albumFound) {
+      let { matches, albumFound } = youtube.matchAlbumTracks(tracks, catalog, album.title)
+
+      // Un sencillo suele salir en el canal dentro de otro disco — "Mañana
+      // Despertar" de Spinetta figura en "Canciones de Cuna". Si el disco no
+      // está, se buscan sus temas por nombre en todo el canal.
+      let loose = false
+      if (!albumFound && canMatchAnywhere(album, tracks)) {
+        matches = youtube.matchTracksAnywhere(tracks, catalog)
+        loose = matches.length > 0
+      }
+
+      if (!albumFound && !loose) {
         results.push({ album: album.title, skipped: 'no-está-en-el-canal' })
         continue
       }
@@ -136,6 +162,7 @@ async function linkArtistDiscography(artist, { auto = false } = {}) {
         album: album.title,
         matched: matches.length,
         total: tracks.length,
+        ...(loose && { loose: true }),
         ...(ingested && { ingested: true }),
       })
     }
