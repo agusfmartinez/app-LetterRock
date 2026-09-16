@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VINYL, haloTexture, labelTexture } from './vinylLook.js';
+import { HALO, VINYL, haloTexture, labelTexture } from './vinylLook.js';
 
 const R_OUT = 1.0, R_PLAY_OUT = 0.955, R_PLAY_IN = 0.335, R_LABEL = 0.3;
 const ARM = { x: 1.02, z: 1.02, len: 1.12 };
@@ -205,7 +205,7 @@ class Vinyl3D extends HTMLElement {
       // Más chico que en la pila: acá el disco está acostado y cerca de la
       // cámara, y a 3.6 el halo se salía del lienzo y se veía cortado en recto.
       new THREE.PlaneGeometry(2.7, 2.7),
-      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false })
+      new THREE.MeshBasicMaterial({ map: haloTexture(), transparent: true, opacity: HALO.turntable, depthWrite: false, toneMapped: false })
     );
     halo.rotation.x = -Math.PI / 2;
     halo.position.y = -0.08;
@@ -392,7 +392,7 @@ class Vinyl3D extends HTMLElement {
     }
     if (this._halo) {
       this._halo.material.map.dispose();
-      this._halo.material.map = haloTexture(this._accent());
+      this._halo.material.map = haloTexture();
       this._halo.material.needsUpdate = true;
     }
   }

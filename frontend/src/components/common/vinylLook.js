@@ -33,8 +33,25 @@ export const VINYL = {
   edge: 0x262223,
 };
 
+/*
+ * El resplandor de atrás, para los dos vinilos.
+ *
+ *  color — uno solo para los dos. Por defecto el acento del sitio.
+ *  stack / turntable — cuánta fuerza tiene en cada vista. Van aparte porque
+ *    con el mismo valor no se ven igual: en la pila el halo está de frente y
+ *    entero, y en la ficha del disco está acostado en el piso, en perspectiva
+ *    y medio tapado por el disco, así que rinde menos. 1 es la fuerza plena.
+ */
+export const HALO = {
+  color: '#818181',
+  stack: 0.65,
+  turntable: 1,
+};
+
+export const HALO_COLOR = HALO.color;
+
 /** Degradé radial tibio, transparente en el borde. Va en un plano detrás del disco. */
-export function haloTexture(color = '#c1592c') {
+export function haloTexture(color = HALO_COLOR) {
   const S = 256, c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d'), C = S / 2;
@@ -43,8 +60,8 @@ export function haloTexture(color = '#c1592c') {
   const col = (a) => `rgba(${Math.round(rgb.r * 255)},${Math.round(rgb.g * 255)},${Math.round(rgb.b * 255)},${a})`;
   // Lleno hasta donde tapa el disco, y de ahí se apaga: lo que se ve es un aura.
   grad.addColorStop(0, col(0.55));
-  grad.addColorStop(0.55, col(0.42));
-  grad.addColorStop(0.72, col(0.16));
+  grad.addColorStop(0.65, col(0.42));
+  grad.addColorStop(0.72, col(0.26));
   grad.addColorStop(1, col(0));
   g.fillStyle = grad;
   g.fillRect(0, 0, S, S);

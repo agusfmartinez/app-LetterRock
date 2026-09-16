@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VINYL, haloTexture, labelTexture } from './vinylLook.js';
+import { HALO, VINYL, haloTexture, labelTexture } from './vinylLook.js';
 
 /*
  * La vitrina 3D de la discografía (`<shelf-3d>`). Viene de la maqueta de
@@ -137,7 +137,7 @@ function sheenTexture() {
 }
 
 class Shelf3D extends HTMLElement {
-  static get observedAttributes() { return ['albums', 'tracks', 'layout', 'mode', 'sel', 'accent', 'artist']; }
+  static get observedAttributes() { return ['albums', 'tracks', 'zones', 'layout', 'mode', 'sel', 'accent', 'artist']; }
 
   // El loop se vigila solo: si React mueve el nodo y el rAF queda cancelado,
   // el perro guardián lo vuelve a arrancar sin rearmar la escena.
@@ -177,6 +177,7 @@ class Shelf3D extends HTMLElement {
     this._root.appendChild(st);
 
     this._albums = this._parse();
+    this._zones = this._json('zones');
     this._layout = this._attr('layout') || 'stack';
     this._mode = this._attr('mode') || 'browse';
     this._focus = +(this._attr('sel') || 0);
@@ -225,6 +226,7 @@ class Shelf3D extends HTMLElement {
     if (!this._up || this._dead || old === val) return;
     if (name === 'albums') { this._albums = this._parse(); this._rebuildAlbums(); this._bandsFor = -1; }
     if (name === 'tracks') this._bandsFor = -1;
+    if (name === 'zones') this._zones = this._json('zones');
     if (name === 'layout') this._layout = val || 'stack';
     if (name === 'sel') { const n = +val || 0; if (n !== this._focus) { this._focus = n; this._cursor = n; } }
     if (name === 'mode' && val && val !== this._mode) {
@@ -245,6 +247,13 @@ class Shelf3D extends HTMLElement {
     const raw = (this._attr(name) || '').trim();
     if (!raw) return [];
     try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+
+  /** Un atributo con un objeto JSON adentro (hoy, `zones`). */
+  _json(name) {
+    const raw = (this._attr(name) || '').trim();
+    if (!raw) return null;
+    try { const v = JSON.parse(raw); return v && typeof v === 'object' ? v : null; } catch (e) { return null; }
   }
 
   _album() { return this._albums[this._focus] || this._albums[0] || {}; }
@@ -417,7 +426,24 @@ class Shelf3D extends HTMLElement {
   // de pantalla: en el plano paralelo a la imagen que pasa por el punto al que
   // mira la cámara, girada igual que la cámara (así no hay deformación) y con
   // la escala que da ese ancho en px a esa distancia.
-  _screenPose(r) {
+  /*
+   * Con el vinilo afuera, la funda y el disco van donde diga `zones`: centro y
+   * ancho en fracciones del lienzo, así el costado que queda libre es el del
+   * panel de canciones. Cada tamaño de pantalla manda sus zonas — en compu son
+   * tres columnas y en el teléfono la funda arriba y el vinilo abajo.
+   *
+   * `unit` es el ancho del objeto en unidades de escena: la funda mide AL de
+   * lado, el disco dos radios.
+   */
+  _zonePose(name, unit) {
+    const z = this._zones && this._zones[name];
+    if (!z) return null;
+    const w = this.clientWidth || this._w || 1, h = this.clientHeight || this._h || 1;
+    const side = z.w * w;
+    return this._screenPose({ x: z.cx * w - side / 2, y: z.cy * h - side / 2, w: side, h: side }, unit);
+  }
+
+  _screenPose(r, unit = AL) {
     const w = this.clientWidth || this._w || 1, h = this.clientHeight || this._h || 1;
     const cam = this._camera;
     cam.updateMatrixWorld();
@@ -431,7 +457,7 @@ class Shelf3D extends HTMLElement {
     return {
       x: p.x, y: p.y, z: p.z,
       rx: cam.rotation.x, ry: cam.rotation.y, rz: cam.rotation.z,
-      s: (r.w * worldPerPx) / AL, o: 1,
+      s: (r.w * worldPerPx) / unit, o: 1,
     };
   }
 
@@ -492,11 +518,22 @@ class Shelf3D extends HTMLElement {
     // Sólo con el vinilo afuera; guardado en la funda asomaría por los bordes.
     this._halo = new THREE.Mesh(
       new THREE.PlaneGeometry(3.4, 3.4),
-      new THREE.MeshBasicMaterial({ map: haloTexture(this._accent()), transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
+      new THREE.MeshBasicMaterial({ map: haloTexture(), transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
     );
-    this._halo.position.z = -0.03;
+    // Bien atrás, no apenas detrás del disco: si queda casi en el mismo plano,
+    // el halo llega hasta la funda y se ve como una sombra encima de la tapa.
+    this._halo.position.z = -0.4;
     vg.add(this._halo);
     this._haloK = 0;
+
+    // El mismo resplandor detrás de la funda abierta: sin él, con el vinilo
+    // afuera la tapa quedaba sola sobre el negro y el conjunto no cerraba.
+    // Vive en la escena, no en el grupo del vinilo, porque sigue a la funda.
+    this._sleeveHalo = new THREE.Mesh(
+      this._halo.geometry,
+      new THREE.MeshBasicMaterial({ map: this._halo.material.map, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
+    );
+    this._scene.add(this._sleeveHalo);
 
     // El barniz queda oscuro, como el original: con reflejos de entorno y filo
     // claro el disco se veía plateado. El resplandor alcanza para recortarlo.
@@ -544,7 +581,7 @@ class Shelf3D extends HTMLElement {
     this._vinylMats = [this._grooveMat, edgeMat, backMat, this._labelMat, sheen.material];
     vg.scale.setScalar(0.2);
     vg.visible = false;
-    this._vcur = { x: 0, z: 0, s: 0.2, o: 0 };
+    this._vcur = { x: 0, y: 0, z: 0, s: 0.2, o: 0 };
   }
 
   _setBands() {
@@ -574,9 +611,16 @@ class Shelf3D extends HTMLElement {
     this._edges.forEach((e) => { e.material.color = new THREE.Color(this._accent()); });
   }
 
+  /** Resaltar un surco desde afuera: lo usa el hover de la lista de canciones. */
+  setHover(n) {
+    if (this._up && !this._dead && this._mode === 'split') this._setHover(+n || 0);
+  }
+
   _setHover(n) {
     if (n === this._hover) return;
     this._hover = n;
+    // Para que la lista de canciones resalte el mismo tema que el surco.
+    this.dispatchEvent(new CustomEvent('shelf-hover', { bubbles: true, composed: true, detail: { n } }));
     const b = this._bands.find((x) => x.n === n);
     if (b) {
       this._ring.geometry.dispose();
@@ -732,7 +776,7 @@ class Shelf3D extends HTMLElement {
     if (m !== 'browse') {
       if (i !== this._focus) return { x: d < 0 ? -3.6 : 3.6, y: 0, z: -2.4, rx: 0, ry: 0, rz: 0, s: 0.9, o: 0 };
       if (m === 'focus') return { x: 0, y: 0, z: 0.55, rx: 0, ry: 0, rz: 0, s: 1.55, o: 1 };
-      return { x: -0.74, y: 0, z: 0.5, rx: 0, ry: 0.17, rz: 0, s: 1.18, o: 1 };
+      return this._zonePose('sleeve', AL) || { x: -0.74, y: 0, z: 0.5, rx: 0, ry: 0.17, rz: 0, s: 1.18, o: 1 };
     }
     if (this._layout === 'row') {
       return {
@@ -775,13 +819,16 @@ class Shelf3D extends HTMLElement {
   }
 
   _vinylTarget() {
-    if (this._mode === 'split') return { x: 0.74, z: 0.48, s: 0.48, o: 1 };
+    if (this._mode === 'split') {
+      const zone = this._zonePose('vinyl', R_OUT * 2);
+      return zone ? { x: zone.x, y: zone.y, z: zone.z, s: zone.s, o: 1 } : { x: 0.74, y: 0, z: 0.48, s: 0.48, o: 1 };
+    }
     // Si ya estaba afuera (volviendo de `split`), sigue visible y se guarda
     // deslizándose detrás de la funda, en vez de desaparecer de golpe.
     if (this._mode === 'focus' && (this._vcur.o > 0.02 || this._sleeveSettled())) {
-      return { x: 0, z: 0.46, s: 0.46, o: 1 };
+      return { x: 0, y: 0, z: 0.46, s: 0.46, o: 1 };
     }
-    return { x: 0, z: 0.2, s: 0.2, o: 0 };
+    return { x: 0, y: 0, z: 0.2, s: 0.2, o: 0 };
   }
 
   _dist() {
@@ -829,11 +876,13 @@ class Shelf3D extends HTMLElement {
           el.addEventListener('pointerenter', () => { clearTimeout(this._hoverOff); this._setHover(b.n); });
         }
       }
+      // La línea es la que une la etiqueta con su surco: sin etiqueta (hoy la
+      // lista de canciones va al costado) no tiene de dónde salir.
       const l = this._lines[i];
       if (l) {
         l.setAttribute('x1', lx); l.setAttribute('y1', ly);
         l.setAttribute('x2', dx); l.setAttribute('y2', dy);
-        l.setAttribute('opacity', on ? 0.5 : 0);
+        l.setAttribute('opacity', on && el ? 0.5 : 0);
       }
     });
   }
@@ -890,12 +939,12 @@ class Shelf3D extends HTMLElement {
     });
 
     const vt = this._vinylTarget(), vc = this._vcur;
-    vc.x += (vt.x - vc.x) * k; vc.z += (vt.z - vc.z) * k;
+    vc.x += (vt.x - vc.x) * k; vc.y += (vt.y - vc.y) * k; vc.z += (vt.z - vc.z) * k;
     vc.s += (vt.s - vc.s) * k; vc.o += (vt.o - vc.o) * k;
     // Lo mismo al cerrar: si se desvanecía de a poco, quedaba a la vista
     // cuando la funda se iba. Mientras no está afuera (`split`), se apaga ya.
-    if (vt.o === 0 && this._mode !== 'split') { vc.o = 0; vc.x = vt.x; vc.z = vt.z; vc.s = vt.s; }
-    this._vinyl.position.set(vc.x, Math.sin(t * 0.7 + 0.9) * 0.03 * calm, vc.z);
+    if (vt.o === 0 && this._mode !== 'split') { vc.o = 0; vc.x = vt.x; vc.y = vt.y; vc.z = vt.z; vc.s = vt.s; }
+    this._vinyl.position.set(vc.x, vc.y + Math.sin(t * 0.7 + 0.9) * 0.03 * calm, vc.z);
     this._vinyl.rotation.set(Math.sin(t * 0.46) * 0.018 * calm, Math.sin(t * 0.38) * 0.03 * calm, 0);
     this._vinyl.scale.setScalar(vc.s);
     this._vinyl.visible = vc.o > 0.02;
@@ -906,7 +955,25 @@ class Shelf3D extends HTMLElement {
     });
     this._sheen.rotation.z = t * 0.12;
     this._haloK += ((this._mode === 'split' ? 1 : 0) - this._haloK) * ease(5);
-    this._halo.material.opacity = this._haloK * vc.o;
+    this._halo.material.opacity = this._haloK * vc.o * HALO.stack;
+
+    /*
+     * El resplandor de la funda la sigue: se pone en su lugar, detrás de ella
+     * (un paso en la dirección en la que mira la cámara) y con el tamaño que
+     * le corresponde — el plano mide 2.9 y la funda AL, así que el 0.4 deja el
+     * mismo halo alrededor que tiene el disco.
+     */
+    const open = this._items[this._focus];
+    const sh = this._sleeveHalo;
+    if (open) {
+      const fwd = new THREE.Vector3();
+      this._camera.getWorldDirection(fwd);
+      sh.position.copy(open.g.position).addScaledVector(fwd, 0.35);
+      sh.rotation.copy(this._camera.rotation);
+      sh.scale.setScalar(open.cur.s * 0.4);
+      sh.material.opacity = this._haloK * open.cur.o * HALO.stack * 0.85;
+    } else sh.material.opacity = 0;
+    sh.visible = sh.material.opacity > 0.01;
 
     const kg = ease(9.5);
     const rm = this._ring.material;

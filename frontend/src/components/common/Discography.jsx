@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from './AlbumCard'
-import { EmptyState, SkeletonGrid } from './States'
+import TrackRow from './TrackRow'
+import { EmptyState, SkeletonGrid, SkeletonRows } from './States'
 import { IconArrowLeft, IconArrowRight } from './Icons'
 import { getAlbum } from '../../services/api'
 import { albumYear, trackDuration } from '../../services/dates'
@@ -25,6 +26,33 @@ function loadShelf() {
 function shelfHeight() {
   const desktop = window.innerWidth >= 768
   return Math.max(420, Math.min(window.innerHeight * (desktop ? 0.85 : 0.7), desktop ? 820 : 580))
+}
+
+/*
+ * Con el vinilo afuera, el panel se reparte en zonas — centro y ancho en
+ * fracciones del panel. La escena 3D pone la funda y el disco en las suyas
+ * (atributo `zones`) y el listado de canciones va apoyado sobre la que queda.
+ *
+ * En compu son tres columnas: funda, vinilo y canciones. En el teléfono no
+ * entran: arriba van la funda y el vinilo, y la lista abajo a todo el ancho —
+ * en media columna los títulos se cortaban a la tercera palabra.
+ */
+const ZONES = {
+  desktop: {
+    sleeve: { cx: 0.14, cy: 0.46, w: 0.2 },
+    vinyl: { cx: 0.39, cy: 0.47, w: 0.29 },
+    panel: { left: '55%', top: '8%', width: '41%', height: '76%' },
+  },
+  mobile: {
+    sleeve: { cx: 0.26, cy: 0.19, w: 0.3 },
+    vinyl: { cx: 0.7, cy: 0.2, w: 0.42 },
+    panel: { left: '4%', top: '40%', width: '92%', height: '56%' },
+  },
+}
+
+const zonesFor = (mobile) => {
+  const z = mobile ? ZONES.mobile : ZONES.desktop
+  return JSON.stringify({ sleeve: z.sleeve, vinyl: z.vinyl })
 }
 
 // Las tapas de la grilla, relativas al contenedor, en el orden en que están.
@@ -72,6 +100,9 @@ export default function Discography({ albums, ingesting, artistName }) {
   // El disco que está adelante mientras se recorre la pila (el elemento avisa
   // con `shelf-cursor`). `focus` es el que se abrió; pueden no coincidir.
   const [cursor, setCursor] = useState(0)
+  // El tema resaltado, sea por el surco o por el renglón de la lista.
+  const [hoverTrack, setHoverTrack] = useState(0)
+  const [mobile, setMobile] = useState(() => window.innerWidth < 768)
 
   const wrapRef = useRef(null)
   const shelfRef = useRef(null)
@@ -92,6 +123,7 @@ export default function Discography({ albums, ingesting, artistName }) {
     const onResize = () => {
       const h = shelfHeight()
       setBoxH(h)
+      setMobile(window.innerWidth < 768)
       if (view === 'stack' && !busy) setWrapH(h)
     }
     window.addEventListener('resize', onResize)
@@ -176,7 +208,8 @@ export default function Discography({ albums, ingesting, artistName }) {
     el.setAttribute('sel', String(focus))
     el.setAttribute('accent', '#c1592c')
     el.setAttribute('artist', artistName || '')
-  }, [albumsAttr, tracksAttr, mode, focus, artistName, showShelf])
+    el.setAttribute('zones', zonesFor(mobile))
+  }, [albumsAttr, tracksAttr, mode, focus, artistName, showShelf, mobile])
 
   useEffect(() => {
     const el = shelfRef.current
@@ -190,13 +223,16 @@ export default function Discography({ albums, ingesting, artistName }) {
       if (t) navigate(`/track/${t.id}`)
     }
     const onCursor = e => setCursor(e.detail.index)
+    const onHover = e => setHoverTrack(e.detail.n)
     el.addEventListener('shelf-mode', onMode)
     el.addEventListener('shelf-track', onTrack)
     el.addEventListener('shelf-cursor', onCursor)
+    el.addEventListener('shelf-hover', onHover)
     return () => {
       el.removeEventListener('shelf-mode', onMode)
       el.removeEventListener('shelf-track', onTrack)
       el.removeEventListener('shelf-cursor', onCursor)
+      el.removeEventListener('shelf-hover', onHover)
     }
   }, [tracks, navigate, showShelf])
 
@@ -337,24 +373,60 @@ export default function Discography({ albums, ingesting, artistName }) {
               className="absolute inset-x-0 top-0"
               style={{ height: boxH, visibility: shelfVisible ? 'visible' : 'hidden' }}
             >
-              <shelf-3d ref={shelfRef} style={{ position: 'absolute', inset: 0 }}>
-                {/* Las etiquetas de los surcos: el elemento las posiciona y las
-                    muestra cuando el mouse pasa por el surco de ese tema. */}
-                {mode === 'split' && tracks.map((t, i) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    data-shelf-track={i + 1}
-                    onClick={() => navigate(`/track/${t.id}`)}
-                    className="w-[170px] text-left leading-snug bg-rock-cardHover rounded-md px-3 py-2 shadow-card opacity-0"
-                  >
-                    <span className="block text-[13.5px] font-semibold text-rock-text">{t.title}</span>
-                    <span className="block font-mono text-[11px] text-gray-500 mt-0.5">
-                      {i + 1} · {trackDuration(t) || '—'}
-                    </span>
-                  </button>
-                ))}
-              </shelf-3d>
+              {/* Sin etiquetas sobre los surcos: con la lista al lado eran
+                  ruido, y en pantallas chicas costaba apuntarles. */}
+              <shelf-3d ref={shelfRef} style={{ position: 'absolute', inset: 0 }} />
+
+              {/*
+                La columna de canciones, apoyada sobre la zona que la escena 3D
+                deja libre (ver ZONES). El hover va en los dos sentidos: por acá
+                se ilumina el surco, y por el surco se ilumina el renglón.
+              */}
+              {mode === 'split' && (
+                <div
+                  className="absolute flex flex-col animate-fade-up"
+                  style={{ ...(mobile ? ZONES.mobile.panel : ZONES.desktop.panel), position: 'absolute' }}
+                  onMouseLeave={() => shelfRef.current?.setHover?.(0)}
+                >
+                  <div className="flex items-baseline gap-3 flex-wrap mb-2 pr-1">
+                    <h3 className="font-display text-[19px] sm:text-2xl leading-tight line-clamp-2">
+                      {current?.title}
+                    </h3>
+                    <Link
+                      to={`/album/${current?.id}`}
+                      className="text-[12.5px] text-gray-400 hover:text-rock-accent ml-auto whitespace-nowrap"
+                    >
+                      Ver la ficha →
+                    </Link>
+                  </div>
+                  <p className="kicker mb-3">
+                    {[year, KIND[current?.album_type], tracks.length ? `${tracks.length} temas` : null]
+                      .filter(Boolean).join(' · ')}
+                  </p>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
+                    {tracks.length === 0 ? (
+                      albumData?.ingestingTracks || !albumData ? (
+                        <SkeletonRows count={6} avatar={false} />
+                      ) : (
+                        <p className="text-[13.5px] text-gray-500">
+                          Este disco todavía no tiene las canciones cargadas.
+                        </p>
+                      )
+                    ) : (
+                      tracks.map((t, i) => (
+                        <TrackRow
+                          key={t.id}
+                          track={t}
+                          index={i}
+                          selected={hoverTrack === i + 1}
+                          onHover={() => shelfRef.current?.setHover?.(i + 1)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="absolute inset-0 pointer-events-none">
                 <button
@@ -375,8 +447,12 @@ export default function Discography({ albums, ingesting, artistName }) {
                   título) y aparece el link a la ficha.
                 */}
                 <div
+                  // Con el vinilo afuera esto se va: el nombre del disco y el
+                  // link a la ficha pasan a encabezar la lista de canciones.
                   className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 text-center px-2 pb-4 pt-14
-                              transition-opacity duration-300 ${shelfVisible ? 'opacity-100' : 'opacity-0'}`}
+                              transition-opacity duration-300 ${
+                    shelfVisible && mode !== 'split' ? 'opacity-100' : 'opacity-0'
+                  }`}
                   style={{ background: 'linear-gradient(to top, #100d0b 10%, rgba(16,13,11,0.85) 50%, rgba(16,13,11,0) 100%)' }}
                 >
                   {/*
