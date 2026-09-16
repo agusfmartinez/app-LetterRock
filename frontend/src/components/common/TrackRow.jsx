@@ -9,21 +9,24 @@ import { trackDuration } from '../../services/dates'
  * por un surco resalta este renglón y pasar por este renglón resalta el surco.
  * Por eso el hover no se resuelve en CSS — tiene que avisar hacia afuera.
  */
-export default function TrackRow({ track, index, selected, onHover }) {
+export default function TrackRow({ track, index, selected, onHover, onOpen }) {
   const navigate = useNavigate()
+  // `onOpen` es para la pila 3D, donde la canción se abre en la columna de al
+  // lado. Sin él, el clic navega a su página como siempre.
+  const open = () => (onOpen ? onOpen() : navigate(`/track/${track.id}`))
   const views = track.view_count
   const n = track.track_number ?? index + 1
 
   return (
     <div
-      onClick={() => navigate(`/track/${track.id}`)}
+      onClick={open}
       onMouseEnter={() => onHover?.(n)}
       role="button"
       tabIndex={0}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          navigate(`/track/${track.id}`)
+          open()
         }
       }}
       className={`flex items-center gap-4 px-3.5 h-[46px] rounded-[14px] cursor-pointer

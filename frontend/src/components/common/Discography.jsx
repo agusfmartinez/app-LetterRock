@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from './AlbumCard'
 import TrackRow from './TrackRow'
+import TrackPanel from './TrackPanel'
+import ArrowLink from './ArrowLink'
 import { EmptyState, SkeletonGrid, SkeletonRows } from './States'
 import { IconArrowLeft, IconArrowRight } from './Icons'
 import { getAlbum } from '../../services/api'
@@ -84,7 +86,6 @@ function measureCovers(wrap) {
  * volver atrás desde un disco te deje donde estabas.
  */
 export default function Discography({ albums, ingesting, artistName }) {
-  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const startStack = params.get('vista') === 'pila'
 
@@ -102,6 +103,8 @@ export default function Discography({ albums, ingesting, artistName }) {
   const [cursor, setCursor] = useState(0)
   // El tema resaltado, sea por el surco o por el renglón de la lista.
   const [hoverTrack, setHoverTrack] = useState(0)
+  // El tema abierto: su info reemplaza al listado en la misma columna.
+  const [openTrack, setOpenTrack] = useState(null)
   const [mobile, setMobile] = useState(() => window.innerWidth < 768)
 
   const wrapRef = useRef(null)
@@ -217,10 +220,13 @@ export default function Discography({ albums, ingesting, artistName }) {
     const onMode = e => {
       setMode(e.detail.mode)
       setFocus(e.detail.index)
+      // Cerrar el disco o volver a la pila cierra también la canción abierta.
+      if (e.detail.mode !== 'split') setOpenTrack(null)
     }
+    // Un clic en un surco abre esa canción al costado, igual que el renglón.
     const onTrack = e => {
       const t = tracks[e.detail.n - 1]
-      if (t) navigate(`/track/${t.id}`)
+      if (t) setOpenTrack(t.id)
     }
     const onCursor = e => setCursor(e.detail.index)
     const onHover = e => setHoverTrack(e.detail.n)
@@ -234,7 +240,7 @@ export default function Discography({ albums, ingesting, artistName }) {
       el.removeEventListener('shelf-cursor', onCursor)
       el.removeEventListener('shelf-hover', onHover)
     }
-  }, [tracks, navigate, showShelf])
+  }, [tracks, showShelf])
 
   /* grilla → pila */
   useEffect(() => {
@@ -282,6 +288,10 @@ export default function Discography({ albums, ingesting, artistName }) {
       clearTimeout(t2)
     }
   }, [phase])
+
+  // La canción abierta se busca en la lista del disco: si cambiaste de disco
+  // o todavía no llegaron los temas, no hay nada que mostrar.
+  const shownTrack = openTrack ? tracks.find(t => t.id === openTrack) : null
 
   const browsing = mode === 'browse'
   // Abajo va el disco de adelante mientras se recorre, y el abierto si hay uno.
@@ -388,16 +398,19 @@ export default function Discography({ albums, ingesting, artistName }) {
                   style={{ ...(mobile ? ZONES.mobile.panel : ZONES.desktop.panel), position: 'absolute' }}
                   onMouseLeave={() => shelfRef.current?.setHover?.(0)}
                 >
+                  {shownTrack ? (
+                    <TrackPanel
+                      track={shownTrack}
+                      artistName={artistName}
+                      onBack={() => setOpenTrack(null)}
+                    />
+                  ) : (
+                  <>
                   <div className="flex items-baseline gap-3 flex-wrap mb-2 pr-1">
                     <h3 className="font-display text-[19px] sm:text-2xl leading-tight line-clamp-2">
                       {current?.title}
                     </h3>
-                    <Link
-                      to={`/album/${current?.id}`}
-                      className="text-[12.5px] text-gray-400 hover:text-rock-accent ml-auto whitespace-nowrap"
-                    >
-                      Ver la ficha →
-                    </Link>
+                    <ArrowLink to={`/album/${current?.id}`} className="ml-auto">Ver la ficha</ArrowLink>
                   </div>
                   <p className="kicker mb-3">
                     {[year, KIND[current?.album_type], tracks.length ? `${tracks.length} temas` : null]
@@ -421,10 +434,13 @@ export default function Discography({ albums, ingesting, artistName }) {
                           index={i}
                           selected={hoverTrack === i + 1}
                           onHover={() => shelfRef.current?.setHover?.(i + 1)}
+                          onOpen={() => setOpenTrack(t.id)}
                         />
                       ))
                     )}
                   </div>
+                  </>
+                  )}
                 </div>
               )}
 
