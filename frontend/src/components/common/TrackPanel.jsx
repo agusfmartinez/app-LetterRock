@@ -12,14 +12,17 @@ import { useReviews } from '../../hooks/useReviews'
 /**
  * La canción elegida, en la misma columna donde estaba el listado.
  *
- * Es un resumen, no la ficha: lo que se escucha y se decide rápido — el
- * reproductor, las plataformas, guardar y las últimas opiniones. Escribir una
- * opinión, leerlas todas y la letra siguen en la página de la canción: son
- * textos largos, y esto vive dentro de la ficha del artista, que abajo ya
- * tiene sus propias opiniones.
+ * Dos lugares la usan:
+ * - La pila de la discografía: es un resumen — el reproductor, las
+ *   plataformas, guardar y las últimas dos opiniones — con un link a la ficha
+ *   del disco con el tema abierto, que es donde se escribe.
+ * - La ficha del disco (`inPage`): ahí ES la página de la canción. Muestra la
+ *   letra en lugar del resumen de opiniones, porque las opiniones completas,
+ *   con la caja para escribir, van abajo en la página.
  */
-export default function TrackPanel({ track, artistName, onBack }) {
-  const { reviews } = useReviews('track', track.id)
+export default function TrackPanel({ track, artistName, albumId, onBack, inPage = false }) {
+  // En la ficha las opiniones las trae la página: no se piden dos veces.
+  const { reviews } = useReviews('track', inPage ? undefined : track.id)
 
   // Escape vuelve al listado, igual que la flecha. En la pila, Escape ya cierra
   // el disco, así que acá se frena el evento para que no haga las dos cosas.
@@ -46,11 +49,13 @@ export default function TrackPanel({ track, artistName, onBack }) {
         >
           <IconArrowLeft size={14} /> Canciones
         </button>
-        <ArrowLink to={`/track/${track.id}`} className="ml-auto">Ver la canción</ArrowLink>
+        {!inPage && <ArrowLink to={`/album/${albumId || track.album_id}?tema=${track.id}`} className="ml-auto">Ver la canción</ArrowLink>}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
-        <h3 className="font-display text-[21px] sm:text-2xl leading-tight mb-1.5">{track.title}</h3>
+      <div className={inPage ? 'pt-3' : 'flex-1 min-h-0 overflow-y-auto pr-1 -mr-1'}>
+        <h3 className={`font-display leading-tight mb-1.5 ${inPage ? 'text-[26px] sm:text-3xl' : 'text-[21px] sm:text-2xl'}`}>
+          {track.title}
+        </h3>
         <p className="kicker mb-3">
           {[
             track.track_number ? `Pista ${track.track_number}` : null,
@@ -82,6 +87,17 @@ export default function TrackPanel({ track, artistName, onBack }) {
           }
         />
 
+        {inPage ? (
+          <div className="mt-7">
+            <p className="kicker mb-2.5">Letra</p>
+            <p className="text-[14.5px] leading-relaxed text-gray-300 mb-1.5">
+              Todavía no cargamos la letra de esta canción.
+            </p>
+            <p className="text-[13px] leading-relaxed text-gray-500">
+              Si la tenés a mano, vas a poder proponerla cuando abramos las ediciones de letra.
+            </p>
+          </div>
+        ) : (
         <div className="mt-5">
           <p className="kicker mb-2.5">
             {reviews.length === 0 ? 'Opiniones' : `Opiniones (${reviews.length})`}
@@ -102,6 +118,7 @@ export default function TrackPanel({ track, artistName, onBack }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   )

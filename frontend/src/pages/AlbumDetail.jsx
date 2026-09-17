@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumLineup from '../components/common/AlbumLineup'
 import TrackRow from '../components/common/TrackRow'
+import TrackPanel from '../components/common/TrackPanel'
 import Vinyl from '../components/common/Vinyl'
 import FavoriteButton from '../components/common/FavoriteButton'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
@@ -16,17 +17,34 @@ import { useReviews } from '../hooks/useReviews'
 
 const TYPE_LABEL = { album: 'Álbum', single: 'Sencillo', ep: 'EP' }
 
+const trackNum = (t, i) => t.track_number ?? i + 1
+
 export default function AlbumDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [params, setParams] = useSearchParams()
 
   /*
-   * Un solo `activeTrack` gobierna el vinilo y la lista: el surco resaltado y
-   * el renglón resaltado son el mismo dato. Vive acá, en el padre de los dos,
-   * y no dentro de ninguno — si viviera en el vinilo, la lista no podría
-   * moverlo.
+   * La canción no tiene página propia: es un modo de la ficha del disco. El
+   * tema abierto vive en la URL (`?tema=`) para que se pueda compartir y para
+   * que el "atrás" del navegador lo cierre.
    */
-  const [activeTrack, setActiveTrack] = useState(null)
+  const temaId = params.get('tema')
+
+  // El tema bajo el mouse, sea en un surco o en un renglón. Manda sobre el
+  // abierto para resaltar, pero no lo cambia.
+  const [hoverTrack, setHoverTrack] = useState(null)
+  // Hacia dónde se desliza la columna: adelante al abrir, atrás al volver.
+  const [dir, setDir] = useState('fwd')
+  const [mobile, setMobile] = useState(() => window.innerWidth < 768)
+  const columnRef = useRef(null)
+
+  useEffect(() => {
+    const onResize = () => setMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['album', id],
@@ -41,30 +59,83 @@ export default function AlbumDetail() {
   const tracks = data?.tracks || []
   const artist = data?.artist
   const links = data?.links || {}
-  const { reviews, createReview, deleteReview } = useReviews('album', id)
 
-  /* Las flechas mueven la selección con wrap: del último se vuelve al primero. */
+  const openIndex = temaId ? tracks.findIndex(t => t.id === temaId) : -1
+  const openTrack = openIndex >= 0 ? tracks[openIndex] : null
+  const openNum = openTrack ? trackNum(openTrack, openIndex) : null
+
+  // Las opiniones de abajo son las del tema abierto, o las del disco.
+  const { reviews, createReview, deleteReview } = useReviews(
+    temaId ? 'track' : 'album',
+    temaId || id
+  )
+
+  /*
+   * Abrir desde la lista suma una entrada al historial (el "atrás" vuelve a la
+   * lista). Pasar de tema con las flechas la reemplaza: si no, volver a la
+   * lista costaría un "atrás" por cada tema recorrido.
+   */
+  const openTema = useCallback((t, { replace = false } = {}) => {
+    setDir('fwd')
+    setParams(p => {
+      const next = new URLSearchParams(p)
+      next.set('tema', t.id)
+      return next
+    }, { replace, state: { tema: true } })
+  }, [setParams])
+
+  const closeTema = useCallback(() => {
+    setDir('back')
+    if (location.state?.tema) { navigate(-1); return }
+    setParams(p => {
+      const next = new URLSearchParams(p)
+      next.delete('tema')
+      return next
+    }, { replace: true })
+  }, [location.state, navigate, setParams])
+
+  // Un `?tema=` que no es de este disco no abre nada: se limpia.
+  useEffect(() => {
+    if (temaId && tracks.length > 0 && openIndex < 0 && !data?.ingestingTracks) {
+      setParams(p => {
+        const next = new URLSearchParams(p)
+        next.delete('tema')
+        return next
+      }, { replace: true })
+    }
+  }, [temaId, tracks.length, openIndex, data?.ingestingTracks, setParams])
+
+  /* Las flechas pasan de tema con wrap; sin tema abierto, abren el primero. */
   const step = useCallback((delta) => {
     if (tracks.length === 0) return
-    setActiveTrack(prev => {
-      const nums = tracks.map((t, i) => t.track_number ?? i + 1)
-      if (prev == null) return nums[0]
-      const at = nums.indexOf(prev)
-      return nums[(at + delta + nums.length) % nums.length]
-    })
-  }, [tracks])
+    if (openIndex < 0) { openTema(tracks[0]); return }
+    const next = tracks[(openIndex + delta + tracks.length) % tracks.length]
+    openTema(next, { replace: true })
+  }, [tracks, openIndex, openTema])
 
   useEffect(() => {
     const onKey = (e) => {
       // Con el foco en un campo, las flechas mueven el cursor, no el disco.
       const tag = document.activeElement?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return
       if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1) }
       if (e.key === 'ArrowRight') { e.preventDefault(); step(1) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [step])
+
+  // En celular la columna queda debajo del vinilo: si al cambiar quedó su
+  // principio fuera de la pantalla, se sube hasta ahí.
+  const lastTema = useRef(temaId)
+  useLayoutEffect(() => {
+    if (lastTema.current === temaId) return
+    lastTema.current = temaId
+    const el = columnRef.current
+    if (!el || !mobile) return
+    const top = el.getBoundingClientRect().top
+    if (top < 72) window.scrollTo({ top: window.scrollY + top - 80, behavior: 'smooth' })
+  }, [temaId, mobile])
 
   if (isLoading) return <div className="py-11"><SkeletonFicha lines={5} /></div>
   if (error) return <ErrorState title="No pudimos traer este disco." onRetry={refetch} />
@@ -73,7 +144,8 @@ export default function AlbumDetail() {
   const year = albumYear(album)
   const rating = album.avg_rating ? parseFloat(album.avg_rating).toFixed(1) : null
 
-  const nowPlaying = tracks.find((t, i) => (t.track_number ?? i + 1) === activeTrack)
+  const litNum = hoverTrack || openNum
+  const caption = tracks.find((t, i) => trackNum(t, i) === litNum)
 
   return (
     <div className="animate-fade-up">
@@ -146,26 +218,28 @@ export default function AlbumDetail() {
         </div>
       </div>
 
-      {/* — Vinilo + canciones — */}
-      <div className="flex flex-wrap gap-9 items-start mb-8">
+      {/* — Vinilo + canciones (o el tema abierto) — */}
+      <div className="flex flex-wrap gap-x-9 gap-y-4 items-start mb-8">
         {tracks.length > 0 && (
-          /* El vinilo se esconde en mobile: no se achica ni se rota, y a
-             ancho de teléfono no queda espacio para las etiquetas. */
-          <div className="hidden md:block flex-1 min-w-[320px]">
+          /* En escritorio el vinilo acompaña el scroll: la lista o la letra
+             pueden ser más largas que él. */
+          <div className="w-full md:w-auto md:flex-1 min-w-[280px] md:min-w-[320px] md:sticky md:top-20">
             <Vinyl
               tracks={tracks}
               album={{ ...album, artist_name: artist?.name }}
-              activeTrack={activeTrack}
-              onHover={setActiveTrack}
+              activeTrack={litNum}
+              spinning={!!openTrack}
+              height={mobile ? 300 : 520}
+              onHover={n => setHoverTrack(n || null)}
               onSelect={n => {
-                const t = tracks.find((x, i) => (x.track_number ?? i + 1) === n)
-                if (t) navigate(`/track/${t.id}`)
+                const i = tracks.findIndex((x, j) => trackNum(x, j) === n)
+                if (i >= 0) openTema(tracks[i], { replace: !!openTrack })
               }}
             />
 
             {/* Flechas fijas arriba a la izquierda: el título puede ocupar varias
                 líneas y no tiene que moverlas ni achicarlas. */}
-            <div className="flex items-start gap-3.5 mt-4 min-h-[84px]">
+            <div className="flex items-start gap-3.5 mt-2 md:mt-4 min-h-[84px]">
               <button onClick={() => step(-1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción anterior">
                 <IconArrowLeft size={16} />
               </button>
@@ -174,13 +248,13 @@ export default function AlbumDetail() {
               </button>
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-1.5 flex gap-3">
-                  <span>{nowPlaying ? `PISTA ${activeTrack}` : 'ELEGÍ UNA CANCIÓN'}</span>
-                  {nowPlaying && trackDuration(nowPlaying) && (
-                    <span className="ml-auto">{trackDuration(nowPlaying)}</span>
+                  <span>{caption ? `PISTA ${litNum}` : 'ELEGÍ UNA CANCIÓN'}</span>
+                  {caption && trackDuration(caption) && (
+                    <span className="ml-auto">{trackDuration(caption)}</span>
                   )}
                 </p>
                 <p className="font-display text-[22px] leading-[1.15] break-words">
-                  {nowPlaying?.title || '—'}
+                  {caption?.title || '—'}
                 </p>
               </div>
             </div>
@@ -188,39 +262,64 @@ export default function AlbumDetail() {
         )}
 
         <section
-          className="flex-1 min-w-[280px]"
-          onMouseLeave={() => setActiveTrack(null)}
+          ref={columnRef}
+          className="flex-1 min-w-[280px] overflow-x-clip"
+          onMouseLeave={() => setHoverTrack(null)}
         >
-          <h2 className="font-display text-3xl mb-3.5">Canciones</h2>
-
-          {data?.ingestingTracks ? (
-            <SkeletonRows count={6} avatar={false} />
-          ) : tracks.length === 0 ? (
-            <EmptyState title="Sin canciones">
-              Todavía no cargamos el tracklist de este disco.
-            </EmptyState>
-          ) : (
-            tracks.map((t, i) => (
-              <TrackRow
-                key={t.id}
-                track={t}
-                index={i}
-                selected={activeTrack === (t.track_number ?? i + 1)}
-                onHover={setActiveTrack}
+          {openTrack ? (
+            <div key={openTrack.id} className={dir === 'back' ? 'slide-from-left' : 'slide-from-right'}>
+              <TrackPanel
+                inPage
+                track={openTrack}
+                artistName={artist?.name}
+                albumId={id}
+                onBack={closeTema}
               />
-            ))
+            </div>
+          ) : (
+            <div key="list" className={dir === 'back' ? 'slide-from-left' : ''}>
+              <h2 className="font-display text-3xl mb-3.5">Canciones</h2>
+
+              {data?.ingestingTracks ? (
+                <SkeletonRows count={6} avatar={false} />
+              ) : tracks.length === 0 ? (
+                <EmptyState title="Sin canciones">
+                  Todavía no cargamos el tracklist de este disco.
+                </EmptyState>
+              ) : (
+                tracks.map((t, i) => (
+                  <TrackRow
+                    key={t.id}
+                    track={t}
+                    index={i}
+                    selected={hoverTrack === trackNum(t, i)}
+                    onHover={setHoverTrack}
+                    onOpen={() => openTema(t)}
+                  />
+                ))
+              )}
+            </div>
           )}
         </section>
       </div>
 
-      {/* — Opiniones — */}
+      {/* — Opiniones — del tema abierto o del disco. */}
       <section className="border-t border-rock-border pt-8">
-        <h2 className="font-display text-3xl mb-5">Lo que escribieron</h2>
+        <h2 className="font-display text-3xl mb-5">
+          {openTrack ? <>Opiniones sobre <span className="text-rock-accent">{openTrack.title}</span></> : 'Lo que escribieron'}
+        </h2>
         <div className="max-w-2xl space-y-4">
-          <ReviewForm entityType="album" entityId={id} onSubmit={createReview} />
+          <ReviewForm
+            key={temaId || id}
+            entityType={temaId ? 'track' : 'album'}
+            entityId={temaId || id}
+            onSubmit={createReview}
+          />
           {reviews.length === 0 ? (
             <EmptyState title="Todavía nadie escribió">
-              Sé el primero en decir algo sobre este disco.
+              {openTrack
+                ? 'Sé el primero en decir algo sobre esta canción.'
+                : 'Sé el primero en decir algo sobre este disco.'}
             </EmptyState>
           ) : (
             reviews.map(r => (

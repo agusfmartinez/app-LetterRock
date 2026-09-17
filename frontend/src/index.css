@@ -314,6 +314,13 @@
   }
 }
 
+/* Lista ↔ tema en la ficha del disco: entra desde el lado hacia el que se va
+   (adelante desde la derecha, volver desde la izquierda). */
+@keyframes slide-from-right { from { opacity: 0; transform: translateX(28px) } to { opacity: 1; transform: none } }
+@keyframes slide-from-left  { from { opacity: 0; transform: translateX(-28px) } to { opacity: 1; transform: none } }
+.slide-from-right { animation: slide-from-right .32s cubic-bezier(.2,.8,.25,1) both }
+.slide-from-left  { animation: slide-from-left .32s cubic-bezier(.2,.8,.25,1) both }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

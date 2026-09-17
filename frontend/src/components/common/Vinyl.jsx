@@ -23,7 +23,7 @@ function toTracksAttr(tracks) {
     .join(';')
 }
 
-export default function Vinyl({ tracks = [], album, activeTrack, onSelect, onHover, height = 520 }) {
+export default function Vinyl({ tracks = [], album, activeTrack, spinning = false, onSelect, onHover, height = 520 }) {
   const ref = useRef(null)
 
   /* La carga es diferida: three pesa, y sólo hace falta en esta pantalla. */
@@ -64,6 +64,14 @@ export default function Vinyl({ tracks = [], album, activeTrack, onSelect, onHov
   useEffect(() => {
     ref.current?.setAttribute('active', String(activeTrack ?? 0))
   }, [activeTrack])
+
+  // Gira mientras hay un tema abierto.
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (spinning) el.setAttribute('spinning', '')
+    else el.removeAttribute('spinning')
+  }, [spinning, tracks.length])
 
   if (tracks.length === 0) return null
 

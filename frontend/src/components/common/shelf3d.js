@@ -137,7 +137,7 @@ function sheenTexture() {
 }
 
 class Shelf3D extends HTMLElement {
-  static get observedAttributes() { return ['albums', 'tracks', 'zones', 'layout', 'mode', 'sel', 'accent', 'artist']; }
+  static get observedAttributes() { return ['albums', 'tracks', 'zones', 'layout', 'mode', 'sel', 'accent', 'artist', 'active']; }
 
   // El loop se vigila solo: si React mueve el nodo y el rAF queda cancelado,
   // el perro guardián lo vuelve a arrancar sin rearmar la escena.
@@ -183,6 +183,8 @@ class Shelf3D extends HTMLElement {
     this._focus = +(this._attr('sel') || 0);
     this._cursor = this._focus || 0;
     this._hover = 0;
+    // El tema abierto: su surco queda marcado aunque el mouse se vaya.
+    this._active = +this.getAttribute('active') || 0;
     this._bands = [];
     this._bandsFor = -1;
     this._camDist = 7;
@@ -233,6 +235,7 @@ class Shelf3D extends HTMLElement {
       this._mode = val;
       if (val === 'browse') this._setHover(0);
     }
+    if (name === 'active') { this._active = +val || 0; this._paintGroove(); }
     if (name === 'accent' || name === 'artist') { this._retexture(); this._bandsFor = -1; }
   }
 
@@ -603,6 +606,7 @@ class Shelf3D extends HTMLElement {
       return l;
     });
     this._setHover(0);
+    this._paintGroove();
   }
 
   _retexture() {
@@ -621,6 +625,13 @@ class Shelf3D extends HTMLElement {
     this._hover = n;
     // Para que la lista de canciones resalte el mismo tema que el surco.
     this.dispatchEvent(new CustomEvent('shelf-hover', { bubbles: true, composed: true, detail: { n } }));
+    this._paintGroove();
+  }
+
+  // Se ilumina el surco bajo el mouse; si no hay ninguno, el del tema abierto.
+  _paintGroove() {
+    if (!this._ring) return;
+    const n = this._hover || this._active;
     const b = this._bands.find((x) => x.n === n);
     if (b) {
       this._ring.geometry.dispose();

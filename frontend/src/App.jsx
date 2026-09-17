@@ -8,7 +8,7 @@ import Home from './pages/Home'
 import Search from './pages/Search'
 import ArtistDetail from './pages/ArtistDetail'
 import AlbumDetail from './pages/AlbumDetail'
-import TrackDetail from './pages/TrackDetail'
+import TrackRedirect from './pages/TrackRedirect'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
@@ -62,7 +62,7 @@ export default function App() {
             <Route path="/artist/:slug/vitrina" element={<ShelfRedirect />} />
             <Route path="/album/:id" element={<AlbumDetail />} />
             <Route path="/musico/:mbId" element={<MemberDetail />} />
-            <Route path="/track/:id" element={<TrackDetail />} />
+            <Route path="/track/:id" element={<TrackRedirect />} />
             <Route path="/colecciones" element={<Collections />} />
             <Route path="/coleccion/:slug" element={<CollectionDetail />} />
             {/* Editar dejó de ser cosa del panel: la ruta acompaña a la

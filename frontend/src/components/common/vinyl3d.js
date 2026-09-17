@@ -45,6 +45,19 @@ function grooveTexture(bs, accent, title, artist, year) {
     g.beginPath(); g.arc(C, C, px(r + 0.0008), 0, Math.PI * 2); g.stroke();
   }
 
+  // Un disco perfectamente concéntrico girando parece quieto. Un brillo
+  // desparejo, muy tenue, es lo que deja ver que da vueltas.
+  if (g.createConicGradient) {
+    const cone = g.createConicGradient(0.6, C, C);
+    [[0, 0], [0.08, 0.07], [0.2, 0], [0.55, 0], [0.63, 0.045], [0.74, 0], [1, 0]]
+      .forEach(([st, a]) => cone.addColorStop(st, `rgba(255,248,236,${a})`));
+    g.save();
+    g.beginPath(); g.arc(C, C, px(R_PLAY_OUT), 0, Math.PI * 2); g.arc(C, C, px(R_PLAY_IN), 0, Math.PI * 2, true);
+    g.clip('evenodd');
+    g.fillStyle = cone; g.fillRect(0, 0, S, S);
+    g.restore();
+  }
+
   // Separación lisa entre tracks, como en un disco real.
   bs.forEach((b) => {
     g.strokeStyle = `rgba(255,250,242,${VINYL.trackGap})`; g.lineWidth = 5;
@@ -89,7 +102,7 @@ function sheenTexture() {
 }
 
 class Vinyl3D extends HTMLElement {
-  static get observedAttributes() { return ['active', 'tracks', 'accent']; }
+  static get observedAttributes() { return ['active', 'tracks', 'accent', 'spinning']; }
 
   connectedCallback() {
     if (this._up) return;
@@ -109,6 +122,10 @@ class Vinyl3D extends HTMLElement {
     this._spin = 0;
     this._spinBoost = 0;
     this._targetArm = 0;
+    this._spinning = this.hasAttribute('spinning');
+    this._spinSpeed = 0;
+    this._labelAngle = 0;
+    this._last = performance.now();
     this._build();
     document.fonts.ready.then(() => this._retexture());
   }
@@ -130,6 +147,7 @@ class Vinyl3D extends HTMLElement {
       this._syncActive();
     }
     if (name === 'accent') this._retexture();
+    if (name === 'spinning') this._spinning = val != null && val !== 'false';
   }
 
   // Formato compacto sin escapes: "1|La rubia tarada|3:02;2|Kaya|4:12"
@@ -225,7 +243,8 @@ class Vinyl3D extends HTMLElement {
     sheen.name = 'sheen';
     sheen.rotation.x = -Math.PI / 2;
     sheen.position.y = 0.0105;
-    disc.add(sheen);
+    // El reflejo no gira: la luz está quieta aunque el disco dé vueltas.
+    scene.add(sheen);
     this._sheen = sheen;
 
     // Anillo de brillo del track activo — no gira con el disco.
@@ -242,6 +261,7 @@ class Vinyl3D extends HTMLElement {
     sello.rotation.x = -Math.PI / 2;
     sello.position.y = 0.0115;
     anchors.add(sello);
+    this._sello = sello;
 
 
     const glowMat = (op) => new THREE.MeshBasicMaterial({ color: new THREE.Color(this._accent()), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
@@ -498,7 +518,22 @@ class Vinyl3D extends HTMLElement {
   _loop = () => {
     this._raf = requestAnimationFrame(this._loop);
     this._resize();
-    this._disc.rotation.y = 0;
+    /*
+     * Con un tema abierto el disco gira (sentido horario visto de arriba) y el
+     * sello con él. Al parar, el sello termina de girar hasta quedar derecho:
+     * quieto tiene que leerse.
+     */
+    const now = performance.now(), dt = Math.min(0.05, (now - this._last) / 1000);
+    this._last = now;
+    this._spinSpeed += ((this._spinning ? 1.4 : 0) - this._spinSpeed) * Math.min(1, dt * 2.5);
+    if (this._spinning || this._spinSpeed > 0.25) {
+      this._labelAngle += this._spinSpeed * dt;
+    } else {
+      const rest = Math.ceil(this._labelAngle / (Math.PI * 2) - 0.02) * Math.PI * 2;
+      this._labelAngle += (rest - this._labelAngle) * Math.min(1, dt * 3);
+    }
+    this._disc.rotation.y = -this._labelAngle;
+    if (this._sello) this._sello.rotation.z = -this._labelAngle;
     const m = this._ring.material;
     m.opacity += ((this._ringTarget ?? 0) - m.opacity) * 0.12;
     this._edges.forEach((e) => { e.material.opacity += ((this._edgeTarget ?? 0) - e.material.opacity) * 0.12; });

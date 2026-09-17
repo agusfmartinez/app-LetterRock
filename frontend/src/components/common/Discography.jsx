@@ -225,6 +225,12 @@ export default function Discography({ albums, ingesting, artistName }) {
     el.setAttribute('zones', zonesFor(mobile))
   }, [albumsAttr, tracksAttr, mode, focus, artistName, showShelf, mobile])
 
+  // El surco del tema abierto queda marcado mientras se lee su info.
+  useEffect(() => {
+    const n = openTrack ? tracks.findIndex(t => t.id === openTrack) + 1 : 0
+    shelfRef.current?.setAttribute('active', String(n))
+  }, [openTrack, tracks, showShelf])
+
   useEffect(() => {
     const el = shelfRef.current
     if (!el) return
@@ -420,6 +426,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                     <TrackPanel
                       track={shownTrack}
                       artistName={artistName}
+                      albumId={current?.id}
                       onBack={() => setOpenTrack(null)}
                     />
                   ) : (
