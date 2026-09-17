@@ -29,7 +29,7 @@ const FOV = 30;
 
 // Ancho/alto de escena que la cámara tiene que abarcar en cada modo.
 const SPAN = {
-  stack: { w: 1.3, h: 1.9 },
+  stack: { w: 1.15, h: 1.7 },
   row: { w: 3.2, h: 1.35 },
   focus: { w: 2.4, h: 2.6 },
   split: { w: 3.3, h: 2.3 },
@@ -468,7 +468,7 @@ class Shelf3D extends HTMLElement {
     // tgtY más arriba que el centro de la pila: abajo va el nombre del disco
     // con las flechas, y los últimos de la pila, casi transparentes, pueden
     // quedar debajo.
-    return { dir: new THREE.Vector3(0.2, 0.28, 1).normalize(), tgtY: -0.25 };
+    return { dir: new THREE.Vector3(0.2, 0.28, 1).normalize(), tgtY: -0.2 };
   }
 
   _snapCamera() {

@@ -6,7 +6,7 @@ import TrackRow from './TrackRow'
 import TrackPanel from './TrackPanel'
 import ArrowLink from './ArrowLink'
 import { EmptyState, SkeletonGrid, SkeletonRows } from './States'
-import { IconArrowLeft, IconArrowRight } from './Icons'
+import { IconArrowLeft, IconArrowRight, IconGrid, IconStack } from './Icons'
 import { getAlbum } from '../../services/api'
 import { albumYear, trackDuration } from '../../services/dates'
 
@@ -110,6 +110,17 @@ export default function Discography({ albums, ingesting, artistName }) {
   const wrapRef = useRef(null)
   const shelfRef = useRef(null)
   const rectsRef = useRef([])
+
+  const hasAlbums = albums.some(a => a.album_type === 'album')
+  const hasSingles = albums.some(a => a.album_type === 'single')
+
+  // Si el artista tiene de un solo tipo, se muestra ese: arrancar en "Álbumes"
+  // con un artista que sólo sacó sencillos dejaba la sección vacía, y sin el
+  // switch no habría cómo llegar a los sencillos.
+  useEffect(() => {
+    if (filter === 'album' && !hasAlbums && hasSingles) setFilter('single')
+    if (filter === 'single' && !hasSingles && hasAlbums) setFilter('album')
+  }, [filter, hasAlbums, hasSingles])
 
   const filtered = useMemo(() => albums.filter(a => a.album_type === filter), [albums, filter])
   const current = filtered[focus] || filtered[0]
@@ -302,10 +313,36 @@ export default function Discography({ albums, ingesting, artistName }) {
 
   return (
     <section className="mb-16">
-      <div className="flex items-baseline gap-4 flex-wrap mb-3">
+      <div className="flex items-center gap-3 flex-wrap mb-3">
         <h2 className="font-display text-3xl">Discografía</h2>
-        <div className="flex gap-2.5 flex-wrap ml-auto">
+
+        {/* La vista, pegada al título y con iconos: es un modo de ver la
+            sección, no un filtro de qué discos entran. */}
+        {filtered.length > 0 && !ingesting && (
           <div className="seg">
+            {[
+              { value: 'grid', label: 'Ver en grilla', Icon: IconGrid, go: toGrid },
+              { value: 'stack', label: 'Ver en pila 3D', Icon: IconStack, go: toStack },
+            ].map(({ value, label, Icon, go }) => (
+              <label key={value} className="seg-opt !px-3" title={label}>
+                <input
+                  type="radio"
+                  name="vista-disco"
+                  checked={view === value}
+                  onChange={go}
+                  disabled={busy}
+                  aria-label={label}
+                />
+                <Icon size={17} />
+              </label>
+            ))}
+          </div>
+        )}
+
+        {/* Sólo si hay de los dos: con un solo tipo, una de las opciones
+            mostraría siempre la sección vacía. */}
+        {hasAlbums && hasSingles && (
+          <div className="seg ml-auto">
             {[
               { value: 'album', label: 'Álbumes' },
               { value: 'single', label: 'Sencillos y EP' },
@@ -322,26 +359,7 @@ export default function Discography({ albums, ingesting, artistName }) {
               </label>
             ))}
           </div>
-          {filtered.length > 0 && !ingesting && (
-            <div className="seg">
-              {[
-                { value: 'grid', label: 'Grilla', go: toGrid },
-                { value: 'stack', label: 'Pila', go: toStack },
-              ].map(({ value, label, go }) => (
-                <label key={value} className="seg-opt">
-                  <input
-                    type="radio"
-                    name="vista-disco"
-                    checked={view === value}
-                    onChange={go}
-                    disabled={busy}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {ingesting ? (
@@ -465,7 +483,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                 <div
                   // Con el vinilo afuera esto se va: el nombre del disco y el
                   // link a la ficha pasan a encabezar la lista de canciones.
-                  className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 text-center px-2 pb-4 pt-14
+                  className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 text-center px-2 pb-12 sm:pb-16 pt-14
                               transition-opacity duration-300 ${
                     shelfVisible && mode !== 'split' ? 'opacity-100' : 'opacity-0'
                   }`}

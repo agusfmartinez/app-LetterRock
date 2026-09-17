@@ -140,6 +140,25 @@ export const IconMenu = (p) => (
   </Svg>
 )
 
+/* Discografía en grilla: cuatro tapas. */
+export const IconGrid = (p) => (
+  <Svg {...p}>
+    <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+  </Svg>
+)
+
+/* Discografía en pila: una funda adelante y los bordes de las de atrás. */
+export const IconStack = (p) => (
+  <Svg {...p}>
+    <rect x="5" y="9" width="14" height="11" rx="2" />
+    <path d="M7 5.5h10" />
+    <path d="M6 7.5h12" />
+  </Svg>
+)
+
 /*
  * El vinilo de la marca. No es un icono de trazo: es un disco, y se dibuja
  * con gradientes para que tenga surcos de verdad. `spin` lo hace girar — se
