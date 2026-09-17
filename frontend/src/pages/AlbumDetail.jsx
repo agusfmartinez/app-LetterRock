@@ -9,7 +9,7 @@ import PlatformBadges, { youtubeMusicSearch } from '../components/common/Platfor
 import ReviewCard from '../components/common/ReviewCard'
 import ReviewForm from '../components/forms/ReviewForm'
 import { EmptyState, ErrorState, NotFoundLine, SkeletonFicha, SkeletonRows } from '../components/common/States'
-import { IconArrowLeft } from '../components/common/Icons'
+import { IconArrowLeft, IconArrowRight } from '../components/common/Icons'
 import { getAlbum } from '../services/api'
 import { albumYear, trackDuration } from '../services/dates'
 import { useReviews } from '../hooks/useReviews'
@@ -72,14 +72,6 @@ export default function AlbumDetail() {
 
   const year = albumYear(album)
   const rating = album.avg_rating ? parseFloat(album.avg_rating).toFixed(1) : null
-
-  /* Los lados son una convención del vinilo, no un dato: la mitad de arriba es
-     el lado A. Con menos de seis canciones no se parte — un EP no tiene lados. */
-  const split = tracks.length >= 6 ? Math.ceil(tracks.length / 2) : tracks.length
-  const sides = [
-    { label: 'Lado A', items: tracks.slice(0, split) },
-    { label: 'Lado B', items: tracks.slice(split) },
-  ].filter(s => s.items.length > 0)
 
   const nowPlaying = tracks.find((t, i) => (t.track_number ?? i + 1) === activeTrack)
 
@@ -171,22 +163,26 @@ export default function AlbumDetail() {
               }}
             />
 
-            <div className="flex items-center gap-3.5 mt-4">
-              <button onClick={() => step(-1)} className="btn btn-secondary btn-icon" aria-label="Canción anterior">←</button>
-              <button onClick={() => step(1)} className="btn btn-secondary btn-icon" aria-label="Canción siguiente">→</button>
-              <div className="min-w-0">
-                <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-1">
-                  {nowPlaying ? `PISTA ${activeTrack}` : 'ELEGÍ UNA CANCIÓN'}
+            {/* Flechas fijas arriba a la izquierda: el título puede ocupar varias
+                líneas y no tiene que moverlas ni achicarlas. */}
+            <div className="flex items-start gap-3.5 mt-4 min-h-[84px]">
+              <button onClick={() => step(-1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción anterior">
+                <IconArrowLeft size={16} />
+              </button>
+              <button onClick={() => step(1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción siguiente">
+                <IconArrowRight size={16} />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-1.5 flex gap-3">
+                  <span>{nowPlaying ? `PISTA ${activeTrack}` : 'ELEGÍ UNA CANCIÓN'}</span>
+                  {nowPlaying && trackDuration(nowPlaying) && (
+                    <span className="ml-auto">{trackDuration(nowPlaying)}</span>
+                  )}
                 </p>
-                <p className="font-display text-[22px] leading-none truncate">
+                <p className="font-display text-[22px] leading-[1.15] break-words">
                   {nowPlaying?.title || '—'}
                 </p>
               </div>
-              {nowPlaying && (
-                <span className="ml-auto font-mono text-[12.5px] text-gray-500">
-                  {trackDuration(nowPlaying) || ''}
-                </span>
-              )}
             </div>
           </div>
         )}
@@ -195,12 +191,7 @@ export default function AlbumDetail() {
           className="flex-1 min-w-[280px]"
           onMouseLeave={() => setActiveTrack(null)}
         >
-          <div className="flex items-baseline gap-3.5 mb-3.5">
-            <h2 className="font-display text-3xl">Canciones</h2>
-            <span className="text-[12.5px] text-gray-500 hidden md:inline">
-              pasá por el vinilo o por la lista
-            </span>
-          </div>
+          <h2 className="font-display text-3xl mb-3.5">Canciones</h2>
 
           {data?.ingestingTracks ? (
             <SkeletonRows count={6} avatar={false} />
@@ -209,26 +200,14 @@ export default function AlbumDetail() {
               Todavía no cargamos el tracklist de este disco.
             </EmptyState>
           ) : (
-            sides.map(side => (
-              <div key={side.label}>
-                {sides.length > 1 && (
-                  <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 h-8 flex items-end pb-1.5">
-                    {side.label.toUpperCase()}
-                  </p>
-                )}
-                {side.items.map((t, i) => {
-                  const n = t.track_number ?? tracks.indexOf(t) + 1
-                  return (
-                    <TrackRow
-                      key={t.id}
-                      track={t}
-                      index={tracks.indexOf(t)}
-                      selected={activeTrack === n}
-                      onHover={setActiveTrack}
-                    />
-                  )
-                })}
-              </div>
+            tracks.map((t, i) => (
+              <TrackRow
+                key={t.id}
+                track={t}
+                index={i}
+                selected={activeTrack === (t.track_number ?? i + 1)}
+                onHover={setActiveTrack}
+              />
             ))
           )}
         </section>
@@ -237,21 +216,17 @@ export default function AlbumDetail() {
       {/* — Opiniones — */}
       <section className="border-t border-rock-border pt-8">
         <h2 className="font-display text-3xl mb-5">Lo que escribieron</h2>
-        <div className="flex flex-wrap gap-8 items-start">
-          <div className="flex-1 min-w-[280px] max-w-sm">
-            <ReviewForm entityType="album" entityId={id} onSubmit={createReview} />
-          </div>
-          <div className="flex-1 min-w-[300px] space-y-4">
-            {reviews.length === 0 ? (
-              <EmptyState title="Todavía nadie escribió">
-                Sé el primero en decir algo sobre este disco.
-              </EmptyState>
-            ) : (
-              reviews.map(r => (
-                <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
-              ))
-            )}
-          </div>
+        <div className="max-w-2xl space-y-4">
+          <ReviewForm entityType="album" entityId={id} onSubmit={createReview} />
+          {reviews.length === 0 ? (
+            <EmptyState title="Todavía nadie escribió">
+              Sé el primero en decir algo sobre este disco.
+            </EmptyState>
+          ) : (
+            reviews.map(r => (
+              <ReviewCard key={r.id} review={r} onDelete={() => deleteReview(r.id)} />
+            ))
+          )}
         </div>
       </section>
     </div>

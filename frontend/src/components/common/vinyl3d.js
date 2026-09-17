@@ -358,6 +358,8 @@ class Vinyl3D extends HTMLElement {
       const a = anchorAngle(i, this._bands.length);
       dot.position.set(Math.cos(a) * b.rMid, 0.02, -Math.sin(a) * b.rMid);
       dot.userData = { n: b.n, angle: a, r: b.rMid };
+      // Sin etiquetas HTML el punto no señala nada: queda sólo como ancla.
+      dot.visible = false;
       this._anchors.add(dot);
       return dot;
     });
@@ -489,7 +491,7 @@ class Vinyl3D extends HTMLElement {
       const l = this._lines[i];
       l.setAttribute('x1', cx); l.setAttribute('y1', ly);
       l.setAttribute('x2', dx); l.setAttribute('y2', dy);
-      l.setAttribute('opacity', show ? (n === this._active ? 0.8 : 0.45) : 0);
+      l.setAttribute('opacity', el && show ? (n === this._active ? 0.8 : 0.45) : 0);
     });
   }
 
