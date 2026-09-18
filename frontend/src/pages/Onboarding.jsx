@@ -147,7 +147,7 @@ function PickPeople({ onDone, onBack }) {
         ) : suggestions.length === 0 ? (
           <EmptyState
             title="Todavía no hay coincidencias"
-            action={<Link to="/usuarios" className="btn btn-secondary">Ver toda la gente</Link>}
+            action={<Link to="/search" className="btn btn-secondary">Ver toda la gente</Link>}
           >
             La comunidad es chica y nadie comparte tus bandas todavía.
           </EmptyState>

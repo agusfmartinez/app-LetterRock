@@ -35,9 +35,6 @@ export default function Navbar() {
           {/* Al índice y no a una colección con el slug escrito acá: con dos
               colecciones cargadas, a la segunda no se llegaba desde ningún lado. */}
           <NavLink to="/colecciones" className={link}>Colecciones</NavLink>
-          {/* Sólo con sesión: sin cuenta no se puede seguir a nadie, así que el
-              directorio no lleva a ninguna acción. */}
-          {user && <NavLink to="/usuarios" className={link}>Gente</NavLink>}
           {isEditor && <NavLink to="/admin/catalogo" className={link}>Catálogo</NavLink>}
           {isAdmin && <NavLink to="/admin/users" className={link}>Panel</NavLink>}
         </nav>

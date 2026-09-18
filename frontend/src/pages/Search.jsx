@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ArtistCard from '../components/common/ArtistCard'
 import FollowButton from '../components/common/FollowButton'
@@ -13,7 +13,7 @@ import { useAuthStore } from '../store/authStore'
  * Se busca junto con las bandas y no en otra pantalla porque el que busca
  * "agustin" no sabe de antemano si va a encontrar una banda o una persona, y
  * obligarlo a elegir el buscador correcto antes de buscar es pedirle la
- * respuesta para poder preguntar.
+ * respuesta para poder preguntar. Por eso ya no hay página de Gente aparte.
  */
 function UserResult({ user }) {
   return (
@@ -78,6 +78,26 @@ export default function Search() {
     }
   }
 
+  /*
+   * Sin búsqueda, los últimos en sumarse. Era lo que mostraba la página de
+   * Gente, que ya no existe: sin esto, a alguien sólo se llegaba sabiendo su
+   * nombre de antemano o cruzándoselo en el feed.
+   */
+  const [newcomers, setNewcomers] = useState([])
+  useEffect(() => {
+    if (searched) return
+    let alive = true
+    supabase
+      .from('users')
+      .select('id, username, avatar_url, bio')
+      .order('created_at', { ascending: false })
+      .limit(12)
+      .then(({ data }) => {
+        if (alive) setNewcomers((data || []).filter(u => u.id !== sessionUser?.id))
+      })
+    return () => { alive = false }
+  }, [searched, sessionUser?.id])
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (query.trim()) run(query.trim())
@@ -119,6 +139,21 @@ export default function Search() {
 
       {loading && <SkeletonGrid count={6} min={140} />}
 
+      {/* Primero las bandas: es un archivo de rock, y quien busca casi siempre
+          viene por una banda. La gente va abajo, en la misma pantalla. */}
+      {results.length > 0 && (
+        <section className="mb-12">
+          <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">
+            BANDAS Y ARTISTAS · {results.length} {results.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
+          </p>
+          <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))' }}>
+            {results.map(a => (
+              <ArtistCard key={a.id || a.external_mb_id} artist={a} variant="circle" />
+            ))}
+          </div>
+        </section>
+      )}
+
       {users.length > 0 && (
         <section className="mb-12 max-w-[620px]">
           <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">
@@ -130,15 +165,13 @@ export default function Search() {
         </section>
       )}
 
-      {results.length > 0 && (
-        <section className="mt-12">
-          <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-4">
-            BANDAS Y ARTISTAS · {results.length} {results.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
+      {!searched && newcomers.length > 0 && (
+        <section className="mb-12 max-w-[620px]">
+          <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">
+            ÚLTIMOS EN SUMARSE
           </p>
-          <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))' }}>
-            {results.map(a => (
-              <ArtistCard key={a.id || a.external_mb_id} artist={a} variant="circle" />
-            ))}
+          <div className="flex flex-col gap-2.5">
+            {newcomers.map(u => <UserResult key={u.id} user={u} />)}
           </div>
         </section>
       )}

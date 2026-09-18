@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { IconHome, IconLayers, IconSearch, IconUser, IconUsers } from './Icons'
+import { IconHome, IconLayers, IconSearch, IconUser } from './Icons'
 
 /*
  * La barra de solapas de abajo, que en mobile reemplaza a la hamburguesa. Es
@@ -17,15 +17,13 @@ export default function MobileTabBar() {
   /*
    * La maqueta pide Home · Bandas · Colecciones · Buscar · Perfil, pero en el
    * repo "bandas" no tiene índice propio: el catálogo se recorre desde la
-   * búsqueda. Poner dos solapas al mismo lugar sería mentir sobre que hay dos
-   * destinos, así que ese lugar lo ocupa Gente, que sí existe y en el header
-   * de escritorio también está.
+   * búsqueda. Gente tampoco: buscar personas es parte del mismo buscador que
+   * las bandas. Quedan cuatro solapas antes que dos que van al mismo lado.
    */
   const tabs = [
     { to: '/', label: 'Home', Icon: IconHome, end: true },
     { to: '/search', label: 'Buscar', Icon: IconSearch },
     { to: '/colecciones', label: 'Colecciones', Icon: IconLayers },
-    { to: '/usuarios', label: 'Gente', Icon: IconUsers },
     {
       to: user ? `/user/${user.username}` : '/auth/login',
       label: 'Perfil',

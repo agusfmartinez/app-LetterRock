@@ -137,7 +137,7 @@ export default function Home() {
         scoped && noFollows ? (
           <EmptyState
             title="Todavía no seguís a nadie"
-            action={<Link to="/usuarios" className="btn btn-secondary">Buscar gente</Link>}
+            action={<Link to="/search" className="btn btn-secondary">Buscar gente</Link>}
           >
             Seguí gente para ver acá qué está escuchando.
           </EmptyState>
