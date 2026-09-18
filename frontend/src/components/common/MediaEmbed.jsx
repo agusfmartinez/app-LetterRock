@@ -28,6 +28,38 @@ function writePreference(value) {
 }
 
 /**
+ * El embed, con su lugar ya ocupado mientras baja.
+ *
+ * Los dos reproductores tardan unos cuantos milisegundos en aparecer, y hasta
+ * entonces el iframe es un hueco transparente: al cambiar de canción el panel
+ * quedaba vacío. El armazón va debajo y se apaga cuando el iframe avisa que
+ * cargó. La `key` con el `src` lo enciende de nuevo en cada tema.
+ */
+function Frame({ src, title, height, allow, allowFullScreen = false, className = '' }) {
+  const [loaded, setLoaded] = useState(false)
+
+  return (
+    <div className="relative w-full h-full">
+      {!loaded && <span className="skeleton absolute inset-0 rounded-xl" aria-hidden="true" />}
+      <iframe
+        title={title}
+        src={src}
+        width="100%"
+        height={height}
+        frameBorder="0"
+        loading="lazy"
+        allow={allow}
+        allowFullScreen={allowFullScreen}
+        onLoad={() => setLoaded(true)}
+        className={`relative rounded-xl transition-opacity duration-200 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        } ${className}`}
+      />
+    </div>
+  )
+}
+
+/**
  * Reproductor de la plataforma que elija quien mira.
  *
  * Ninguno de los dos embeds se puede modificar por dentro: son la UI de cada
@@ -92,34 +124,31 @@ export default function MediaEmbed({ spotify, youtube, compact = false, classNam
       )}
 
       {provider === 'spotify' && (
-        <iframe
-          title="Reproductor de Spotify"
-          src={`https://open.spotify.com/embed/${spotify.type || 'album'}/${spotify.id}?utm_source=generator&theme=0`}
-          width="100%"
-          height={compact ? 152 : 352}
-          frameBorder="0"
-          loading="lazy"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          className="rounded-xl"
-        />
+        <div style={{ height: compact ? 152 : 352 }}>
+          <Frame
+            key={spotify.id}
+            title="Reproductor de Spotify"
+            src={`https://open.spotify.com/embed/${spotify.type || 'album'}/${spotify.id}?utm_source=generator&theme=0`}
+            height={compact ? 152 : 352}
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          />
+        </div>
       )}
 
       {provider === 'youtube' && (
         <div className="aspect-video w-full">
-          <iframe
+          <Frame
+            key={youtube.listId || youtube.videoId}
             title="Reproductor de YouTube"
             src={
               youtube.listId
                 ? `https://www.youtube.com/embed/videoseries?list=${youtube.listId}&rel=0`
                 : `https://www.youtube.com/embed/${youtube.videoId}?rel=0`
             }
-            width="100%"
             height="100%"
-            frameBorder="0"
-            loading="lazy"
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            className="rounded-xl w-full h-full"
+            className="w-full h-full"
           />
         </div>
       )}
