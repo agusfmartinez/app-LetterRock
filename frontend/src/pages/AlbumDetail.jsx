@@ -328,7 +328,7 @@ export default function AlbumDetail() {
       {/* — Opiniones — del tema abierto o del disco. */}
       <section className="border-t border-rock-border pt-8">
         <h2 className="font-display text-3xl mb-5">
-          {openTrack ? <>Opiniones sobre <span className="text-rock-accent">{openTrack.title}</span></> : 'Lo que escribieron'}
+          Opiniones{openTrack ? <> sobre <span className="text-rock-accent">{openTrack.title}</span></> : ''}
         </h2>
         <div className="max-w-2xl space-y-4">
           <ReviewForm

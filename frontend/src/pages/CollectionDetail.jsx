@@ -284,7 +284,7 @@ export default function CollectionDetail() {
           se lee —y por lo tanto lo que se opina— está adentro de cada una. */}
       {!isTimeline && (
         <section className="max-w-2xl mt-12">
-          <h2 className="font-display text-3xl mb-5">Lo que escribieron</h2>
+          <h2 className="font-display text-3xl mb-5">Opiniones</h2>
           <div className="space-y-4">
             <ReviewForm entityType="collection" entityId={collection.id} onSubmit={createReview} />
             {reviews.length > 0 ? (
