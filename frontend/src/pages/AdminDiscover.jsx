@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
 import AdminLayout from '../components/common/AdminLayout'
-import { IconArrowLeft } from '../components/common/Icons'
 import { useInvalidateCatalog } from '../hooks/useCatalogAdmin'
 import { discoverArtists, saveDiscovered } from '../services/api'
 import ArrowLink from '../components/common/ArrowLink'
@@ -178,12 +176,7 @@ export default function AdminDiscover() {
         title="Panel"
         lead="Buscar en MusicBrainz por nombre, por disco o por período. Lo que agregues trae su discografía de Spotify en segundo plano."
       >
-        <Link
-          to="/admin/catalogo"
-          className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent mb-5"
-        >
-          <IconArrowLeft size={14} /> Catálogo
-        </Link>
+        <ArrowLink back to="/admin/catalogo" className="mb-5">Catálogo</ArrowLink>
 
         <form onSubmit={submit} className="card space-y-3">
           <label className="field block">

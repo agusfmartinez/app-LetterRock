@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import AlbumLineup from '../components/common/AlbumLineup'
 import TrackRow from '../components/common/TrackRow'
 import TrackPanel from '../components/common/TrackPanel'
+import ArrowLink from '../components/common/ArrowLink'
 import Vinyl from '../components/common/Vinyl'
 import FavoriteButton from '../components/common/FavoriteButton'
 import PlatformBadges, { youtubeMusicSearch } from '../components/common/PlatformBadges'
@@ -152,12 +153,7 @@ export default function AlbumDetail() {
       {/* "Volver" va a la banda, no a history.back(): quien llegó por un link
           directo también tiene que poder subir un nivel. */}
       {artist && (
-        <Link
-          to={`/artist/${artist.slug}`}
-          className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent pt-4"
-        >
-          <IconArrowLeft size={14} /> {artist.name}
-        </Link>
+        <ArrowLink back to={`/artist/${artist.slug}`} className="mt-4">{artist.name}</ArrowLink>
       )}
 
       {/* — Ficha — */}

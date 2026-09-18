@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { IconArrowRight, IconExternal } from './Icons'
+import { IconArrowLeft, IconArrowRight, IconExternal } from './Icons'
 
 /**
  * "Ver todas", "Ver en MusicBrainz" y compañía.
@@ -10,8 +10,11 @@ import { IconArrowRight, IconExternal } from './Icons'
  *
  * `href` en vez de `to` = sale del sitio: abre en otra pestaña y lleva la
  * flecha en diagonal, que es la convención para eso.
+ *
+ * `back` es la misma píldora para subir un nivel ("← Almendra"): la flecha va
+ * adelante y apunta al otro lado.
  */
-export default function ArrowLink({ to, href, children, className = '', ...rest }) {
+export default function ArrowLink({ to, href, children, back = false, className = '', ...rest }) {
   const cls = `btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] gap-1.5 flex-none ${className}`
 
   if (href) {
@@ -25,6 +28,15 @@ export default function ArrowLink({ to, href, children, className = '', ...rest 
 
   // `rest` deja pasar `target="_blank"`: el panel abre las páginas públicas en
   // otra pestaña para no perder lo que se está editando.
+  if (back) {
+    return (
+      <Link to={to} className={cls} {...rest}>
+        <IconArrowLeft size={13} />
+        {children}
+      </Link>
+    )
+  }
+
   return (
     <Link to={to} className={cls} {...rest}>
       {children}

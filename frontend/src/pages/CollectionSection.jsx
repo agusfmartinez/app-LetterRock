@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ArrowLink from '../components/common/ArrowLink'
 import FavoriteButton from '../components/common/FavoriteButton'
 import RatingStars from '../components/common/RatingStars'
 import PlaylistPanel from '../components/common/PlaylistPanel'
@@ -8,7 +9,6 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
 import { useReviews } from '../hooks/useReviews'
 import { EmptyState, NotFoundLine, SkeletonRows } from '../components/common/States'
-import { IconArrowLeft } from '../components/common/Icons'
 import YearRail from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
@@ -121,12 +121,7 @@ export default function CollectionSection() {
 
   return (
     <div className="animate-fade-up">
-      <Link
-        to={`/coleccion/${collection.slug}`}
-        className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent pt-4"
-      >
-        <IconArrowLeft size={14} /> {collection.title}
-      </Link>
+      <ArrowLink back to={`/coleccion/${collection.slug}`} className="mt-4">{collection.title}</ArrowLink>
 
       {/* La misma portada que identifica a la época en la tarjeta de la
           colección. Sin esto sólo se veía en la grilla de la que venís. */}

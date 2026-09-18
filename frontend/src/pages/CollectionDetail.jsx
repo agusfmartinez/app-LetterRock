@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ArrowLink from '../components/common/ArrowLink'
 import FavoriteButton from '../components/common/FavoriteButton'
 import RatingStars from '../components/common/RatingStars'
 import PlaylistPanel from '../components/common/PlaylistPanel'
@@ -7,7 +8,7 @@ import ReviewCard from '../components/common/ReviewCard'
 import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
 import { EmptyState, NotFoundLine, SkeletonRows } from '../components/common/States'
-import { IconArrowLeft, IconChevronRight } from '../components/common/Icons'
+import { IconChevronRight } from '../components/common/Icons'
 import { useReviews } from '../hooks/useReviews'
 import { useBandMembersMany } from '../hooks/useArtistMembers'
 import { useCollection } from '../hooks/useCollections'
@@ -147,12 +148,7 @@ export default function CollectionDetail() {
 
   return (
     <div className="animate-fade-up">
-      <Link
-        to="/colecciones"
-        className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent pt-4"
-      >
-        <IconArrowLeft size={14} /> Colecciones
-      </Link>
+      <ArrowLink back to="/colecciones" className="mt-4">Colecciones</ArrowLink>
 
       {/* La portada abre la página con el título encima. Es el único lugar
           donde se ve: la de las épocas vive en su fila, más abajo. */}

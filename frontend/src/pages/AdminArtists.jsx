@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import RequireEditor from '../components/common/RequireEditor'
 import AdminLayout from '../components/common/AdminLayout'
 import { EmptyState, SkeletonRows } from '../components/common/States'
-import { IconArrowLeft } from '../components/common/Icons'
 import ArrowLink from '../components/common/ArrowLink'
 import {
   ARTISTS_PAGE_SIZE,
@@ -116,12 +115,7 @@ export default function AdminArtists({ hidden = false }) {
           : 'Corregir datos de artistas, discos y canciones. Lo que edites acá queda protegido de la próxima ingesta de Spotify.'}
       >
         {hidden && (
-          <Link
-            to="/admin/catalogo"
-            className="inline-flex items-center gap-2 text-[13.5px] text-gray-400 hover:text-rock-accent mb-5"
-          >
-            <IconArrowLeft size={14} /> Catálogo
-          </Link>
+          <ArrowLink back to="/admin/catalogo" className="mb-5">Catálogo</ArrowLink>
         )}
 
         {!hidden && unlinkedCount > 0 && (
