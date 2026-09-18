@@ -84,6 +84,9 @@ export default function AlbumDetail() {
    */
   const openTema = useCallback((t, { replace = false } = {}) => {
     setDir('fwd')
+    // Dónde estabas en el listado, para volver ahí al cerrar. Pasar de tema a
+    // tema no lo pisa: lo que interesa es el renglón del que saliste.
+    if (keepScroll.current == null) keepScroll.current = window.scrollY
     setParams(p => {
       const next = new URLSearchParams(p)
       next.set('tema', t.id)
@@ -132,17 +135,42 @@ export default function AlbumDetail() {
     return () => window.removeEventListener('keydown', onKey)
   }, [step])
 
-  // En celular la columna queda debajo del vinilo: si al cambiar quedó su
-  // principio fuera de la pantalla, se sube hasta ahí.
+  /*
+   * El scroll al abrir y cerrar un tema.
+   *
+   * Al abrir: la info del tema es más corta que el listado, así que entrar por
+   * una canción del final dejaba la pantalla en los comentarios. Si hace falta
+   * se sube hasta el principio de la columna; si ya estabas más arriba, no se
+   * toca nada.
+   *
+   * Al cerrar: se vuelve a donde estabas en el listado. Cerrar es un "atrás"
+   * del historial, y el navegador lo acomodaba por su cuenta.
+   */
+  const keepScroll = useRef(null)
   const lastTema = useRef(temaId)
   useLayoutEffect(() => {
-    if (lastTema.current === temaId) return
+    const before = lastTema.current
+    if (before === temaId) return
     lastTema.current = temaId
     const el = columnRef.current
-    if (!el || !mobile) return
-    const top = el.getBoundingClientRect().top
-    if (top < 72) window.scrollTo({ top: window.scrollY + top - 80, behavior: 'smooth' })
-  }, [temaId, mobile])
+
+    if (temaId) {
+      if (!el) return
+      const top = window.scrollY + el.getBoundingClientRect().top - 80
+      if (window.scrollY > top) window.scrollTo({ top: Math.max(0, top), behavior: before ? 'auto' : 'smooth' })
+    } else if (keepScroll.current != null) {
+      window.scrollTo(0, keepScroll.current)
+    }
+    if (!temaId) keepScroll.current = null
+  }, [temaId])
+
+  // El navegador restaura el scroll al volver atrás, y acá el "atrás" es
+  // cerrar un tema: lo maneja el efecto de arriba.
+  useEffect(() => {
+    const prev = window.history.scrollRestoration
+    if (prev) window.history.scrollRestoration = 'manual'
+    return () => { if (prev) window.history.scrollRestoration = prev }
+  }, [])
 
   if (isLoading) return <div className="py-11"><SkeletonFicha lines={5} /></div>
   if (error) return <ErrorState title="No pudimos traer este disco." onRetry={refetch} />
