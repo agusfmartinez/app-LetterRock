@@ -9,6 +9,7 @@ import { EmptyState, SkeletonGrid, SkeletonRows } from './States'
 import { IconArrowLeft, IconArrowRight, IconGrid, IconStack } from './Icons'
 import { getAlbum } from '../../services/api'
 import { albumYear, trackDuration } from '../../services/dates'
+import { discAt, discGroups, sortTracks } from '../../services/tracks'
 
 const KIND = { album: 'álbum', single: 'sencillo', ep: 'EP' }
 
@@ -102,7 +103,7 @@ export default function Discography({ albums, ingesting, artistName }) {
   // con `shelf-cursor`). `focus` es el que se abrió; pueden no coincidir.
   const [cursor, setCursor] = useState(0)
   // El tema resaltado, sea por el surco o por el renglón de la lista.
-  const [hoverTrack, setHoverTrack] = useState(0)
+  const [hoverPos, setHoverPos] = useState(0)
   // El tema abierto: su info reemplaza al listado en la misma columna.
   const [openTrack, setOpenTrack] = useState(null)
   const [mobile, setMobile] = useState(() => window.innerWidth < 768)
@@ -196,18 +197,35 @@ export default function Discography({ albums, ingesting, artistName }) {
   })
   const tracks = useMemo(() => {
     if (!albumData || albumData.album?.id !== current?.id) return []
-    return albumData.tracks || []
+    // Por disco y después por pista (ver services/tracks.js).
+    return sortTracks(albumData.tracks)
   }, [albumData, current])
+  const discs = useMemo(() => discGroups(tracks), [tracks])
 
   const albumsAttr = useMemo(
     () => JSON.stringify(filtered.map(a => ({ title: a.title, year: albumYear(a) || '', cover: a.cover_url || null }))),
     [filtered]
   )
-  // `n` es la posición y no `track_number`: en un disco doble la numeración
-  // vuelve a 1 y dos surcos con el mismo número se pisarían.
+  /*
+   * El vinilo dibuja un surco por canción, así que de un doble muestra un
+   * disco por vez: el de la canción que estás mirando. Al pasar al disco 2 se
+   * redibuja desde el borde, como cambiar el vinilo de la bandeja.
+   *
+   * Adentro del elemento las canciones van por posición dentro de ese disco
+   * (`n`), y acá se habla por posición en la lista entera (`pos`). `side`
+   * traduce entre las dos.
+   */
+  const openPos = openTrack ? tracks.findIndex(t => t.id === openTrack) + 1 : 0
+  const side = discAt(discs, hoverPos || openPos)
+  const sideRef = useRef(side)
+  sideRef.current = side
+  const localOf = pos => side.items.findIndex(it => it.pos === pos) + 1
+
   const tracksAttr = useMemo(
-    () => JSON.stringify(tracks.map((t, i) => ({ n: i + 1, title: t.title, dur: trackDuration(t) || '3:00' }))),
-    [tracks]
+    () => JSON.stringify(side.items.map((it, i) => ({
+      n: i + 1, title: it.track.title, dur: trackDuration(it.track) || '3:00',
+    }))),
+    [side]
   )
 
   // Atributos a mano: React no se los pasa bien a un custom element. Tiene que
@@ -225,11 +243,20 @@ export default function Discography({ albums, ingesting, artistName }) {
     el.setAttribute('zones', zonesFor(mobile))
   }, [albumsAttr, tracksAttr, mode, focus, artistName, showShelf, mobile])
 
+  /*
+   * El resaltado va por posición en la lista entera; el elemento habla por
+   * posición dentro del disco que tiene puesto. Pasar el mouse por una canción
+   * del disco 2 primero cambia el vinilo, y recién después se ilumina el
+   * surco: por eso se sincroniza acá y no en el renglón.
+   */
+  useEffect(() => {
+    if (mode === 'split') shelfRef.current?.setHover?.(hoverPos ? localOf(hoverPos) : 0)
+  }, [hoverPos, side, mode])
+
   // El surco del tema abierto queda marcado mientras se lee su info.
   useEffect(() => {
-    const n = openTrack ? tracks.findIndex(t => t.id === openTrack) + 1 : 0
-    shelfRef.current?.setAttribute('active', String(n))
-  }, [openTrack, tracks, showShelf])
+    shelfRef.current?.setAttribute('active', String(openPos ? localOf(openPos) : 0))
+  }, [openPos, side, showShelf])
 
   useEffect(() => {
     const el = shelfRef.current
@@ -242,11 +269,11 @@ export default function Discography({ albums, ingesting, artistName }) {
     }
     // Un clic en un surco abre esa canción al costado, igual que el renglón.
     const onTrack = e => {
-      const t = tracks[e.detail.n - 1]
-      if (t) setOpenTrack(t.id)
+      const it = sideRef.current.items[e.detail.n - 1]
+      if (it) setOpenTrack(it.track.id)
     }
     const onCursor = e => setCursor(e.detail.index)
-    const onHover = e => setHoverTrack(e.detail.n)
+    const onHover = e => setHoverPos(e.detail.n ? sideRef.current.items[e.detail.n - 1]?.pos || 0 : 0)
     el.addEventListener('shelf-mode', onMode)
     el.addEventListener('shelf-track', onTrack)
     el.addEventListener('shelf-cursor', onCursor)
@@ -420,7 +447,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                 <div
                   className="absolute flex flex-col animate-fade-up"
                   style={{ ...(mobile ? ZONES.mobile.panel : ZONES.desktop.panel), position: 'absolute' }}
-                  onMouseLeave={() => shelfRef.current?.setHover?.(0)}
+                  onMouseLeave={() => setHoverPos(0)}
                 >
                   {shownTrack ? (
                     <TrackPanel
@@ -452,15 +479,23 @@ export default function Discography({ albums, ingesting, artistName }) {
                         </p>
                       )
                     ) : (
-                      tracks.map((t, i) => (
-                        <TrackRow
-                          key={t.id}
-                          track={t}
-                          index={i}
-                          selected={hoverTrack === i + 1}
-                          onHover={() => shelfRef.current?.setHover?.(i + 1)}
-                          onOpen={() => setOpenTrack(t.id)}
-                        />
+                      discs.map(d => (
+                        <div key={d.disc}>
+                          {/* Un doble se separa por disco; uno solo no lleva título. */}
+                          {discs.length > 1 && (
+                            <p className="kicker mt-3 first:mt-0 mb-1.5">Disco {d.disc}</p>
+                          )}
+                          {d.items.map(({ track, pos }) => (
+                            <TrackRow
+                              key={track.id}
+                              track={track}
+                              index={pos - 1}
+                              selected={hoverPos === pos}
+                              onHover={() => setHoverPos(pos)}
+                              onOpen={() => setOpenTrack(track.id)}
+                            />
+                          ))}
+                        </div>
                       ))
                     )}
                   </div>

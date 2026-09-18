@@ -610,7 +610,14 @@ class Shelf3D extends HTMLElement {
       this._svg.appendChild(l);
       return l;
     });
-    this._setHover(0);
+    /*
+     * Los surcos cambiaron (otro disco, o el disco 2 de un doble). Si el tema
+     * resaltado ya no existe se apaga, pero en silencio: avisar "hover 0"
+     * haría que afuera se soltara el tema recién elegido y el vinilo volviera
+     * al disco anterior.
+     */
+    if (!this._bands.some((b) => b.n === this._hover)) this._hover = 0;
+    if (!this._bands.some((b) => b.n === this._active)) this._active = 0;
     this._paintGroove();
   }
 

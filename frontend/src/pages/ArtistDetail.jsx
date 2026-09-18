@@ -151,9 +151,9 @@ export default function ArtistDetail() {
       {/* — Formación — */}
       {people.length > 0 && (
         <section className="mb-16">
-          <h2 className="font-display text-3xl mb-1.5">Quiénes pasaron por la banda</h2>
+          <h2 className="font-display text-3xl mb-1.5">Integrantes</h2>
           <p className="text-[13.5px] text-gray-500 mb-6">
-            {people.length} {people.length === 1 ? 'músico' : 'músicos'}. Las barras son las etapas de cada uno.
+            {people.length} {people.length === 1 ? 'integrante' : 'integrantes'}.
           </p>
 
           {/*

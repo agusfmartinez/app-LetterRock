@@ -12,13 +12,19 @@ import { trackDuration } from '../../services/dates'
  * `addEventListener` y no con props `onX`.
  */
 
-/** El formato que espera el elemento: "1|La rubia tarada|3:02;2|Kaya|4:12" */
+/**
+ * El formato que espera el elemento: "1|La rubia tarada|3:02;2|Kaya|4:12"
+ *
+ * El número es la posición en la lista, no `track_number`: un disco doble
+ * numera 1..n dos veces, y con eso dos surcos (y dos renglones) respondían al
+ * mismo número.
+ */
 function toTracksAttr(tracks) {
   return tracks
     .map((t, i) => {
       // Los separadores no se escapan del otro lado, así que se limpian acá.
       const title = (t.title || '').replace(/[|;]/g, ' ').trim()
-      return `${t.track_number ?? i + 1}|${title}|${trackDuration(t) || '3:00'}`
+      return `${i + 1}|${title}|${trackDuration(t) || '3:00'}`
     })
     .join(';')
 }

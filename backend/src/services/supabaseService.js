@@ -456,6 +456,9 @@ async function getTracksByAlbum(albumId) {
     .from('tracks')
     .select('*')
     .eq('album_id', albumId)
+    // Por disco y después por pista: un doble numera 1..n en cada disco, y
+    // ordenando sólo por pista los dos quedaban intercalados.
+    .order('disc_number', { ascending: true })
     .order('track_number', { ascending: true })
   return data || []
 }

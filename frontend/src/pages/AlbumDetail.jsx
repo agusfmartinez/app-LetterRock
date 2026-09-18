@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumLineup from '../components/common/AlbumLineup'
 import TrackRow from '../components/common/TrackRow'
@@ -13,12 +13,11 @@ import ReviewForm from '../components/forms/ReviewForm'
 import { EmptyState, ErrorState, NotFoundLine, SkeletonFicha, SkeletonRows } from '../components/common/States'
 import { IconArrowLeft, IconArrowRight } from '../components/common/Icons'
 import { getAlbum } from '../services/api'
-import { albumYear, trackDuration } from '../services/dates'
+import { albumYear } from '../services/dates'
+import { discAt, discGroups, sortTracks, trackNum } from '../services/tracks'
 import { useReviews } from '../hooks/useReviews'
 
 const TYPE_LABEL = { album: 'Álbum', single: 'Sencillo', ep: 'EP' }
-
-const trackNum = (t, i) => t.track_number ?? i + 1
 
 export default function AlbumDetail() {
   const { id } = useParams()
@@ -33,9 +32,13 @@ export default function AlbumDetail() {
    */
   const temaId = params.get('tema')
 
-  // El tema bajo el mouse, sea en un surco o en un renglón. Manda sobre el
-  // abierto para resaltar, pero no lo cambia.
-  const [hoverTrack, setHoverTrack] = useState(null)
+  /*
+   * El tema bajo el mouse, sea en un surco o en un renglón, por posición en la
+   * lista — no por `track_number`: un disco doble numera 1..n dos veces, y así
+   * se prendían dos renglones a la vez. Manda sobre el abierto para resaltar,
+   * pero no lo cambia.
+   */
+  const [hoverPos, setHoverPos] = useState(null)
   // Hacia dónde se desliza la columna: adelante al abrir, atrás al volver.
   const [dir, setDir] = useState('fwd')
   const [mobile, setMobile] = useState(() => window.innerWidth < 768)
@@ -57,13 +60,16 @@ export default function AlbumDetail() {
   })
 
   const album = data?.album
-  const tracks = data?.tracks || []
+  // Por disco y después por pista: el backend ya los manda así, pero un disco
+  // fichado antes del arreglo puede venir intercalado.
+  const tracks = useMemo(() => sortTracks(data?.tracks), [data?.tracks])
+  const discs = useMemo(() => discGroups(tracks), [tracks])
   const artist = data?.artist
   const links = data?.links || {}
 
   const openIndex = temaId ? tracks.findIndex(t => t.id === temaId) : -1
   const openTrack = openIndex >= 0 ? tracks[openIndex] : null
-  const openNum = openTrack ? trackNum(openTrack, openIndex) : null
+  const openPos = openIndex >= 0 ? openIndex + 1 : null
 
   // Las opiniones de abajo son las del tema abierto, o las del disco.
   const { reviews, createReview, deleteReview } = useReviews(
@@ -145,8 +151,17 @@ export default function AlbumDetail() {
   const year = albumYear(album)
   const rating = album.avg_rating ? parseFloat(album.avg_rating).toFixed(1) : null
 
-  const litNum = hoverTrack || openNum
-  const caption = tracks.find((t, i) => trackNum(t, i) === litNum)
+  const litPos = hoverPos || openPos
+  const caption = litPos ? tracks[litPos - 1] : null
+
+  /*
+   * En un doble el vinilo muestra un disco por vez: los surcos son los de la
+   * canción que estás mirando, y al pasar al disco 2 se redibuja desde el
+   * borde, como poner el otro vinilo en la bandeja.
+   */
+  const side = discAt(discs, litPos)
+  const sideTracks = side.items.map(it => it.track)
+  const sidePos = side.items.findIndex(it => it.pos === litPos) + 1
 
   return (
     <div className="animate-fade-up">
@@ -221,38 +236,41 @@ export default function AlbumDetail() {
              pueden ser más largas que él. */
           <div className="w-full md:w-auto md:flex-1 min-w-[280px] md:min-w-[320px] md:sticky md:top-20">
             <Vinyl
-              tracks={tracks}
+              tracks={sideTracks}
               album={{ ...album, artist_name: artist?.name }}
-              activeTrack={litNum}
+              activeTrack={sidePos}
               spinning={!!openTrack}
               height={mobile ? 300 : 520}
-              onHover={n => setHoverTrack(n || null)}
+              onHover={n => setHoverPos(n ? side.items[n - 1]?.pos ?? null : null)}
               onSelect={n => {
-                const i = tracks.findIndex((x, j) => trackNum(x, j) === n)
-                if (i >= 0) openTema(tracks[i], { replace: !!openTrack })
+                const t = side.items[n - 1]?.track
+                if (t) openTema(t, { replace: !!openTrack })
               }}
             />
 
-            {/* Flechas fijas arriba a la izquierda: el título puede ocupar varias
-                líneas y no tiene que moverlas ni achicarlas. */}
-            <div className="flex items-start gap-3.5 mt-2 md:mt-4 min-h-[84px]">
+            {/*
+              El desplazador, centrado bajo el vinilo: "← 1. Nombre de la
+              canción →". El centro tiene alto fijo y el título va a dos
+              renglones como mucho, así las flechas no se corren bajo el dedo
+              al pasar de tema — igual que el de los discos en la pila.
+            */}
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-5
+                            w-full max-w-[520px] mx-auto mt-2 md:mt-3">
               <button onClick={() => step(-1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción anterior">
-                <IconArrowLeft size={16} />
+                <IconArrowLeft size={18} />
               </button>
-              <button onClick={() => step(1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción siguiente">
-                <IconArrowRight size={16} />
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-1.5 flex gap-3">
-                  <span>{caption ? `PISTA ${litNum}` : 'ELEGÍ UNA CANCIÓN'}</span>
-                  {caption && trackDuration(caption) && (
-                    <span className="ml-auto">{trackDuration(caption)}</span>
-                  )}
-                </p>
-                <p className="font-display text-[22px] leading-[1.15] break-words">
-                  {caption?.title || '—'}
+
+              <div key={caption?.id || 'none'} className="min-w-0 h-[58px] flex items-center justify-center animate-fade-up">
+                <p className="font-display text-[19px] sm:text-[22px] leading-[1.15] text-center text-balance line-clamp-2">
+                  {caption
+                    ? `${trackNum(caption, litPos - 1)}. ${caption.title}`
+                    : 'Elegí una canción'}
                 </p>
               </div>
+
+              <button onClick={() => step(1)} className="btn btn-secondary btn-icon flex-none" aria-label="Canción siguiente">
+                <IconArrowRight size={18} />
+              </button>
             </div>
           </div>
         )}
@@ -260,7 +278,7 @@ export default function AlbumDetail() {
         <section
           ref={columnRef}
           className="flex-1 min-w-[280px] overflow-x-clip"
-          onMouseLeave={() => setHoverTrack(null)}
+          onMouseLeave={() => setHoverPos(null)}
         >
           {openTrack ? (
             <div key={openTrack.id} className={dir === 'back' ? 'slide-from-left' : 'slide-from-right'}>
@@ -283,15 +301,23 @@ export default function AlbumDetail() {
                   Todavía no cargamos el tracklist de este disco.
                 </EmptyState>
               ) : (
-                tracks.map((t, i) => (
-                  <TrackRow
-                    key={t.id}
-                    track={t}
-                    index={i}
-                    selected={hoverTrack === trackNum(t, i)}
-                    onHover={setHoverTrack}
-                    onOpen={() => openTema(t)}
-                  />
+                discs.map(d => (
+                  <div key={d.disc}>
+                    {/* Los discos de un doble se separan; uno solo no lleva título. */}
+                    {discs.length > 1 && (
+                      <p className="kicker mt-4 first:mt-0 mb-1.5">Disco {d.disc}</p>
+                    )}
+                    {d.items.map(({ track, pos }) => (
+                      <TrackRow
+                        key={track.id}
+                        track={track}
+                        index={pos - 1}
+                        selected={hoverPos === pos}
+                        onHover={() => setHoverPos(pos)}
+                        onOpen={() => openTema(track)}
+                      />
+                    ))}
+                  </div>
                 ))
               )}
             </div>

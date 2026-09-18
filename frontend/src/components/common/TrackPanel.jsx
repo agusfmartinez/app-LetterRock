@@ -49,7 +49,7 @@ export default function TrackPanel({ track, artistName, albumId, onBack, inPage 
         >
           <IconArrowLeft size={14} /> Canciones
         </button>
-        {!inPage && <ArrowLink to={`/album/${albumId || track.album_id}?tema=${track.id}`} className="ml-auto">Ver la canción</ArrowLink>}
+        {!inPage && <ArrowLink to={`/album/${albumId || track.album_id}?tema=${track.id}`} className="ml-auto">Ver canción</ArrowLink>}
       </div>
 
       <div className={inPage ? 'pt-3' : 'flex-1 min-h-0 overflow-y-auto pr-1 -mr-1'}>
