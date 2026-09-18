@@ -12,7 +12,6 @@ import TrackRedirect from './pages/TrackRedirect'
 import Profile from './pages/Profile'
 import AuthPages from './pages/AuthPages'
 import AdminUsers from './pages/AdminUsers'
-import Users from './pages/Users'
 import Collections from './pages/Collections'
 import CollectionDetail from './pages/CollectionDetail'
 import CollectionSection from './pages/CollectionSection'
@@ -70,7 +69,8 @@ export default function App() {
             <Route path="/coleccion/:slug/editar" element={<AdminCollectionEdit />} />
             <Route path="/coleccion/:slug/:sectionSlug" element={<CollectionSection />} />
             <Route path="/coleccion/:slug/:sectionSlug/editar" element={<AdminSectionEdit />} />
-            <Route path="/usuarios" element={<Users />} />
+            {/* La búsqueda de gente vive en el buscador, junto con las bandas. */}
+            <Route path="/usuarios" element={<Navigate replace to="/search" />} />
             <Route path="/user/:username" element={<Profile />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/colecciones" element={<AdminCollections />} />
