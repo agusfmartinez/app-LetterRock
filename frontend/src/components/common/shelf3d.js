@@ -385,8 +385,13 @@ class Shelf3D extends HTMLElement {
 
   /** Un disco para adelante (1) o para atrás (-1) en la pila. Lo usan las flechas. */
   step(delta) {
-    if (!this._up || this._dead || this._mode !== 'browse' || !this._albums.length) return;
-    this._cursor = clamp(Math.round(this._cursor) + delta, 0, this._albums.length - 1);
+    if (!this._up || this._dead || !this._albums.length) return;
+    const n = clamp(Math.round(this._cursor) + delta, 0, this._albums.length - 1);
+    // Con una funda abierta se recorre igual: se abre la de al lado, sin
+    // volver a la pila.
+    if (this._mode === 'focus') { if (n !== this._focus) this._setMode('focus', n); return; }
+    if (this._mode !== 'browse') return;
+    this._cursor = n;
   }
 
   /** Resuelve cuando bajaron las tapas pendientes, o a los `ms` igual. */
@@ -663,6 +668,11 @@ class Shelf3D extends HTMLElement {
   }
 
   _setMode(mode, index) {
+    // Cambiar de funda abierta esconde el vinilo de golpe: si no, quedaba a la
+    // vista en el centro mientras la tapa nueva todavía volaba hacia ahí.
+    if (index != null && index !== this._focus && this._vcur) {
+      Object.assign(this._vcur, { x: 0, y: 0, z: 0.2, s: 0.2, o: 0 });
+    }
     if (index != null) { this._focus = index; this._cursor = index; }
     this._mode = mode;
     this.dispatchEvent(new CustomEvent('shelf-mode', { bubbles: true, composed: true, detail: { mode, index: this._focus } }));

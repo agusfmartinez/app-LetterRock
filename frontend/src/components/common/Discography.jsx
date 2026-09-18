@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import AlbumCard from './AlbumCard'
 import TrackRow from './TrackRow'
@@ -435,7 +435,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                     <h3 className="font-display text-[19px] sm:text-2xl leading-tight line-clamp-2">
                       {current?.title}
                     </h3>
-                    <ArrowLink to={`/album/${current?.id}`} className="ml-auto">Ver la ficha</ArrowLink>
+                    <ArrowLink to={`/album/${current?.id}`} className="ml-auto">Ver álbum</ArrowLink>
                   </div>
                   <p className="kicker mb-3">
                     {[year, KIND[current?.album_type], tracks.length ? `${tracks.length} temas` : null]
@@ -484,8 +484,8 @@ export default function Discography({ albums, ingesting, artistName }) {
                 {/*
                   Nombre y año del disco de adelante, con flechas para pasar de
                   a uno sin rueda — en touch o con trackpad es lo más cómodo.
-                  Con un disco abierto las flechas se esconden (sin mover el
-                  título) y aparece el link a la ficha.
+                  Las flechas siguen andando con una funda abierta: abren la de
+                  al lado, así se recorre la discografía sin volver a la pila.
                 */}
                 <div
                   // Con el vinilo afuera esto se va: el nombre del disco y el
@@ -508,9 +508,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                       onClick={() => shelfRef.current?.step?.(-1)}
                       disabled={atFirst}
                       aria-label="Disco anterior"
-                      className={`btn btn-secondary btn-icon flex-none disabled:opacity-30 ${
-                        browsing ? 'pointer-events-auto' : 'invisible'
-                      }`}
+                      className="btn btn-secondary btn-icon flex-none disabled:opacity-30 pointer-events-auto"
                     >
                       <IconArrowLeft size={18} />
                     </button>
@@ -524,9 +522,7 @@ export default function Discography({ albums, ingesting, artistName }) {
                         {shown?.title}
                       </h3>
                       <p className="font-mono text-[12px] tracking-[0.14em] uppercase text-gray-500 mt-1.5">
-                        {browsing
-                          ? year || '—'
-                          : [year, KIND[shown?.album_type]].filter(Boolean).join(' · ')}
+                        {year || '—'}
                         {mode === 'split' && albumData?.ingestingTracks && ' · trayendo los temas…'}
                       </p>
                     </div>
@@ -536,21 +532,11 @@ export default function Discography({ albums, ingesting, artistName }) {
                       onClick={() => shelfRef.current?.step?.(1)}
                       disabled={atLast}
                       aria-label="Disco siguiente"
-                      className={`btn btn-secondary btn-icon flex-none disabled:opacity-30 ${
-                        browsing ? 'pointer-events-auto' : 'invisible'
-                      }`}
+                      className="btn btn-secondary btn-icon flex-none disabled:opacity-30 pointer-events-auto"
                     >
                       <IconArrowRight size={18} />
                     </button>
                   </div>
-                  {!browsing && current && (
-                    <Link
-                      to={`/album/${current.id}`}
-                      className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px] pointer-events-auto"
-                    >
-                      Abrir la ficha del disco
-                    </Link>
-                  )}
                 </div>
               </div>
             </div>
