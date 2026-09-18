@@ -14,9 +14,12 @@ export default function Navbar() {
   const { user, logout } = useAuthStore()
   const { isAdmin, isEditor } = useRole()
 
+  // Sin texto lleva igual a la página de búsqueda: desde que no hay página de
+  // Gente, es la única puerta al directorio ("últimos en sumarse").
   const handleSearch = (e) => {
     e.preventDefault()
-    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+    const q = query.trim()
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
   }
 
   /* El estado activo lo pone NavLink, no una comparación de pathname a mano. */
@@ -42,12 +45,20 @@ export default function Navbar() {
         <div className="ml-auto flex items-center gap-3 flex-none">
           {/* Buscar sale del header en mobile: pasa a la barra de solapas. */}
           <form onSubmit={handleSearch} className="hidden md:flex relative items-center">
-            <IconSearch size={15} className="absolute left-3 text-gray-500 pointer-events-none" />
+            <button
+              type="submit"
+              aria-label="Buscar"
+              title="Buscar"
+              className="absolute left-1.5 w-7 h-7 grid place-items-center rounded-full
+                         text-gray-500 hover:text-rock-accent transition-colors"
+            >
+              <IconSearch size={15} />
+            </button>
             <input
               type="search"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Bandas, discos, gente"
+              placeholder="Buscar..."
               className="input pl-9"
               style={{ width: 'min(240px, 34vw)' }}
             />

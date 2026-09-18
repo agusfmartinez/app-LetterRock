@@ -5,6 +5,10 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* El lugar de la barra de scroll queda reservado siempre. Si no, en las
+       páginas cortas no hay barra, en las largas sí, y todo lo centrado
+       (el header primero) se corría unos píxeles al cambiar de página. */
+    scrollbar-gutter: stable;
   }
 
   body {

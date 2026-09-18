@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ArtistCard from '../components/common/ArtistCard'
 import FollowButton from '../components/common/FollowButton'
@@ -49,7 +49,10 @@ export default function Search() {
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(false)
 
+  const lastRun = useRef(null)
+
   const run = async (term) => {
+    lastRun.current = term
     setSearchParams({ q: term }, { replace: true })
     setLoading(true)
     setError('')
@@ -97,6 +100,21 @@ export default function Search() {
       })
     return () => { alive = false }
   }, [searched, sessionUser?.id])
+
+  /*
+   * El buscador del header manda a `/search?q=…`: la búsqueda arranca sola.
+   * Antes el texto llegaba copiado al campo y había que apretar "Buscar" de
+   * nuevo. También cubre buscar desde el header estando ya en esta página, y
+   * abrir un link con la búsqueda hecha.
+   */
+  const paramQ = (searchParams.get('q') || '').trim()
+  useEffect(() => {
+    if (!paramQ || paramQ === lastRun.current) return
+    setQuery(paramQ)
+    run(paramQ)
+    // `run` cambia en cada render; lo que dispara la búsqueda es el parámetro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramQ])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -157,7 +175,7 @@ export default function Search() {
       {users.length > 0 && (
         <section className="mb-12 max-w-[620px]">
           <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-500 mb-3.5">
-            GENTE · {users.length} {users.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
+            USUARIOS · {users.length} {users.length === 1 ? 'RESULTADO' : 'RESULTADOS'}
           </p>
           <div className="flex flex-col gap-2.5">
             {users.map(u => <UserResult key={u.id} user={u} />)}
