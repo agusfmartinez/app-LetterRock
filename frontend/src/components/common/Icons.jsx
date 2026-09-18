@@ -160,6 +160,24 @@ export const IconStack = (p) => (
 )
 
 /*
+ * Marcas de las plataformas. Van rellenas y no de trazo: son logos, no iconos
+ * de la app, y con trazo fino no se reconocen. Toman el color del texto, así
+ * que el verde y el rojo los pone el botón.
+ */
+export const IconSpotify = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" {...rest}>
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.586 14.424a.623.623 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.871 7.077-.496 9.713 1.115a.623.623 0 0 1 .206.857Zm1.223-2.722a.78.78 0 0 1-1.072.256c-2.687-1.652-6.785-2.131-9.965-1.166a.78.78 0 1 1-.453-1.492c3.632-1.102 8.147-.568 11.234 1.329a.78.78 0 0 1 .256 1.073Zm.106-2.835c-3.223-1.914-8.54-2.09-11.591-1.164a.935.935 0 1 1-.542-1.79c3.502-1.063 9.373-.858 13.073 1.338a.935.935 0 1 1-.94 1.616Z" />
+  </svg>
+)
+
+export const IconYouTubeMusic = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" {...rest}>
+    <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1.9" />
+    <path d="M10.1 8.15 16 12l-5.9 3.85V8.15Z" fill="currentColor" />
+  </svg>
+)
+
+/*
  * El vinilo de la marca. No es un icono de trazo: es un disco, y se dibuja
  * con gradientes para que tenga surcos de verdad. `spin` lo hace girar — se
  * usa sólo en el hero, en el header queda quieto.

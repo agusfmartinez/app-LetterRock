@@ -1,12 +1,16 @@
+import { IconExternal, IconSpotify, IconYouTubeMusic } from './Icons'
+
 const PROVIDERS = [
   {
     key: 'spotify',
     label: 'Spotify',
+    Icon: IconSpotify,
     className: 'text-[#1DB954] border-[#1DB954]/40 hover:bg-[#1DB954]/10',
   },
   {
     key: 'youtube',
     label: 'YouTube Music',
+    Icon: IconYouTubeMusic,
     className: 'text-[#FF4E45] border-[#FF4E45]/40 hover:bg-[#FF4E45]/10',
   },
 ]
@@ -38,12 +42,16 @@ export default function PlatformBadges({ links = {}, fallbacks = {}, className =
           href={p.url}
           target="_blank"
           rel="noopener noreferrer"
+          // El nombre lo dice el logo. Queda en `title` y en `aria-label`: sin
+          // texto visible, es lo único que lo nombra para un lector de pantalla.
+          title={`Escuchar en ${p.label}`}
+          aria-label={`Escuchar en ${p.label}`}
           // `.btn` y no un chip propio: al lado del botón de favorito tienen que
           // medir lo mismo, si no la fila queda escalonada.
-          className={`btn !text-[13px] ${p.className}`}
+          className={`btn !px-4 gap-1.5 ${p.className}`}
         >
-          {p.label}
-          <span aria-hidden="true">↗</span>
+          <p.Icon size={18} />
+          <IconExternal size={12} />
         </a>
       ))}
     </div>
