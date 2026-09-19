@@ -391,9 +391,23 @@ async function getFirstOfficialRelease(releaseGroupId) {
   return releases.find(r => r.status === 'Official') || null
 }
 
+/**
+ * El id de Wikidata del artista (Q…), si MusicBrainz lo tiene enlazado.
+ *
+ * Es la forma segura de llegar a su artículo de Wikipedia: por nombre,
+ * "Almendra" es la fruta.
+ */
+async function getWikidataId(artistId) {
+  const data = await rateLimitedRequest(`${BASE_URL}/artist/${artistId}`, { inc: 'url-rels' })
+  const rel = (data?.relations || []).find(r => r.type === 'wikidata')
+  const match = rel?.url?.resource?.match(/(Q\d+)$/)
+  return match ? match[1] : null
+}
+
 module.exports = {
   searchArtist,
   getArtistById,
+  getWikidataId,
   discoverArtists,
   findArtistsByAlbum,
   getArtistReleaseGroups,

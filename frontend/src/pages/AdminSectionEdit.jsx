@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
 import PlaylistField from '../components/common/PlaylistField'
@@ -128,12 +128,7 @@ export default function AdminSectionEdit() {
         <RequireCollectionOwner collection={data.collection}>
         <div className="space-y-6">
           <div className="flex items-center gap-4 flex-wrap">
-            <Link
-              to={`/coleccion/${data.collection.slug}/editar`}
-              className="text-gray-400 hover:text-rock-accent text-sm"
-            >
-              ← {data.collection.title}
-            </Link>
+            <ArrowLink back to={`/coleccion/${data.collection.slug}/editar`}>{data.collection.title}</ArrowLink>
             <ArrowLink to={`/coleccion/${data.collection.slug}/${data.section.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 

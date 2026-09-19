@@ -19,6 +19,7 @@ import { linkArtistDiscography, refreshArtistFromSpotify } from '../services/api
 import { formatReleaseDate, timeAgo } from '../services/dates'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
+import RowMenu from '../components/common/RowMenu'
 
 const INPUT = 'input'
 
@@ -106,11 +107,12 @@ function ArtistForm({ artist }) {
 
   return (
     <div className="card space-y-3">
+      <h2 className="font-display text-xl">Datos</h2>
       <Field label="Nombre" field="name" {...marks}>
         <input value={form.name} onChange={set('name')} className={`w-full ${INPUT}`} />
       </Field>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <Field label="País" field="country" {...marks}>
           <input value={form.country} onChange={set('country')} placeholder="AR" className={`w-20 ${INPUT}`} />
         </Field>
@@ -148,15 +150,15 @@ function ArtistForm({ artist }) {
 
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end pt-1">
+        {saved && <span className="text-xs text-gray-500">Guardado</span>}
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="btn btn-primary"
+          className="btn btn-primary px-7"
         >
           Guardar
         </button>
-        {saved && <span className="text-xs text-gray-500">Guardado</span>}
       </div>
     </div>
   )
@@ -175,7 +177,7 @@ function HiddenToggle({ artist }) {
 
   return (
     <div className="card space-y-2">
-      <h2 className="font-display text-lg text-sm">Visibilidad</h2>
+      <h2 className="font-display text-xl">Visibilidad</h2>
       <p className="text-gray-500 text-xs">
         {artist.hidden
           ? 'Oculto: no aparece en búsquedas, ni en la home, ni entre los resultados de MusicBrainz.'
@@ -188,10 +190,8 @@ function HiddenToggle({ artist }) {
           { onError: e => setError(describeError(e)) }
         )}
         disabled={toggle.isPending}
-        className={`text-xs border rounded px-2 py-1 disabled:opacity-50 ${
-          artist.hidden
-            ? 'border-rock-accent text-rock-accent'
-            : 'border-rock-border text-gray-400 hover:text-rock-accentBright hover:border-rock-accentDim'
+        className={`btn !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] ${
+          artist.hidden ? 'btn-primary' : 'btn-secondary hover:!text-rock-accentBright'
         }`}
       >
         {artist.hidden ? 'Volver a mostrar' : 'Ocultar del catálogo'}
@@ -249,7 +249,7 @@ function NewAlbumForm({ artistId }) {
 
   return (
     <form onSubmit={submit} className="card space-y-3">
-      <h3 className="font-display text-lg text-sm">Disco nuevo</h3>
+      <h3 className="font-display text-xl">Disco nuevo</h3>
       <p className="text-gray-500 text-xs">
         Para discos que Spotify no tiene. Al no llevar id de Spotify, la ingesta
         nunca lo va a modificar.
@@ -275,16 +275,16 @@ function NewAlbumForm({ artistId }) {
         placeholder="URL de portada (opcional)"
       />
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end">
+        <button type="button" onClick={() => setOpen(false)} className="btn btn-secondary">
+          Cancelar
+        </button>
         <button
           type="submit"
           disabled={create.isPending || !form.title.trim()}
           className="btn btn-primary"
         >
           Crear disco
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500 hover:text-rock-text">
-          Cancelar
         </button>
       </div>
     </form>
@@ -319,7 +319,7 @@ function SpotifyRefresh({ artist }) {
   return (
     <div className="card space-y-2">
       <div className="flex items-baseline gap-2">
-        <h2 className="font-display text-lg text-sm">Spotify</h2>
+        <h2 className="font-display text-xl">Spotify</h2>
         <LastRun at={artist.spotify_refreshed_at} />
       </div>
       <p className="text-gray-500 text-xs">
@@ -329,7 +329,7 @@ function SpotifyRefresh({ artist }) {
       <button
         onClick={run}
         disabled={busy}
-        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
       >
         Refrescar metadatos
       </button>
@@ -375,7 +375,7 @@ function YoutubeDiscography({ artist }) {
   return (
     <div className="card space-y-2">
       <div className="flex items-baseline gap-2">
-        <h2 className="font-display text-lg text-sm">YouTube Music</h2>
+        <h2 className="font-display text-xl">YouTube Music</h2>
         <LastRun at={artist.youtube_linked_at} />
       </div>
       <p className="text-gray-500 text-xs">
@@ -385,7 +385,7 @@ function YoutubeDiscography({ artist }) {
       <button
         onClick={run}
         disabled={busy}
-        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
       >
         Vincular discografía
       </button>
@@ -421,48 +421,49 @@ function YoutubeDiscography({ artist }) {
   )
 }
 
+const ALBUM_TYPE = { album: 'Álbum', single: 'Sencillo', ep: 'EP', compilation: 'Recopilado' }
+const TAG = 'tag !text-[10.5px] !py-0.5'
+
 function AlbumRow({ album }) {
   const toggle = useToggleHidden('albums')
+  const edited = album.manual_fields?.length || 0
 
   return (
-    <div className="flex items-center gap-3 p-3">
-      <div className={`w-10 h-10 rounded overflow-hidden bg-rock-dark flex-shrink-0 ${album.hidden ? 'opacity-40' : ''}`}>
-        {album.cover_url ? (
-          <img src={album.cover_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm">💿</div>
-        )}
+    <div className="flex items-center gap-3.5 px-4 py-3 border-t border-rock-border first:border-t-0">
+      <div className={`w-11 h-11 rounded-[8px] overflow-hidden bg-rock-border flex-none ${album.hidden ? 'opacity-40' : ''}`}>
+        {album.cover_url && <img src={album.cover_url} alt="" className="w-full h-full object-cover washed" />}
       </div>
       <div className="flex-1 min-w-0">
-        <Link
-          to={`/admin/album/${album.id}`}
-          className={`hover:text-rock-accent ${album.hidden ? 'text-gray-500 line-through' : 'text-rock-text'}`}
-        >
-          {album.title}
-        </Link>
-        <p className="text-gray-500 text-xs">
-          {album.album_type} · {formatReleaseDate(album) || 'sin fecha'}
-          {album.manual_fields?.length > 0 && (
-            <span className="text-rock-accent"> · editado</span>
-          )}
-          {album.hidden && <span className="text-rock-accentBright"> · oculto</span>}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            to={`/admin/album/${album.id}`}
+            className={`text-[14.5px] font-medium hover:text-rock-accent ${album.hidden ? 'text-gray-500' : ''}`}
+          >
+            {album.title}
+          </Link>
+          {edited > 0 && <span className={`${TAG} tag-accent`}>Editado</span>}
+          {album.hidden && <span className={`${TAG} tag-neutral`}>Oculto</span>}
+        </div>
+        <p className="text-gray-500 text-[12.5px] mt-0.5">
+          {[ALBUM_TYPE[album.album_type] || album.album_type, formatReleaseDate(album) || 'Sin fecha'].join(' · ')}
         </p>
       </div>
-      <button
-        onClick={() => toggle.mutate({ id: album.id, hidden: !album.hidden })}
-        disabled={toggle.isPending}
-        title={album.hidden ? 'Volver a mostrarlo' : 'Ocultar de la discografía'}
-        className="text-xs text-gray-500 hover:text-rock-accent disabled:opacity-50"
-      >
-        {album.hidden ? 'Mostrar' : 'Ocultar'}
-      </button>
       <Link
         to={`/admin/album/${album.id}`}
-        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] hidden sm:inline-flex"
       >
         Editar
       </Link>
-      <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
+      <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex">Ver</ArrowLink>
+      <RowMenu
+        disabled={toggle.isPending}
+        items={[{
+          label: album.hidden ? 'Mostrar' : 'Ocultar',
+          hint: album.hidden ? 'Vuelve a la discografía.' : 'Lo saca de la discografía, sin borrarlo.',
+          onClick: () => toggle.mutate({ id: album.id, hidden: !album.hidden }),
+          danger: !album.hidden,
+        }]}
+      />
     </div>
   )
 }
@@ -478,46 +479,51 @@ export default function AdminArtistEdit() {
       ) : !data ? (
         <p className="text-rock-accentBright">Artista no encontrado.</p>
       ) : (
-        <div className="space-y-6 max-w-3xl">
-          <div className="flex items-center gap-4 flex-wrap">
-            <Link to="/admin/catalogo" className="text-gray-400 hover:text-rock-accent text-sm">
-              ← Catálogo
-            </Link>
-            <ArrowLink to={`/artist/${data.artist.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
-          </div>
+        <div className="space-y-6">
+          <ArrowLink back to="/admin/catalogo">Catálogo</ArrowLink>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-display text-3xl">{data.artist.name}</h1>
-            {data.artist.hidden && (
-              <span className="text-xs uppercase tracking-widest border border-rock-accentDim text-rock-accentBright rounded px-2 py-0.5">
-                Oculto
-              </span>
-            )}
+            <h1 className="font-display text-3xl sm:text-4xl">{data.artist.name}</h1>
+            {data.artist.hidden && <span className="tag tag-neutral">Oculto</span>}
+            <ArrowLink to={`/artist/${data.artist.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
+              Ver la página
+            </ArrowLink>
           </div>
 
-          <ArtistForm key={data.artist.id} artist={data.artist} />
+          {/*
+            En escritorio, dos columnas: a la izquierda lo que se edita (datos,
+            integrantes, discos) y a la derecha lo que se corre (visibilidad y
+            las ingestas de Spotify y YouTube). En el teléfono, una sola columna
+            con las ingestas al final.
+          */}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+            <div className="space-y-6 min-w-0">
+              <ArtistForm key={data.artist.id} artist={data.artist} />
 
-          <HiddenToggle artist={data.artist} />
+              <MembersPanel artist={data.artist} />
 
-          <SpotifyRefresh artist={data.artist} />
+              <section>
+                <div className="flex items-center gap-3 flex-wrap mb-3">
+                  <h2 className="font-display text-2xl">Discos ({data.albums.length})</h2>
+                </div>
+                {data.albums.length === 0 ? (
+                  <p className="text-gray-500 text-sm mb-4">Sin discos cargados.</p>
+                ) : (
+                  // Sin overflow-hidden: el menú "⋯" de la última fila sale por abajo.
+                  <div className="card !p-0 mb-4">
+                    {data.albums.map(a => <AlbumRow key={a.id} album={a} />)}
+                  </div>
+                )}
 
-          <YoutubeDiscography artist={data.artist} />
+                <NewAlbumForm artistId={data.artist.id} />
+              </section>
+            </div>
 
-          <MembersPanel artist={data.artist} />
-
-          <div>
-            <h2 className="font-display text-xl mb-3">
-              Discos ({data.albums.length})
-            </h2>
-            {data.albums.length === 0 ? (
-              <p className="text-gray-500 text-sm">Sin discos cargados.</p>
-            ) : (
-              <div className="card !p-0 overflow-hidden divide-y divide-rock-border mb-4">
-                {data.albums.map(a => <AlbumRow key={a.id} album={a} />)}
-              </div>
-            )}
-
-            <NewAlbumForm artistId={data.artist.id} />
+            <aside className="space-y-6 lg:sticky lg:top-24">
+              <HiddenToggle artist={data.artist} />
+              <SpotifyRefresh artist={data.artist} />
+              <YoutubeDiscography artist={data.artist} />
+            </aside>
           </div>
         </div>
       )}

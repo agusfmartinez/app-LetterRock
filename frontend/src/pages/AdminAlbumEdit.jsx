@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import AlbumLineup from '../components/common/AlbumLineup'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import ImageField from '../components/common/ImageField'
@@ -314,12 +314,7 @@ export default function AdminAlbumEdit() {
       ) : (
         <div className="space-y-6 max-w-3xl">
           <div className="flex items-center gap-4 flex-wrap">
-            <Link
-              to={`/admin/artista/${data.album.artist?.id}`}
-              className="text-gray-400 hover:text-rock-accent text-sm"
-            >
-              ← {data.album.artist?.name}
-            </Link>
+            <ArrowLink back to={`/admin/artista/${data.album.artist?.id}`}>{data.album.artist?.name}</ArrowLink>
             <ArrowLink to={`/album/${data.album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 

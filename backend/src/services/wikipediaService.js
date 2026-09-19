@@ -36,42 +36,106 @@ function isDisambiguation(extract) {
   return text.includes('puede referirse a') || text.includes('puede hacer referencia a')
 }
 
-async function fetchExtract(title) {
+/**
+ * ¿El texto habla de música?
+ *
+ * Pedir el artículo por nombre acepta lo primero que exista con ese título, y
+ * para "Almendra" eso es la fruta. Se mira el principio de la introducción: la
+ * de un artista dice que es una banda, un músico, un cantante…
+ */
+const MUSIC_WORDS = /\b(banda|grupo|musical|musico|cantante|cantautor|compositor|guitarrista|bajista|baterista|pianista|tecladista|solista|duo|trio|rock|pop|punk|metal|blues|jazz|tango|folk|album|disco|discografia)\b/
+
+function looksMusical(extract) {
+  return MUSIC_WORDS.test(normalize(extract).slice(0, 400))
+}
+
+async function fetchExtracts(titles) {
   const { data } = await axios.get(`${ES_WIKI}/w/api.php`, {
     params: {
       action: 'query',
-      titles: title,
+      titles: titles.join('|'),
       prop: 'extracts',
       exintro: true,
       explaintext: true,
+      exlimit: 'max',
+      redirects: 1,
       format: 'json',
     },
     headers: HEADERS,
     timeout: 5000,
   })
-  const pages = data?.query?.pages
-  if (!pages) return null
-  const page = pages[Object.keys(pages)[0]]
-  if (!page || page.missing !== undefined) return null
-  return page.extract?.trim() || null
+  // Con `redirects` el título pedido puede volver con otro nombre: se arma el
+  // camino de vuelta para saber qué extracto corresponde a qué pedido.
+  const alias = new Map()
+  for (const r of [...(data?.query?.normalized || []), ...(data?.query?.redirects || [])]) {
+    alias.set(r.from, r.to)
+  }
+  const byTitle = new Map()
+  for (const page of Object.values(data?.query?.pages || {})) {
+    if (page.missing === undefined && page.extract?.trim()) byTitle.set(page.title, page.extract.trim())
+  }
+  return titles.map(t => {
+    let key = t
+    for (let i = 0; i < 3 && alias.has(key); i++) key = alias.get(key)
+    return byTitle.get(key) || null
+  })
 }
 
-async function getArtistBio(name) {
-  console.log(`[Wikipedia] buscando: "${name}"`)
+/** El artículo en español de un ítem de Wikidata, si existe. */
+async function eswikiTitleFromWikidata(qid) {
+  const { data } = await axios.get('https://www.wikidata.org/w/api.php', {
+    params: { action: 'wbgetentities', ids: qid, props: 'sitelinks', sitefilter: 'eswiki', format: 'json' },
+    headers: HEADERS,
+    timeout: 5000,
+  })
+  return data?.entities?.[qid]?.sitelinks?.eswiki?.title || null
+}
 
-  const direct = await fetchExtract(name).catch(() => null)
-  if (direct && !isDisambiguation(direct)) {
-    console.log(`[Wikipedia] ${name}: found direct`)
-    return direct
+/**
+ * La bio del artista: la introducción de su artículo en Wikipedia en español.
+ *
+ * Tres caminos, del más seguro al menos:
+ *   1. Por Wikidata, con el id que MusicBrainz tiene enlazado. Es el artículo
+ *      exacto, sin adivinar nada.
+ *   2. Por nombre, probando primero los títulos que Wikipedia usa para
+ *      desambiguar artistas ("Almendra (banda)") y recién después el nombre
+ *      pelado. Sólo se acepta un texto que hable de música.
+ *   3. Por búsqueda, con el mismo filtro y además el título tiene que coincidir.
+ */
+async function getArtistBio(name, wikidataId = null) {
+  console.log(`[Wikipedia] buscando: "${name}"${wikidataId ? ` (${wikidataId})` : ''}`)
+
+  if (wikidataId) {
+    const title = await eswikiTitleFromWikidata(wikidataId).catch(() => null)
+    if (title) {
+      const [text] = await fetchExtracts([title]).catch(() => [null])
+      if (text && !isDisambiguation(text)) {
+        console.log(`[Wikipedia] ${name}: por Wikidata → "${title}"`)
+        return text
+      }
+    }
   }
 
-  // Fallback: búsqueda por nombre, quedándose sólo con un artículo que
-  // efectivamente sea sobre el artista.
+  const candidates = [
+    `${name} (banda)`,
+    `${name} (grupo musical)`,
+    `${name} (banda de rock)`,
+    `${name} (músico)`,
+    `${name} (cantante)`,
+    name,
+  ]
+  const texts = await fetchExtracts(candidates).catch(() => [])
+  const hit = candidates.findIndex((_, i) => texts[i] && !isDisambiguation(texts[i]) && looksMusical(texts[i]))
+  if (hit >= 0) {
+    console.log(`[Wikipedia] ${name}: por nombre → "${candidates[hit]}"`)
+    return texts[hit]
+  }
+
   const { data: search } = await axios.get(`${ES_WIKI}/w/api.php`, {
     params: {
       action: 'query',
       list: 'search',
-      srsearch: name,
+      srsearch: `${name} música`,
       srnamespace: 0,
       srlimit: 5,
       format: 'json',
@@ -80,23 +144,18 @@ async function getArtistBio(name) {
     timeout: 5000,
   })
 
-  const results = search?.query?.search || []
-  const candidate = results.find(r => titleMatchesArtist(r.title, name))
-
-  if (!candidate) {
-    const titles = results.map(r => r.title).join(', ') || 'ninguno'
-    console.log(`[Wikipedia] ${name}: descartado, ningún artículo coincide (${titles})`)
-    return null
+  const results = (search?.query?.search || []).filter(r => titleMatchesArtist(r.title, name))
+  if (results.length) {
+    const found = await fetchExtracts(results.map(r => r.title)).catch(() => [])
+    const i = results.findIndex((_, j) => found[j] && !isDisambiguation(found[j]) && looksMusical(found[j]))
+    if (i >= 0) {
+      console.log(`[Wikipedia] ${name}: por búsqueda → "${results[i].title}"`)
+      return found[i]
+    }
   }
 
-  const via = await fetchExtract(candidate.title).catch(() => null)
-  if (via && isDisambiguation(via)) {
-    console.log(`[Wikipedia] ${name}: "${candidate.title}" es desambiguación, descartado`)
-    return null
-  }
-
-  console.log(`[Wikipedia] ${name}: found via search → "${candidate.title}"`)
-  return via
+  console.log(`[Wikipedia] ${name}: sin artículo que hable del artista`)
+  return null
 }
 
-module.exports = { getArtistBio }
+module.exports = { getArtistBio, looksMusical }

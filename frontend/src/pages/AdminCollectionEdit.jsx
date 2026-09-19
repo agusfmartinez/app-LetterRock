@@ -372,9 +372,7 @@ export default function AdminCollectionEdit() {
         <RequireCollectionOwner collection={data.collection}>
         <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
           <div className="flex items-center gap-4 flex-wrap">
-            <Link to="/colecciones" className="text-gray-400 hover:text-rock-accent text-sm">
-              ← Colecciones
-            </Link>
+            <ArrowLink back to="/colecciones">Colecciones</ArrowLink>
             <ArrowLink to={`/coleccion/${data.collection.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 

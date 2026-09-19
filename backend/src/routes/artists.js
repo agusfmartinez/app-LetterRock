@@ -269,8 +269,13 @@ router.get('/:slugOrMbId', async (req, res, next) => {
         ? spotify.getArtistById(artist.external_spotify_id)
             .then(d => d?.images?.[0]?.url || null)
         : Promise.resolve(null),
+      // Con el id de MusicBrainz se llega al artículo exacto por Wikidata;
+      // por nombre, "Almendra" traía la fruta.
       needsBio
-        ? wiki.getArtistBio(artist.name)
+        ? (artist.external_mb_id
+            ? mb.getWikidataId(artist.external_mb_id).catch(() => null)
+            : Promise.resolve(null)
+          ).then(qid => wiki.getArtistBio(artist.name, qid))
         : Promise.resolve(null),
     ])
 
