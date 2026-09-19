@@ -58,9 +58,13 @@ export default function RowMenu({ items, disabled = false, label = 'Más accione
               type="button"
               role="menuitem"
               onClick={() => { setOpen(false); it.onClick() }}
-              className="w-full text-left px-3 py-2 rounded-[10px] text-[13.5px] hover:bg-rock-cardHover"
+              // Lo que no se deshace va en rojo de verdad: el naranja de la
+              // marca se confundía con una acción cualquiera.
+              className={`w-full text-left px-3 py-2 rounded-[10px] text-[13.5px] ${
+                it.danger ? 'hover:bg-red-500/10' : 'hover:bg-rock-cardHover'
+              }`}
             >
-              <span className={it.danger ? 'text-rock-accentBright' : ''}>{it.label}</span>
+              <span className={it.danger ? 'text-red-400' : ''}>{it.label}</span>
               {it.hint && <span className="block text-[11.5px] text-gray-500">{it.hint}</span>}
             </button>
           ))}

@@ -14,16 +14,105 @@ import { useCollectionAdmin } from '../hooks/useCollectionAdmin'
 import { useCollection } from '../hooks/useCollections'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
+import RowMenu from '../components/common/RowMenu'
 
-function CollectionFields({ collection }) {
+const LABEL = 'block text-[13px] text-gray-400 mb-1.5'
+
+/**
+ * Cabecera de la ficha: el título, en qué estado está y lo que se hace sobre la
+ * colección entera.
+ *
+ * Publicar va a la vista, al lado del estado: es lo que cambia qué ve la gente.
+ * Borrar va al menú "⋯": no se deshace, y como texto suelto al final del
+ * formulario quedaba al alcance de un clic distraído y sin forma de botón.
+ */
+function CollectionHeader({ collection }) {
   const navigate = useNavigate()
   const { updateCollection, deleteCollection } = useCollectionAdmin()
   const confirm = useConfirm()
+  const [error, setError] = useState('')
+  const published = collection.is_published
+
+  const togglePublished = () => {
+    updateCollection.mutate(
+      { id: collection.id, is_published: !published },
+      { onError: e => setError(e.message) }
+    )
+  }
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Borrar colección',
+      message: `¿Borrar "${collection.title}" con todas sus secciones y entradas? No se puede deshacer.`,
+      confirmLabel: 'Borrar',
+    })
+    if (!ok) return
+    deleteCollection.mutate(collection.id, {
+      onSuccess: () => navigate('/colecciones'),
+      onError: e => setError(e.message),
+    })
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="font-display text-3xl sm:text-4xl">{collection.title}</h1>
+        <span className={`tag ${published ? 'tag-accent' : 'tag-outline'}`}>
+          {published ? 'Publicada' : 'Borrador'}
+        </span>
+        {collection.is_official && <span className="tag tag-neutral">De LetterRock</span>}
+        {collection.hidden && <span className="tag tag-neutral">Oculta</span>}
+
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Publicar va a la vista mientras es borrador: es lo que falta
+              hacer. Ya publicada, volver a borrador es raro y va al menú. */}
+          {!published && (
+            <button
+              onClick={togglePublished}
+              disabled={updateCollection.isPending}
+              className="btn btn-primary !min-h-0 !px-4 !py-2 !text-[13px]"
+            >
+              Publicar
+            </button>
+          )}
+          <RowMenu
+            disabled={deleteCollection.isPending || updateCollection.isPending}
+            items={[
+              ...(published ? [{
+                label: 'Pasar a borrador',
+                hint: 'Sale del índice hasta que la vuelvas a publicar.',
+                onClick: togglePublished,
+              }] : []),
+              {
+                label: 'Borrar colección',
+                hint: 'Con todas sus secciones y entradas. No se puede deshacer.',
+                onClick: remove,
+                danger: true,
+              },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Qué significa el estado, dicho una vez y al lado del estado. */}
+      <p className="text-[13px] text-gray-500">
+        {published
+          ? 'La ve todo el mundo en el índice de colecciones.'
+          : 'Todavía no aparece en el índice: sólo la ven quien la armó y los editores.'}
+      </p>
+      {error && <p className="field-error">{error}</p>}
+    </div>
+  )
+}
+
+function CollectionFields({ collection }) {
+  const { updateCollection } = useCollectionAdmin()
   const [title, setTitle] = useState(collection.title)
   const [description, setDescription] = useState(collection.description || '')
   const [coverUrl, setCoverUrl] = useState(collection.cover_url || '')
   const [playlistUrl, setPlaylistUrl] = useState(collection.playlist_url || '')
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
 
   const dirty =
     title !== collection.title ||
@@ -40,73 +129,63 @@ function CollectionFields({ collection }) {
         cover_url: coverUrl.trim() || null,
         playlist_url: playlistUrl.trim() || null,
       },
-      { onError: e => setError(e.message) }
+      { onSuccess: () => { setError(''); setSaved(true) }, onError: e => setError(e.message) }
     )
   }
 
-  const togglePublished = () => {
-    updateCollection.mutate(
-      { id: collection.id, is_published: !collection.is_published },
-      { onError: e => setError(e.message) }
-    )
-  }
-
-  const remove = async () => {
-    const ok = await confirm({
-      title: 'Borrar colección',
-      message: `¿Borrar "${collection.title}" con todas sus secciones y entradas? No se puede deshacer.`,
-    })
-    if (!ok) return
-    deleteCollection.mutate(collection.id, {
-      onSuccess: () => navigate('/colecciones'),
-      onError: e => setError(e.message),
-    })
-  }
+  const touch = (fn) => (v) => { setSaved(false); fn(v) }
 
   return (
-    <div className="card space-y-3">
-      <input
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        className="input"
-      />
-      <textarea
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder="Descripción"
-        rows={3}
-        className="input"
-      />
-      <ImageField
-        value={coverUrl}
-        onChange={setCoverUrl}
-        folder="collections"
-        placeholder="URL de portada (opcional)"
-      />
-      <PlaylistField value={playlistUrl} onChange={setPlaylistUrl} />
+    <div className="card space-y-4">
+      <h2 className="font-display text-xl">Datos</h2>
 
-      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
+      {/* En escritorio, el texto a la izquierda y lo que se engancha (portada
+          y playlist) a la derecha. En el teléfono, uno debajo del otro. */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
+          <label className="block">
+            <span className={LABEL}>Título</span>
+            <input value={title} onChange={e => touch(setTitle)(e.target.value)} className="input" />
+          </label>
+          <label className="block">
+            <span className={LABEL}>Descripción</span>
+            <textarea
+              value={description}
+              onChange={e => touch(setDescription)(e.target.value)}
+              placeholder="De qué se trata la colección"
+              rows={4}
+              className="input"
+            />
+          </label>
+        </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+        <div className="space-y-4">
+          <div>
+            <span className={LABEL}>Portada</span>
+            <ImageField
+              value={coverUrl}
+              onChange={touch(setCoverUrl)}
+              folder="collections"
+              placeholder="URL de portada (opcional)"
+            />
+          </div>
+          <div>
+            <span className={LABEL}>Playlist</span>
+            <PlaylistField value={playlistUrl} onChange={touch(setPlaylistUrl)} />
+          </div>
+        </div>
+      </div>
+
+      {error && <p className="field-error">{error}</p>}
+
+      <div className="flex items-center gap-3 justify-end border-t border-rock-border pt-4">
+        {saved && !dirty && <span className="text-xs text-gray-500">Guardado</span>}
         <button
           onClick={save}
           disabled={!dirty || updateCollection.isPending}
-          className="btn btn-primary"
+          className="btn btn-primary px-7"
         >
           Guardar
-        </button>
-        <button
-          onClick={togglePublished}
-          disabled={updateCollection.isPending}
-          className="btn btn-secondary text-sm hover:border-rock-accent"
-        >
-          {collection.is_published ? 'Pasar a borrador' : 'Publicar'}
-        </button>
-        <span className="text-xs text-gray-500">
-          {collection.is_published ? 'Visible para todos' : 'Sólo la ven los editores'}
-        </span>
-        <button onClick={remove} className="ml-auto text-sm text-gray-500 hover:text-rock-accentBright">
-          Borrar colección
         </button>
       </div>
     </div>
@@ -160,7 +239,7 @@ function NewSectionForm({ collection, nextPosition }) {
 
   return (
     <form onSubmit={submit} className="card space-y-3">
-      <h3 className="font-display text-lg text-sm">Nueva sección</h3>
+      <h3 className="font-display text-xl">Nueva sección</h3>
       <div className="flex gap-2 flex-wrap">
         <input
           value={title}
@@ -193,20 +272,16 @@ function NewSectionForm({ collection, nextPosition }) {
         El rango de años alimenta las sugerencias de discos al cargar la sección.
       </p>
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end">
+        <button type="button" onClick={() => setOpen(false)} className="btn btn-secondary">
+          Cancelar
+        </button>
         <button
           type="submit"
           disabled={createSection.isPending || !title.trim()}
           className="btn btn-primary"
         >
           Agregar sección
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm text-gray-500 hover:text-rock-text"
-        >
-          Cancelar
         </button>
       </div>
     </form>
@@ -227,30 +302,38 @@ function SectionRow({ collection, section }) {
   }
 
   return (
-    <div className="flex items-center gap-3 p-3">
-      <span className="text-gray-500 text-sm w-6 text-right">{section.position}</span>
+    <div className="flex items-center gap-3.5 px-4 sm:px-5 py-3.5 border-t border-rock-border first:border-t-0">
+      <span className="font-mono text-gray-500 text-xs w-6 text-right flex-none">{section.position}</span>
       <div className="flex-1 min-w-0">
         <Link
           to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-          className="text-rock-text hover:text-rock-accent font-medium"
+          className="text-[15px] font-semibold hover:text-rock-accent"
         >
           {section.title}
         </Link>
-        <p className="text-gray-500 text-xs">
+        <p className="text-gray-500 text-[12.5px] mt-0.5">
           {section.year_from && section.year_to ? `${section.year_from}–${section.year_to} · ` : ''}
           {section.entry_count} {section.entry_count === 1 ? 'entrada' : 'entradas'}
         </p>
       </div>
       <Link
         to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] hidden sm:inline-flex"
       >
         Editar
       </Link>
-      <ArrowLink to={`/coleccion/${collection.slug}/${section.slug}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
-      <button onClick={remove} className="text-gray-500 hover:text-rock-accentBright text-sm">
-        Borrar
-      </button>
+      <ArrowLink to={`/coleccion/${collection.slug}/${section.slug}`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex">
+        Ver
+      </ArrowLink>
+      <RowMenu
+        disabled={deleteSection.isPending}
+        items={[{
+          label: 'Borrar sección',
+          hint: 'Con sus entradas. No se puede deshacer.',
+          onClick: remove,
+          danger: true,
+        }]}
+      />
     </div>
   )
 }
@@ -371,18 +454,21 @@ export default function AdminCollectionEdit() {
       ) : (
         <RequireCollectionOwner collection={data.collection}>
         <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
             <ArrowLink back to="/colecciones">Colecciones</ArrowLink>
             <ArrowLink to={`/coleccion/${data.collection.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
-          <CollectionFields collection={data.collection} />
+          <CollectionHeader collection={data.collection} />
+
+          <CollectionFields key={data.collection.id} collection={data.collection} />
 
           {data.collection.type === 'timeline' ? (
             <div>
-              <h2 className="font-display text-xl mb-3">Épocas</h2>
+              <h2 className="font-display text-2xl mb-3">Épocas ({data.sections.length})</h2>
               {data.sections.length > 0 && (
-                <div className="card !p-0 overflow-hidden divide-y divide-rock-border mb-4">
+                // Sin overflow-hidden: el menú "⋯" de la última fila sale por abajo.
+                <div className="card !p-0 mb-4">
                   {data.sections.map(s => (
                     <SectionRow key={s.id} collection={data.collection} section={s} />
                   ))}
