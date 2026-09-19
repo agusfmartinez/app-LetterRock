@@ -372,14 +372,16 @@ function AlbumEditBody({ data }) {
 
   return (
     <div className="space-y-6">
-      <ArrowLink back to={`/admin/artista/${album.artist?.id}`}>{album.artist?.name}</ArrowLink>
+      <div className="flex items-center gap-3">
+        <ArrowLink back to={`/admin/artista/${album.artist?.id}`}>{album.artist?.name}</ArrowLink>
+        <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
+          Ver la página
+        </ArrowLink>
+      </div>
 
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="font-display text-3xl sm:text-4xl">{album.title}</h1>
         {album.hidden && <span className="tag tag-neutral">Oculto</span>}
-        <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
-          Ver la página
-        </ArrowLink>
       </div>
 
       {/*

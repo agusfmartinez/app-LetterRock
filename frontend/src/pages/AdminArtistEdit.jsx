@@ -489,14 +489,16 @@ export default function AdminArtistEdit() {
         <p className="text-rock-accentBright">Artista no encontrado.</p>
       ) : (
         <div className="space-y-6">
-          <ArrowLink back to="/admin/catalogo">Catálogo</ArrowLink>
+          <div className="flex items-center gap-3">
+            <ArrowLink back to="/admin/catalogo">Catálogo</ArrowLink>
+            <ArrowLink to={`/artist/${data.artist.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
+              Ver la página
+            </ArrowLink>
+          </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="font-display text-3xl sm:text-4xl">{data.artist.name}</h1>
             {data.artist.hidden && <span className="tag tag-neutral">Oculto</span>}
-            <ArrowLink to={`/artist/${data.artist.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
-              Ver la página
-            </ArrowLink>
           </div>
 
           {/*
