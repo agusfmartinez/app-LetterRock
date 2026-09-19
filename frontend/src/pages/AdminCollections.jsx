@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import RequireEditor from '../components/common/RequireEditor'
 import AdminLayout from '../components/common/AdminLayout'
 import { EmptyState, SkeletonRows } from '../components/common/States'
-import { IconLayers, IconMore, IconPlus } from '../components/common/Icons'
+import { IconLayers, IconPlus } from '../components/common/Icons'
+import RowMenu from '../components/common/RowMenu'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useAuthStore } from '../store/authStore'
@@ -110,32 +111,15 @@ function NewCollectionForm({ onClose }) {
  * Ocultar no borra, igual que en el catálogo de artistas: baja la colección del
  * índice pero su dueño la sigue viendo, y se puede revertir.
  */
-function RowMenu({ collection }) {
+function ModerationMenu({ collection }) {
   const { updateCollection } = useCollectionAdmin()
   const confirm = useConfirm()
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  // Se cierra al tocar afuera o con Escape.
-  useEffect(() => {
-    if (!open) return
-    const onDown = e => { if (!ref.current?.contains(e.target)) setOpen(false) }
-    const onKey = e => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const toggleOfficial = () => {
-    setOpen(false)
     updateCollection.mutate({ id: collection.id, is_official: !collection.is_official })
   }
 
   const toggleHidden = async () => {
-    setOpen(false)
     if (!collection.hidden) {
       const ok = await confirm({
         title: 'Ocultar colección',
@@ -147,45 +131,23 @@ function RowMenu({ collection }) {
     updateCollection.mutate({ id: collection.id, hidden: !collection.hidden })
   }
 
-  const item = 'w-full text-left px-3 py-2 rounded-[10px] text-[13.5px] hover:bg-rock-cardHover disabled:opacity-40'
-
   return (
-    <div ref={ref} className="relative flex-none">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        disabled={updateCollection.isPending}
-        aria-label="Más acciones"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="btn btn-secondary btn-icon"
-      >
-        <IconMore size={18} />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full mt-1.5 z-20 min-w-[230px] p-1.5
-                     rounded-[14px] bg-rock-card border border-rock-border shadow-card animate-fade-up"
-        >
-          <button type="button" role="menuitem" onClick={toggleOfficial} className={item}>
-            {collection.is_official ? 'Quitar de las de la app' : 'Marcar como de la app'}
-            <span className="block text-[11.5px] text-gray-500">
-              {collection.is_official ? 'Vuelve al bloque de la comunidad.' : 'Va arriba del índice, como de LetterRock.'}
-            </span>
-          </button>
-          <button type="button" role="menuitem" onClick={toggleHidden} className={item}>
-            <span className={collection.hidden ? '' : 'text-rock-accentBright'}>
-              {collection.hidden ? 'Restaurar' : 'Ocultar'}
-            </span>
-            <span className="block text-[11.5px] text-gray-500">
-              {collection.hidden ? 'Vuelve a aparecer en el índice.' : 'La baja del índice, sin borrarla.'}
-            </span>
-          </button>
-        </div>
-      )}
-    </div>
+    <RowMenu
+      disabled={updateCollection.isPending}
+      items={[
+        {
+          label: collection.is_official ? 'Quitar de las de la app' : 'Marcar como de la app',
+          hint: collection.is_official ? 'Vuelve al bloque de la comunidad.' : 'Va arriba del índice, como de LetterRock.',
+          onClick: toggleOfficial,
+        },
+        {
+          label: collection.hidden ? 'Restaurar' : 'Ocultar',
+          hint: collection.hidden ? 'Vuelve a aparecer en el índice.' : 'La baja del índice, sin borrarla.',
+          onClick: toggleHidden,
+          danger: !collection.hidden,
+        },
+      ]}
+    />
   )
 }
 
@@ -230,7 +192,7 @@ function CollectionRow({ c }) {
       <ArrowLink to={`/coleccion/${c.slug}`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex">
         Ver
       </ArrowLink>
-      <RowMenu collection={c} />
+      <ModerationMenu collection={c} />
     </div>
   )
 }
