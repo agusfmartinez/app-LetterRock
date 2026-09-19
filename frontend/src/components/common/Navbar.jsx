@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useRole } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
@@ -11,8 +11,9 @@ import { IconSearch, VinylMark } from './Icons'
 export default function Navbar() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { user, logout } = useAuthStore()
-  const { isAdmin, isEditor } = useRole()
+  const { isEditor } = useRole()
 
   // Sin texto lleva igual a la página de búsqueda: desde que no hay página de
   // Gente, es la única puerta al directorio ("últimos en sumarse").
@@ -38,8 +39,15 @@ export default function Navbar() {
           {/* Al índice y no a una colección con el slug escrito acá: con dos
               colecciones cargadas, a la segunda no se llegaba desde ningún lado. */}
           <NavLink to="/colecciones" className={link}>Colecciones</NavLink>
-          {isEditor && <NavLink to="/admin/catalogo" className={link}>Catálogo</NavLink>}
-          {isAdmin && <NavLink to="/admin/users" className={link}>Panel</NavLink>}
+          {/* Una sola entrada al panel, para editores y admins. Abre en
+              Descubrir, la primera sección del menú lateral; el resto se
+              recorre desde ahí. Queda encendida en cualquier sección del
+              panel, no sólo en la primera. */}
+          {isEditor && (
+            <NavLink to="/admin/descubrir" className={() => link({ isActive: pathname.startsWith('/admin') })}>
+              Panel
+            </NavLink>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-3 flex-none">
