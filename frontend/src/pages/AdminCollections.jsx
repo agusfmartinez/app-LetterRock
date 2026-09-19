@@ -26,7 +26,7 @@ const TYPE_NAME = { timeline: 'Línea de tiempo', list: 'Lista', ranking: 'Ranki
  */
 const FILTERS = [
   { value: 'all', label: 'Todas', test: () => true },
-  { value: 'official', label: 'De la app', test: c => c.is_official },
+  { value: 'official', label: 'De LetterRock', test: c => c.is_official },
   { value: 'community', label: 'Comunidad', test: c => !c.is_official },
   { value: 'drafts', label: 'Borradores', test: c => !c.is_published },
   { value: 'hidden', label: 'Ocultas', test: c => c.hidden },
@@ -136,13 +136,13 @@ function ModerationMenu({ collection }) {
       disabled={updateCollection.isPending}
       items={[
         {
-          label: collection.is_official ? 'Quitar de las de la app' : 'Marcar como de la app',
-          hint: collection.is_official ? 'Vuelve al bloque de la comunidad.' : 'Va arriba del índice, como de LetterRock.',
+          label: collection.is_official ? 'Quitar "de LetterRock"' : 'Marcar "de LetterRock"',
+          hint: collection.is_official ? 'Vuelve al bloque de la comunidad.' : 'Va al bloque de LetterRock.',
           onClick: toggleOfficial,
         },
         {
           label: collection.hidden ? 'Restaurar' : 'Ocultar',
-          hint: collection.hidden ? 'Vuelve a aparecer en el índice.' : 'La baja del índice, sin borrarla.',
+          hint: collection.hidden ? 'Vuelve a aparecer en el índice.' : 'Se oculta del índice.',
           onClick: toggleHidden,
           danger: !collection.hidden,
         },
@@ -174,12 +174,12 @@ function CollectionRow({ c }) {
             {c.title}
           </Link>
           {/* Estados: etiquetas quietas, no botones. Los cambios van en "⋯". */}
-          {c.is_official && <span className="tag tag-accent !text-[10.5px] !py-0.5">De la app</span>}
+          {c.is_official && <span className="tag tag-accent !text-[10.5px] !py-0.5">De LetterRock</span>}
           {!c.is_published && <span className="tag tag-outline !text-[10.5px] !py-0.5">Borrador</span>}
           {c.hidden && <span className="tag tag-neutral !text-[10.5px] !py-0.5">Oculta</span>}
         </div>
         <p className="text-gray-500 text-[12.5px] mt-0.5 truncate">
-          {[TYPE_NAME[c.type] || c.type, counts, c.author ? `por ${c.author.username}` : 'de la app'].join(' · ')}
+          {[TYPE_NAME[c.type] || c.type, counts, c.author ? `por ${c.author.username}` : 'de letterrock'].join(' · ')}
         </p>
       </div>
 
