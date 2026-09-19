@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useConfirm } from '../components/common/ConfirmDialog'
 import RequireEditor from '../components/common/RequireEditor'
 import AdminLayout from '../components/common/AdminLayout'
 import { EmptyState, SkeletonRows } from '../components/common/States'
+import { IconLayers, IconMore, IconPlus } from '../components/common/Icons'
 import { useCollectionAdmin, slugify } from '../hooks/useCollectionAdmin'
 import { useCollections } from '../hooks/useCollections'
 import { useAuthStore } from '../store/authStore'
@@ -15,15 +16,29 @@ const TYPES = [
   { value: 'ranking', label: 'Ranking (con puesto y fuente)' },
 ]
 
-/**
- * Alta de colección. Plegada por defecto y debajo del listado: crear una es lo
- * excepcional —hay tres o cuatro en total—, y ocupando el lugar de arriba
- * empujaba fuera de la vista lo que uno viene a hacer, que es entrar a editar.
+// El tipo en castellano: en la base es `timeline`, `list`, `ranking`.
+const TYPE_NAME = { timeline: 'Línea de tiempo', list: 'Lista', ranking: 'Ranking' }
+
+/*
+ * Qué se ve de la lista. "Comunidad" son las que no marcó la app, sin importar
+ * quién las haya creado.
  */
-function NewCollectionForm() {
+const FILTERS = [
+  { value: 'all', label: 'Todas', test: () => true },
+  { value: 'official', label: 'De la app', test: c => c.is_official },
+  { value: 'community', label: 'Comunidad', test: c => !c.is_official },
+  { value: 'drafts', label: 'Borradores', test: c => !c.is_published },
+  { value: 'hidden', label: 'Ocultas', test: c => c.hidden },
+]
+
+/**
+ * Alta de colección. Se abre desde el botón de la barra, arriba de la lista:
+ * crear una es poco frecuente, pero es la acción principal de esta pantalla y
+ * al pie de la lista quedaba fuera de la vista.
+ */
+function NewCollectionForm({ onClose }) {
   const { user } = useAuthStore()
   const { createCollection } = useCollectionAdmin()
-  const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState('timeline')
   const [description, setDescription] = useState('')
@@ -35,28 +50,21 @@ function NewCollectionForm() {
     createCollection.mutate(
       { title: title.trim(), type, description: description.trim() || null, created_by: user?.id },
       {
-        onSuccess: () => { setTitle(''); setDescription(''); setError(''); setOpen(false) },
+        onSuccess: () => { setTitle(''); setDescription(''); setError(''); onClose() },
         onError: (err) => setError(err.message),
       }
     )
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="btn btn-secondary">
-        + Nueva colección
-      </button>
-    )
-  }
-
   return (
-    <form onSubmit={submit} className="card space-y-3">
-      <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500">NUEVA COLECCIÓN</p>
+    <form onSubmit={submit} className="card space-y-3 mb-5 animate-fade-up">
+      <p className="kicker">Nueva colección</p>
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Título"
         className="input"
+        autoFocus
       />
       {title && <p className="font-mono text-gray-500 text-xs">/coleccion/{slugify(title)}</p>}
       <select
@@ -74,7 +82,10 @@ function NewCollectionForm() {
         className="input"
       />
       {error && <p className="field-error">{error}</p>}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap justify-end">
+        <button type="button" onClick={onClose} className="btn btn-secondary">
+          Cancelar
+        </button>
         <button
           type="submit"
           disabled={createCollection.isPending || !title.trim()}
@@ -82,21 +93,15 @@ function NewCollectionForm() {
         >
           Crear
         </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="btn btn-secondary"
-        >
-          Cancelar
-        </button>
       </div>
     </form>
   )
 }
 
-
 /**
- * Moderación: fijar arriba del índice y bajar del sitio.
+ * Moderación, en el menú "⋯" de cada fila: marcar como de la app y bajar del
+ * sitio. Se usan poco, y como dos botones por fila competían con Editar, que
+ * es lo que se viene a hacer.
  *
  * Las dos son de editor y RLS lo hace cumplir con un trigger, no con la policy
  * de UPDATE: esa no puede comparar el valor viejo con el nuevo, así que el dueño
@@ -105,15 +110,32 @@ function NewCollectionForm() {
  * Ocultar no borra, igual que en el catálogo de artistas: baja la colección del
  * índice pero su dueño la sigue viendo, y se puede revertir.
  */
-function ModerationButtons({ collection }) {
+function RowMenu({ collection }) {
   const { updateCollection } = useCollectionAdmin()
   const confirm = useConfirm()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // Se cierra al tocar afuera o con Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDown = e => { if (!ref.current?.contains(e.target)) setOpen(false) }
+    const onKey = e => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
 
   const toggleOfficial = () => {
+    setOpen(false)
     updateCollection.mutate({ id: collection.id, is_official: !collection.is_official })
   }
 
   const toggleHidden = async () => {
+    setOpen(false)
     if (!collection.hidden) {
       const ok = await confirm({
         title: 'Ocultar colección',
@@ -125,82 +147,150 @@ function ModerationButtons({ collection }) {
     updateCollection.mutate({ id: collection.id, hidden: !collection.hidden })
   }
 
+  const item = 'w-full text-left px-3 py-2 rounded-[10px] text-[13.5px] hover:bg-rock-cardHover disabled:opacity-40'
+
   return (
-    <>
+    <div ref={ref} className="relative flex-none">
       <button
-        onClick={toggleOfficial}
+        type="button"
+        onClick={() => setOpen(o => !o)}
         disabled={updateCollection.isPending}
-        title={collection.is_official ? 'Sacar de las de la app' : 'Fijar como de la app'}
-        className={`btn !min-h-0 !px-3 !py-1.5 !text-[12.5px] ${
-          collection.is_official
-            ? 'border-rock-accent text-rock-accent'
-            : 'btn-secondary !text-gray-400'
-        }`}
+        aria-label="Más acciones"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="btn btn-secondary btn-icon"
       >
-        {collection.is_official ? 'De la app' : 'Fijar'}
+        <IconMore size={18} />
       </button>
-      <button
-        onClick={toggleHidden}
-        disabled={updateCollection.isPending}
-        className="btn btn-ghost !min-h-0 !text-[12.5px] !text-gray-400 hover:!text-rock-accentBright"
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1.5 z-20 min-w-[230px] p-1.5
+                     rounded-[14px] bg-rock-card border border-rock-border shadow-card animate-fade-up"
+        >
+          <button type="button" role="menuitem" onClick={toggleOfficial} className={item}>
+            {collection.is_official ? 'Quitar de las de la app' : 'Marcar como de la app'}
+            <span className="block text-[11.5px] text-gray-500">
+              {collection.is_official ? 'Vuelve al bloque de la comunidad.' : 'Va arriba del índice, como de LetterRock.'}
+            </span>
+          </button>
+          <button type="button" role="menuitem" onClick={toggleHidden} className={item}>
+            <span className={collection.hidden ? '' : 'text-rock-accentBright'}>
+              {collection.hidden ? 'Restaurar' : 'Ocultar'}
+            </span>
+            <span className="block text-[11.5px] text-gray-500">
+              {collection.hidden ? 'Vuelve a aparecer en el índice.' : 'La baja del índice, sin borrarla.'}
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CollectionRow({ c }) {
+  const counts = [
+    c.type === 'timeline' && c.section_count ? `${c.section_count} ${c.section_count === 1 ? 'época' : 'épocas'}` : null,
+    `${c.entry_count} ${c.entry_count === 1 ? 'entrada' : 'entradas'}`,
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <div className="flex items-center gap-4 px-4 sm:px-5 py-3.5 border-t border-rock-border first:border-t-0">
+      <div className="w-12 h-12 flex-none rounded-[10px] overflow-hidden bg-rock-border grid place-items-center text-gray-500">
+        {c.cover_url
+          ? <img src={c.cover_url} alt="" className="w-full h-full object-cover washed" />
+          : <IconLayers size={18} />}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            to={`/coleccion/${c.slug}/editar`}
+            className={`text-[15px] font-semibold hover:text-rock-accent ${c.hidden ? 'text-gray-500' : ''}`}
+          >
+            {c.title}
+          </Link>
+          {/* Estados: etiquetas quietas, no botones. Los cambios van en "⋯". */}
+          {c.is_official && <span className="tag tag-accent !text-[10.5px] !py-0.5">De la app</span>}
+          {!c.is_published && <span className="tag tag-outline !text-[10.5px] !py-0.5">Borrador</span>}
+          {c.hidden && <span className="tag tag-neutral !text-[10.5px] !py-0.5">Oculta</span>}
+        </div>
+        <p className="text-gray-500 text-[12.5px] mt-0.5 truncate">
+          {[TYPE_NAME[c.type] || c.type, counts, c.author ? `por ${c.author.username}` : 'de la app'].join(' · ')}
+        </p>
+      </div>
+
+      <Link
+        to={`/coleccion/${c.slug}/editar`}
+        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] hidden sm:inline-flex"
       >
-        {collection.hidden ? 'Restaurar' : 'Ocultar'}
-      </button>
-    </>
+        Editar
+      </Link>
+      <ArrowLink to={`/coleccion/${c.slug}`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex">
+        Ver
+      </ArrowLink>
+      <RowMenu collection={c} />
+    </div>
   )
 }
 
 export default function AdminCollections() {
   const { data: collections = [], isLoading } = useCollections()
+  const [filter, setFilter] = useState('all')
+  const [creating, setCreating] = useState(false)
+
+  const test = FILTERS.find(f => f.value === filter)?.test || (() => true)
+  const shown = collections.filter(test)
+  // Los filtros sin nada no se muestran: un "Ocultas (0)" no lleva a ningún lado.
+  const filters = FILTERS.filter(f => f.value === 'all' || collections.some(f.test))
 
   return (
     <RequireEditor>
       <AdminLayout
         title="Panel"
-        lead={'Todas las colecciones del sitio, propias y de la comunidad. «Fijar» las manda arriba del índice como colecciones de LetterRock; «Ocultar» las baja sin borrarlas.'}
+        lead="Todas las colecciones del sitio, propias y de la comunidad."
       >
+        <div className="flex items-center gap-3 flex-wrap mb-4">
+          {collections.length > 0 && (
+            <div className="seg">
+              {filters.map(f => (
+                <label key={f.value} className="seg-opt">
+                  <input
+                    type="radio"
+                    name="filtro-colecciones"
+                    checked={filter === f.value}
+                    onChange={() => setFilter(f.value)}
+                  />
+                  <span>{f.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {!creating && (
+            <button onClick={() => setCreating(true)} className="btn btn-primary ml-auto">
+              <IconPlus size={16} /> Nueva colección
+            </button>
+          )}
+        </div>
+
+        {creating && <NewCollectionForm onClose={() => setCreating(false)} />}
+
         {isLoading ? (
           <SkeletonRows count={4} avatar={false} />
         ) : collections.length === 0 ? (
           <EmptyState title="Todavía no hay colecciones">
-            Creá la primera con el botón de abajo.
+            Creá la primera con «Nueva colección».
           </EmptyState>
+        ) : shown.length === 0 ? (
+          <p className="text-gray-500 text-sm">No hay colecciones con ese filtro.</p>
         ) : (
-          <div className="card !p-0 overflow-hidden mb-5">
-            {collections.map(c => (
-              <div
-                key={c.id}
-                className="flex items-center gap-3 px-5 py-4 flex-wrap border-t border-rock-border first:border-t-0"
-              >
-                <div className="flex-1 min-w-[200px]">
-                  <Link
-                    to={`/coleccion/${c.slug}/editar`}
-                    className={`text-[14.5px] font-semibold hover:text-rock-accent ${
-                      c.hidden ? 'text-gray-500 line-through' : ''
-                    }`}
-                  >
-                    {c.title}
-                  </Link>
-                  <p className="text-gray-500 text-xs mt-0.5">
-                    {[c.type, `/${c.slug}`, c.author ? `por ${c.author.username}` : 'de la app']
-                      .join(' · ')}
-                  </p>
-                </div>
-                {!c.is_published && <span className="tag tag-outline">Borrador</span>}
-                <ModerationButtons collection={c} />
-                <Link
-                  to={`/coleccion/${c.slug}/editar`}
-                  className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
-                >
-                  Editar
-                </Link>
-                <ArrowLink to={`/coleccion/${c.slug}`} target="_blank" rel="noopener noreferrer">Ver</ArrowLink>
-              </div>
-            ))}
+          // Sin overflow-hidden: el menú "⋯" de la última fila tiene que poder
+          // salir por debajo de la tarjeta.
+          <div className="card !p-0">
+            {shown.map(c => <CollectionRow key={c.id} c={c} />)}
           </div>
         )}
-
-        <NewCollectionForm />
       </AdminLayout>
     </RequireEditor>
   )

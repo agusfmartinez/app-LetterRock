@@ -140,6 +140,16 @@ export const IconMenu = (p) => (
   </Svg>
 )
 
+/* "Más acciones": los tres puntos de un menú. Rellenos: con trazo quedan
+   como tres rayitas. */
+export const IconMore = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" {...rest}>
+    <circle cx="5.5" cy="12" r="1.9" />
+    <circle cx="12" cy="12" r="1.9" />
+    <circle cx="18.5" cy="12" r="1.9" />
+  </svg>
+)
+
 /* Discografía en grilla: cuatro tapas. */
 export const IconGrid = (p) => (
   <Svg {...p}>
