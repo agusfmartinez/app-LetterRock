@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import ImageField from '../components/common/ImageField'
@@ -20,6 +20,7 @@ import { formatReleaseDate, timeAgo } from '../services/dates'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
 import RowMenu from '../components/common/RowMenu'
+import AsideImage from '../components/common/AsideImage'
 
 const INPUT = 'input'
 
@@ -52,7 +53,7 @@ function Field({ label, field, manualFields, onRelease, children }) {
   )
 }
 
-function ArtistForm({ artist }) {
+function ArtistForm({ artist, onImagePreview }) {
   const update = useCatalogUpdate('artists')
   const release = useReleaseManualField('artists')
   const [form, setForm] = useState({
@@ -75,6 +76,9 @@ function ArtistForm({ artist }) {
   const setValue = (key) => (value) => {
     setSaved(false)
     setForm(f => ({ ...f, [key]: value }))
+    // La foto se ve grande en la columna de la derecha, fuera de este
+    // formulario: se le avisa el valor en vivo.
+    if (key === 'image_url') onImagePreview?.(value)
   }
 
   const changed = () => {
@@ -141,6 +145,7 @@ function ArtistForm({ artist }) {
           onChange={setValue('image_url')}
           folder="artists"
           placeholder="URL de imagen"
+          previewClassName="lg:hidden"
         />
       </Field>
 
@@ -471,6 +476,10 @@ function AlbumRow({ album }) {
 export default function AdminArtistEdit() {
   const { id } = useParams()
   const { data, isLoading } = useAdminArtist(id)
+  // La foto que se está editando, en vivo, para la columna de la derecha.
+  // `null` = la guardada.
+  const [image, setImage] = useState(null)
+  useEffect(() => { setImage(null) }, [id])
 
   return (
     <RequireEditor>
@@ -498,7 +507,7 @@ export default function AdminArtistEdit() {
           */}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
             <div className="space-y-6 min-w-0">
-              <ArtistForm key={data.artist.id} artist={data.artist} />
+              <ArtistForm key={data.artist.id} artist={data.artist} onImagePreview={setImage} />
 
               <MembersPanel artist={data.artist} />
 
@@ -520,6 +529,7 @@ export default function AdminArtistEdit() {
             </div>
 
             <aside className="space-y-6 lg:sticky lg:top-24">
+              <AsideImage src={image ?? data.artist.image_url} saved={data.artist.image_url} alt={data.artist.name} />
               <HiddenToggle artist={data.artist} />
               <SpotifyRefresh artist={data.artist} />
               <YoutubeDiscography artist={data.artist} />

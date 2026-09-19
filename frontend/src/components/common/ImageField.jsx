@@ -15,7 +15,15 @@ const INPUT = 'input'
  * Es controlado: no guarda nada por su cuenta, sólo avisa la URL nueva. Guardar
  * sigue siendo del formulario que lo contiene.
  */
-export default function ImageField({ value, onChange, folder, placeholder = 'URL de imagen (opcional)' }) {
+export default function ImageField({
+  value,
+  onChange,
+  folder,
+  placeholder = 'URL de imagen (opcional)',
+  // Clases de la vista previa. Las fichas del panel la muestran grande en la
+  // columna de la derecha y acá sólo en el teléfono (`lg:hidden`).
+  previewClassName = '',
+}) {
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -68,7 +76,7 @@ export default function ImageField({ value, onChange, folder, placeholder = 'URL
       {error && <p className="text-rock-accentBright text-xs">{error}</p>}
 
       {value && (
-        <div className="flex items-start gap-2">
+        <div className={`flex items-start gap-2 ${previewClassName}`}>
           <img
             src={value}
             alt=""

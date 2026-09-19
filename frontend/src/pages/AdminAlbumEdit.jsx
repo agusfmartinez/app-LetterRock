@@ -14,9 +14,12 @@ import {
   useReleaseManualField,
 } from '../hooks/useCatalogAdmin'
 import { useRole } from '../hooks/useRole'
-import { formatReleaseDate } from '../services/dates'
+import { formatReleaseDate, trackDuration } from '../services/dates'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
+import RowMenu from '../components/common/RowMenu'
+import AsideImage from '../components/common/AsideImage'
+import { discGroups, sortTracks } from '../services/tracks'
 
 const INPUT = 'input'
 
@@ -40,7 +43,7 @@ function Field({ label, field, manualFields, onRelease, hint, children }) {
   )
 }
 
-function AlbumForm({ album }) {
+function AlbumForm({ album, onCoverPreview }) {
   const update = useCatalogUpdate('albums')
   const release = useReleaseManualField('albums')
   const [form, setForm] = useState({
@@ -63,6 +66,9 @@ function AlbumForm({ album }) {
   const setValue = (key) => (value) => {
     setSaved(false)
     setForm(f => ({ ...f, [key]: value }))
+    // La portada se ve grande en la columna de la derecha, que está fuera de
+    // este formulario: se le avisa el valor en vivo.
+    if (key === 'cover_url') onCoverPreview?.(value)
   }
 
   const patch = {}
@@ -92,6 +98,7 @@ function AlbumForm({ album }) {
 
   return (
     <div className="card space-y-3">
+      <h2 className="font-display text-xl">Datos</h2>
       <Field label="Título" field="title" {...marks}>
         <input value={form.title} onChange={set('title')} className={`w-full ${INPUT}`} />
       </Field>
@@ -131,6 +138,7 @@ function AlbumForm({ album }) {
           onChange={setValue('cover_url')}
           folder="albums"
           placeholder="URL de portada"
+          previewClassName="lg:hidden"
         />
       </Field>
 
@@ -145,15 +153,15 @@ function AlbumForm({ album }) {
 
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end pt-1">
+        {saved && <span className="text-xs text-gray-500">Guardado</span>}
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          className="btn btn-primary"
+          className="btn btn-primary px-7"
         >
           Guardar
         </button>
-        {saved && <span className="text-xs text-gray-500">Guardado</span>}
       </div>
     </div>
   )
@@ -163,10 +171,23 @@ function AlbumForm({ album }) {
  * Alta manual de canciones. Necesaria para los discos cargados a mano: sin id
  * de Spotify no hay ingesta que les llene el tracklist.
  */
-function NewTrackForm({ albumId, nextNumber }) {
+/*
+ * En un doble se elige el disco, y el número propuesto es el siguiente de ese
+ * disco: cada uno numera desde 1.
+ */
+function NewTrackForm({ albumId, discs }) {
   const create = useCreateTrack()
   const [title, setTitle] = useState('')
-  const [number, setNumber] = useState(String(nextNumber))
+  const lastDisc = discs.length ? discs[discs.length - 1].disc : 1
+  const nextIn = (d) => (discs.find(x => x.disc === d)?.items.length || 0) + 1
+  const [disc, setDisc] = useState(lastDisc)
+  const [number, setNumber] = useState(String(nextIn(lastDisc)))
+
+  const pickDisc = (value) => {
+    const d = Number(value)
+    setDisc(d)
+    setNumber(String(nextIn(d)))
+  }
   const [duration, setDuration] = useState('')
   const [error, setError] = useState('')
 
@@ -191,7 +212,7 @@ function NewTrackForm({ albumId, nextNumber }) {
         title: title.trim(),
         track_number: number ? Number(number) : null,
         duration_ms: duration.trim() ? parseDuration(duration) : null,
-        disc_number: 1,
+        disc_number: disc,
       },
       {
         onSuccess: () => {
@@ -206,33 +227,46 @@ function NewTrackForm({ albumId, nextNumber }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-2 p-2 border-t border-rock-border">
+    <form onSubmit={submit} className="flex items-center gap-2 flex-wrap px-4 py-3 border-t border-rock-border bg-rock-dark/30">
+      <span className="kicker w-full">Agregar canción</span>
+      {discs.length > 1 && (
+        <select
+          value={disc}
+          onChange={e => pickDisc(e.target.value)}
+          aria-label="Disco"
+          className={`!w-auto ${INPUT}`}
+        >
+          {discs.map(d => <option key={d.disc} value={d.disc}>Disco {d.disc}</option>)}
+        </select>
+      )}
       <input
         value={number}
         onChange={e => setNumber(e.target.value)}
         type="number"
-        className={`w-14 text-center ${INPUT}`}
+        aria-label="Número"
+        className={`!w-16 text-center ${INPUT}`}
       />
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Título de la canción"
-        className={`flex-1 ${INPUT}`}
+        className={`flex-1 min-w-[160px] ${INPUT}`}
       />
       <input
         value={duration}
         onChange={e => setDuration(e.target.value)}
         placeholder="3:35"
-        className={`w-20 text-center ${INPUT}`}
+        aria-label="Duración"
+        className={`!w-20 text-center ${INPUT}`}
       />
       <button
         type="submit"
         disabled={create.isPending || !title.trim()}
-        className="btn btn-primary !text-xs !px-3 !py-1.5"
+        className="btn btn-primary !min-h-0 !px-4 !py-2 !text-[12.5px]"
       >
         Agregar
       </button>
-      {error && <span className="text-rock-accentBright text-xs">{error}</span>}
+      {error && <p className="field-error w-full !mt-0">{error}</p>}
     </form>
   )
 }
@@ -260,43 +294,53 @@ function TrackRow({ track }) {
     )
   }
 
+  const askDelete = async () => {
+    const ok = await confirm({
+      title: 'Borrar canción',
+      message: `¿Borrar "${track.title}" del disco?`,
+    })
+    if (ok) remove.mutate(track.id, { onError: e => setError(describeError(e)) })
+  }
+
   return (
-    <div className="flex items-center gap-2 p-2">
-      <input
-        value={number}
-        onChange={e => setNumber(e.target.value)}
-        type="number"
-        className={`w-14 text-center ${INPUT}`}
-      />
-      <input
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        className={`flex-1 ${INPUT}`}
-      />
-      <ManualFieldMark field="title" manualFields={track.manual_fields} />
-      {error && <span className="text-rock-accentBright text-xs">{error}</span>}
-      <button
-        onClick={save}
-        disabled={!dirty || update.isPending}
-        className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
-      >
-        Guardar
-      </button>
-      {isAdmin && (
-        <button
-          onClick={async () => {
-            const ok = await confirm({
-              title: 'Borrar canción',
-              message: `¿Borrar "${track.title}" del disco?`,
-            })
-            if (ok) remove.mutate(track.id, { onError: e => setError(describeError(e)) })
-          }}
-          disabled={remove.isPending}
-          className="text-xs text-gray-500 hover:text-rock-accentBright disabled:opacity-50"
-        >
-          ✕
-        </button>
-      )}
+    <div className="px-4 py-2.5 border-t border-rock-border first:border-t-0">
+      <div className="flex items-center gap-2.5">
+        <input
+          value={number}
+          onChange={e => setNumber(e.target.value)}
+          type="number"
+          aria-label="Número"
+          className={`!w-16 text-center ${INPUT}`}
+        />
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          aria-label="Título"
+          className={`flex-1 min-w-0 ${INPUT}`}
+        />
+        <ManualFieldMark field="title" manualFields={track.manual_fields} />
+        <span className="text-gray-500 text-[12.5px] tabular-nums w-11 text-right flex-none hidden sm:block">
+          {trackDuration(track) || '—'}
+        </span>
+        {/* Guardar aparece sólo si la fila cambió: con veinte canciones,
+            veinte botones apagados eran puro ruido. */}
+        {dirty && (
+          <button
+            onClick={save}
+            disabled={update.isPending}
+            className="btn btn-primary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] flex-none"
+          >
+            Guardar
+          </button>
+        )}
+        {isAdmin && (
+          <RowMenu
+            disabled={remove.isPending}
+            items={[{ label: 'Borrar canción', hint: 'No se puede deshacer.', onClick: askDelete, danger: true }]}
+          />
+        )}
+      </div>
+      {error && <p className="field-error">{error}</p>}
     </div>
   )
 }
@@ -312,65 +356,89 @@ export default function AdminAlbumEdit() {
       ) : !data ? (
         <p className="text-rock-accentBright">Álbum no encontrado.</p>
       ) : (
-        <div className="space-y-6 max-w-3xl">
-          <div className="flex items-center gap-4 flex-wrap">
-            <ArrowLink back to={`/admin/artista/${data.album.artist?.id}`}>{data.album.artist?.name}</ArrowLink>
-            <ArrowLink to={`/album/${data.album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
-          </div>
+        <AlbumEditBody data={data} />
+      )}
+    </RequireEditor>
+  )
+}
 
-          <h1 className="font-display text-3xl">{data.album.title}</h1>
+function AlbumEditBody({ data }) {
+  const { album } = data
+  const [cover, setCover] = useState(album.cover_url || '')
+  // Por disco y después por pista: un doble numera 1..n en cada disco.
+  const tracks = sortTracks(data.tracks)
+  const discs = discGroups(tracks)
+  const year = album.release_date ? Number(album.release_date.slice(0, 4)) : null
 
-          <AlbumForm key={data.album.id} album={data.album} />
+  return (
+    <div className="space-y-6">
+      <ArrowLink back to={`/admin/artista/${album.artist?.id}`}>{album.artist?.name}</ArrowLink>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="font-display text-3xl sm:text-4xl">{album.title}</h1>
+        {album.hidden && <span className="tag tag-neutral">Oculto</span>}
+        <ArrowLink to={`/album/${album.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto">
+          Ver la página
+        </ArrowLink>
+      </div>
+
+      {/*
+        En escritorio, dos columnas: a la izquierda lo que se edita (datos y
+        canciones), a la derecha lo que se consulta (la portada y la formación
+        de ese año). En el teléfono, una sola, con la formación al final.
+      */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+        <div className="space-y-6 min-w-0">
+          <AlbumForm key={album.id} album={album} onCoverPreview={setCover} />
+
+          <section>
+            <h2 className="font-display text-2xl mb-1">Canciones ({tracks.length})</h2>
+            <p className="text-gray-500 text-[13px] mb-3">
+              Número y título. Cada fila se guarda por separado.
+            </p>
+            {/* Sin overflow-hidden: el menú "⋯" de la última fila sale por abajo. */}
+            <div className="card !p-0">
+              {discs.map(d => (
+                <div key={d.disc}>
+                  {discs.length > 1 && (
+                    <p className="kicker px-4 pt-3 pb-1">Disco {d.disc}</p>
+                  )}
+                  {d.items.map(({ track }) => <TrackRow key={track.id} track={track} />)}
+                </div>
+              ))}
+              <NewTrackForm key={discs.length} albumId={album.id} discs={discs} />
+            </div>
+
+            {tracks.length === 0 && (
+              <p className="text-gray-500 text-xs mt-2">
+                {album.external_spotify_id
+                  ? 'Los discos de Spotify cargan su tracklist solos al entrar a la página del álbum.'
+                  : 'Este disco no viene de Spotify: las canciones se cargan a mano.'}
+              </p>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-24">
+          <AsideImage src={cover} saved={album.cover_url} alt={album.title} />
 
           {/*
             Formación del año del disco. Está acá para poder chequear que las
             fechas de las etapas den la alineación correcta: si falta o sobra
             alguien, el error está en el artista, no en el álbum.
           */}
-          {(() => {
-            const year = data.album.release_date
-              ? Number(data.album.release_date.slice(0, 4))
-              : null
-            if (!year) return null
-            return (
-              <div className="card space-y-2">
-                <h2 className="font-display text-lg text-sm">
-                  Formación en {year}
-                </h2>
-                <AlbumLineup
-                  artistId={data.album.artist?.id}
-                  year={year}
-                  editHref={`/admin/artista/${data.album.artist?.id}`}
-                />
-              </div>
-            )
-          })()}
-
-          <div>
-            <h2 className="font-display text-xl mb-1">
-              Canciones ({data.tracks.length})
-            </h2>
-            <p className="text-gray-500 text-sm mb-3">
-              Número, título y duración. Cada fila se guarda por separado.
-            </p>
-            <div className="card !p-0 overflow-hidden divide-y divide-rock-border">
-              {data.tracks.map(t => <TrackRow key={t.id} track={t} />)}
-              <NewTrackForm
-                albumId={data.album.id}
-                nextNumber={data.tracks.length + 1}
+          {year && (
+            <div className="card space-y-2">
+              <h2 className="font-display text-xl">Formación en {year}</h2>
+              <AlbumLineup
+                artistId={album.artist?.id}
+                year={year}
+                editHref={`/admin/artista/${album.artist?.id}`}
               />
             </div>
-
-            {data.tracks.length === 0 && (
-              <p className="text-gray-500 text-xs mt-2">
-                {data.album.external_spotify_id
-                  ? 'Los discos de Spotify cargan su tracklist solos al entrar a la página del álbum.'
-                  : 'Este disco no viene de Spotify: las canciones se cargan a mano.'}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </RequireEditor>
+          )}
+        </aside>
+      </div>
+    </div>
   )
 }
