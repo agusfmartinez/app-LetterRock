@@ -231,15 +231,15 @@ function NewSectionForm({ collection, nextPosition }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
-        + Nueva sección
+      <button onClick={() => setOpen(true)} className="btn btn-primary">
+        + Nueva época
       </button>
     )
   }
 
   return (
     <form onSubmit={submit} className="card space-y-3">
-      <h3 className="font-display text-xl">Nueva sección</h3>
+      <h3 className="font-display text-xl">Nueva época</h3>
       <div className="flex gap-2 flex-wrap">
         <input
           value={title}
@@ -265,11 +265,11 @@ function NewSectionForm({ collection, nextPosition }) {
       <input
         value={subtitle}
         onChange={e => setSubtitle(e.target.value)}
-        placeholder="Bajada (opcional)"
+        placeholder="Subtítulo (opcional)"
         className="input"
       />
       <p className="text-gray-500 text-xs">
-        El rango de años alimenta las sugerencias de discos al cargar la sección.
+        El rango de años alimenta las sugerencias de discos al cargar la época.
       </p>
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
       <div className="flex items-center gap-3 justify-end">
@@ -281,63 +281,90 @@ function NewSectionForm({ collection, nextPosition }) {
           disabled={createSection.isPending || !title.trim()}
           className="btn btn-primary"
         >
-          Agregar sección
+          Agregar época
         </button>
       </div>
     </form>
   )
 }
 
-function SectionRow({ collection, section }) {
+/**
+ * Una época de la timeline, como tarjeta: portada, número, título, años y
+ * cuántas entradas tiene. En grilla aprovecha el ancho de la pantalla, y se
+ * lee como lo que es — una secuencia de capítulos — más que una tabla.
+ */
+function SectionCard({ collection, section }) {
   const { deleteSection } = useCollectionAdmin()
   const confirm = useConfirm()
+  const editHref = `/coleccion/${collection.slug}/${section.slug}/editar`
+  const years = section.year_from && section.year_to
+    ? `${section.year_from}–${section.year_to}`
+    : section.year_from || section.year_to || null
 
   const remove = async () => {
     const ok = await confirm({
-      title: 'Borrar sección',
-      message: `¿Borrar la sección "${section.title}" y sus ${section.entry_count} entradas? No se puede deshacer.`,
+      title: 'Borrar época',
+      message: `¿Borrar "${section.title}" y sus ${section.entry_count} entradas? No se puede deshacer.`,
+      confirmLabel: 'Borrar',
     })
     if (!ok) return
     deleteSection.mutate(section.id)
   }
 
   return (
-    <div className="flex items-center gap-3.5 px-4 sm:px-5 py-3.5 border-t border-rock-border first:border-t-0">
-      <span className="font-mono text-gray-500 text-xs w-6 text-right flex-none">{section.position}</span>
-      <div className="flex-1 min-w-0">
-        <Link
-          to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-          className="text-[15px] font-semibold hover:text-rock-accent"
-        >
-          {section.title}
-        </Link>
-        <p className="text-gray-500 text-[12.5px] mt-0.5">
-          {section.year_from && section.year_to ? `${section.year_from}–${section.year_to} · ` : ''}
-          {section.entry_count} {section.entry_count === 1 ? 'entrada' : 'entradas'}
-        </p>
-      </div>
-      <Link
-        to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-        className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px] hidden sm:inline-flex"
-      >
-        Editar
+    // Sin overflow-hidden en la tarjeta: el menú "⋯" tiene que poder salir.
+    <div className="card !p-0 flex flex-col">
+      <Link to={editHref} className="group block relative aspect-[16/9] rounded-t-xl overflow-hidden bg-rock-border">
+        {section.cover_url ? (
+          <img
+            src={section.cover_url}
+            alt=""
+            className="w-full h-full object-cover washed group-hover:filter-none transition-[filter]"
+          />
+        ) : (
+          <span className="absolute inset-0 grid place-items-center font-display text-3xl text-gray-600">
+            {years || section.title}
+          </span>
+        )}
+        <span className="absolute top-3 left-3 font-mono text-[11px] tracking-[0.14em] px-2 py-0.5 rounded-full bg-rock-dark/80 text-gray-300">
+          {String(section.position).padStart(2, '0')}
+        </span>
       </Link>
-      <ArrowLink to={`/coleccion/${collection.slug}/${section.slug}`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex">
-        Ver
-      </ArrowLink>
-      <RowMenu
-        disabled={deleteSection.isPending}
-        items={[{
-          label: 'Borrar sección',
-          hint: 'Con sus entradas. No se puede deshacer.',
-          onClick: remove,
-          danger: true,
-        }]}
-      />
+
+      <div className="p-4 flex-1 flex flex-col gap-3">
+        <div className="min-w-0">
+          <Link to={editHref} className="text-[15.5px] font-semibold hover:text-rock-accent">
+            {section.title}
+          </Link>
+          <p className="text-gray-500 text-[12.5px] mt-0.5">
+            {[years, `${section.entry_count} ${section.entry_count === 1 ? 'entrada' : 'entradas'}`]
+              .filter(Boolean).join(' · ')}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 mt-auto">
+          <Link to={editHref} className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]">
+            Editar
+          </Link>
+          <ArrowLink to={`/coleccion/${collection.slug}/${section.slug}`} target="_blank" rel="noopener noreferrer">
+            Ver
+          </ArrowLink>
+          <div className="ml-auto">
+            <RowMenu
+              disabled={deleteSection.isPending}
+              items={[{
+                label: 'Borrar época',
+                hint: 'Con sus entradas. No se puede deshacer.',
+                onClick: remove,
+                danger: true,
+              }]}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
-
 
 /**
  * Carga de una colección sin épocas.
@@ -430,6 +457,7 @@ function FlatEntriesEditor({ collection, entries, sections }) {
             // volver a arrancar del número nuevo y no del que quedó tipeado.
             key={`${selected.id}-${selected.rank ?? ''}`}
             entry={selected}
+            where="la colección"
             isRanking={isRanking}
             siblings={entries}
             onClose={() => setSelectedId(null)}
@@ -453,7 +481,7 @@ export default function AdminCollectionEdit() {
         <p className="text-rock-accentBright">Colección no encontrada.</p>
       ) : (
         <RequireCollectionOwner collection={data.collection}>
-        <div className={`space-y-6 ${data.collection.type === 'timeline' ? 'max-w-3xl' : ''}`}>
+        <div className="space-y-6">
           <div className="flex items-center gap-3">
             <ArrowLink back to="/colecciones">Colecciones</ArrowLink>
             <ArrowLink to={`/coleccion/${data.collection.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
@@ -464,18 +492,22 @@ export default function AdminCollectionEdit() {
           <CollectionFields key={data.collection.id} collection={data.collection} />
 
           {data.collection.type === 'timeline' ? (
-            <div>
-              <h2 className="font-display text-2xl mb-3">Épocas ({data.sections.length})</h2>
+            <section className="space-y-4">
+              <div>
+                <h2 className="font-display text-2xl">Épocas ({data.sections.length})</h2>
+                <p className="text-gray-500 text-[13px] mt-1">
+                  En el orden en que se leen. Cada una se carga por separado: entrá a editarla para sumarle discos.
+                </p>
+              </div>
               {data.sections.length > 0 && (
-                // Sin overflow-hidden: el menú "⋯" de la última fila sale por abajo.
-                <div className="card !p-0 mb-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {data.sections.map(s => (
-                    <SectionRow key={s.id} collection={data.collection} section={s} />
+                    <SectionCard key={s.id} collection={data.collection} section={s} />
                   ))}
                 </div>
               )}
               <NewSectionForm collection={data.collection} nextPosition={data.sections.length + 1} />
-            </div>
+            </section>
           ) : (
             <FlatEntriesEditor
               collection={data.collection}

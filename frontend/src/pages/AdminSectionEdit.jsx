@@ -21,12 +21,26 @@ import { albumYear, formatReleaseDate } from '../services/dates'
 import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../services/api'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
+import { IconChevronRight } from '../components/common/Icons'
 
-const INPUT = 'input'
+const LABEL = 'block text-[13px] text-gray-400 mb-1.5'
 
+// Un campo de año no acepta signo, exponente ni decimales.
+const blockNonDigits = (e) => {
+  if (['-', '+', 'e', 'E', '.', ','].includes(e.key)) e.preventDefault()
+}
+
+/**
+ * Los datos de la época.
+ *
+ * Plegados por defecto: a esta pantalla se viene a cargar discos, y el
+ * formulario abierto empujaba la lista de entradas fuera de la vista. Plegado
+ * muestra igual lo importante —años, subtítulo, si tiene portada y playlist—, así
+ * que se ve qué falta sin abrirlo.
+ */
 function SectionFields({ section }) {
   const { updateSection } = useCollectionAdmin()
-  const [form, setForm] = useState({
+  const initial = () => ({
     title: section.title,
     subtitle: section.subtitle || '',
     intro_text: section.intro_text || '',
@@ -35,10 +49,13 @@ function SectionFields({ section }) {
     year_from: section.year_from ?? '',
     year_to: section.year_to ?? '',
   })
+  const [form, setForm] = useState(initial)
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
+  const set = (key) => (e) => { setSaved(false); setForm({ ...form, [key]: e.target.value }) }
+  const setValue = (key) => (value) => { setSaved(false); setForm(f => ({ ...f, [key]: value })) }
 
   const save = () => {
     updateSection.mutate(
@@ -52,56 +69,127 @@ function SectionFields({ section }) {
         year_from: form.year_from ? Number(form.year_from) : null,
         year_to: form.year_to ? Number(form.year_to) : null,
       },
-      { onError: e => setError(describeError(e)) }
+      { onSuccess: () => { setError(''); setSaved(true) }, onError: e => setError(describeError(e)) }
     )
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]">
-        Editar datos de la época ▾
-      </button>
-    )
-  }
+  // Plegar no descarta nada: lo escrito sigue ahí al volver a abrir, y el
+  // resumen avisa que hay cambios sin guardar.
+  const saved0 = initial()
+  const dirty = Object.keys(saved0).some(k => String(form[k]) !== String(saved0[k]))
+
+  const years = [section.year_from, section.year_to].filter(Boolean).join('–')
+  const summary = [
+    years || 'Sin años',
+    section.subtitle || null,
+    section.cover_url ? 'con portada' : 'sin portada',
+    section.playlist_url ? 'con playlist' : null,
+  ].filter(Boolean).join(' · ')
 
   return (
-    <div className="card space-y-3">
-      <div className="flex gap-2 flex-wrap">
-        <input value={form.title} onChange={set('title')} className={`flex-1 min-w-[160px] ${INPUT}`} />
-        <input value={form.year_from} onChange={set('year_from')} placeholder="Desde" type="number" className={`w-24 ${INPUT}`} />
-        <input value={form.year_to} onChange={set('year_to')} placeholder="Hasta" type="number" className={`w-24 ${INPUT}`} />
-      </div>
-      <input value={form.subtitle} onChange={set('subtitle')} placeholder="Bajada" className={`w-full ${INPUT}`} />
-      <textarea
-        value={form.intro_text}
-        onChange={set('intro_text')}
-        placeholder="Texto de apertura de la época. Una línea en blanco separa párrafos."
-        rows={4}
-        className={`w-full ${INPUT}`}
-      />
-      <ImageField
-        value={form.cover_url}
-        onChange={url => setForm(f => ({ ...f, cover_url: url }))}
-        folder="collections"
-        placeholder="URL de portada de la sección (opcional)"
-      />
-      <PlaylistField
-        value={form.playlist_url}
-        onChange={url => setForm(f => ({ ...f, playlist_url: url }))}
-      />
-      {error && <p className="text-rock-accentBright text-sm">{error}</p>}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={save}
-          disabled={updateSection.isPending}
-          className="btn btn-primary"
-        >
-          Guardar sección
-        </button>
-        <button onClick={() => setOpen(false)} className="text-sm text-gray-500 hover:text-rock-text">
-          Cerrar
-        </button>
-      </div>
+    <div className="card space-y-4">
+      {/* El encabezado entero abre y cierra: es un plegable, y la flecha lo
+          dice. Un "Cancelar" para cerrar se leía como descartar la edición. */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-3 text-left group"
+      >
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-xl group-hover:text-rock-accent transition-colors">Datos de la época</h2>
+          {!open && (
+            <p className="text-gray-500 text-[12.5px] mt-0.5 truncate">
+              {dirty ? <span className="text-rock-accent">Cambios sin guardar · </span> : null}
+              {summary}
+            </p>
+          )}
+        </div>
+        <span className={`btn btn-secondary btn-icon flex-none transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>
+          <IconChevronRight size={16} />
+        </span>
+      </button>
+
+      {open && (
+        <>
+          {/* De a pares en escritorio (título y subtítulo, años y portada);
+              playlist y descripción a todo el ancho. En el teléfono, en fila. */}
+          <div className="grid gap-4 md:grid-cols-2 items-start">
+            <label className="block">
+              <span className={LABEL}>Título</span>
+              <input value={form.title} onChange={set('title')} className="input" />
+            </label>
+            <label className="block">
+              <span className={LABEL}>Subtítulo</span>
+              <input value={form.subtitle} onChange={set('subtitle')} placeholder="Una línea debajo del título" className="input" />
+            </label>
+
+            <div>
+              <span className={LABEL}>Años</span>
+              <div className="flex items-center gap-2.5">
+                <input
+                  value={form.year_from}
+                  onChange={set('year_from')}
+                  onKeyDown={blockNonDigits}
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Desde"
+                  aria-label="Desde"
+                  className="input !w-28"
+                />
+                <span className="text-gray-500 text-sm">a</span>
+                <input
+                  value={form.year_to}
+                  onChange={set('year_to')}
+                  onKeyDown={blockNonDigits}
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Hasta"
+                  aria-label="Hasta"
+                  className="input !w-28"
+                />
+              </div>
+              <span className="block text-[11.5px] text-gray-500 mt-1.5">
+                Alimentan las sugerencias de discos del buscador de la derecha.
+              </span>
+            </div>
+            <div>
+              <span className={LABEL}>Portada</span>
+              <ImageField
+                value={form.cover_url}
+                onChange={setValue('cover_url')}
+                folder="collections"
+                placeholder="URL de portada (opcional)"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <span className={LABEL}>Playlist</span>
+              <PlaylistField value={form.playlist_url} onChange={setValue('playlist_url')} />
+            </div>
+
+            <label className="block md:col-span-2">
+              <span className={LABEL}>Descripción</span>
+              <textarea
+                value={form.intro_text}
+                onChange={set('intro_text')}
+                placeholder="Con qué arranca la época. Una línea en blanco separa párrafos."
+                rows={5}
+                className="input"
+              />
+            </label>
+          </div>
+
+          {error && <p className="field-error">{error}</p>}
+
+          <div className="flex items-center gap-3 justify-end border-t border-rock-border pt-4">
+            {saved && !dirty && <span className="text-xs text-gray-500">Guardado</span>}
+            <button onClick={save} disabled={!dirty || updateSection.isPending} className="btn btn-primary px-7">
+              Guardar
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -127,12 +215,19 @@ export default function AdminSectionEdit() {
       ) : (
         <RequireCollectionOwner collection={data.collection}>
         <div className="space-y-6">
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
             <ArrowLink back to={`/coleccion/${data.collection.slug}/editar`}>{data.collection.title}</ArrowLink>
             <ArrowLink to={`/coleccion/${data.collection.slug}/${data.section.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto">Ver la página</ArrowLink>
           </div>
 
-          <h1 className="font-display text-3xl">{data.section.title}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="font-display text-3xl sm:text-4xl">{data.section.title}</h1>
+            {(data.section.year_from || data.section.year_to) && (
+              <span className="tag tag-neutral">
+                {[data.section.year_from, data.section.year_to].filter(Boolean).join('–')}
+              </span>
+            )}
+          </div>
 
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             {/* Contenido cargado */}
@@ -140,10 +235,10 @@ export default function AdminSectionEdit() {
               <SectionFields section={data.section} />
 
               <div>
-                <h2 className="font-display text-xl mb-1">
+                <h2 className="font-display text-2xl mb-1">
                   Entradas ({entries.length})
                 </h2>
-                <p className="text-gray-500 text-sm mb-3">
+                <p className="text-gray-500 text-[13px] mb-3">
                   Agrupadas por año, en orden cronológico. Elegí una para editarla
                   en el panel de la derecha, o movela con las flechas para fijar
                   el orden dentro de su año.
@@ -168,6 +263,7 @@ export default function AdminSectionEdit() {
                 <EntryEditor
                   key={selected.id}
                   entry={selected}
+                  where="la época"
                   onClose={() => setSelectedId(null)}
                 />
               )}

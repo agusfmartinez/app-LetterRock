@@ -1,4 +1,8 @@
 import { useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../services/supabaseClient'
+import RowMenu from './RowMenu'
+import { IconX } from './Icons'
 import { Link } from 'react-router-dom'
 import { useConfirm } from './ConfirmDialog'
 import ImageField from './ImageField'
@@ -11,7 +15,7 @@ import {
 } from '../../hooks/useCollectionAdmin'
 import { groupEntriesByYear, nextPositionInYear } from '../../hooks/useCollections'
 import { albumYear, formatReleaseDate } from '../../services/dates'
-import { linkAlbumToYoutube, linkArtistDiscography, refreshYoutubeViews } from '../../services/api'
+import { linkAlbumToYoutube, refreshYoutubeViews } from '../../services/api'
 
 const INPUT = 'input'
 
@@ -207,7 +211,9 @@ export function EntriesFlat({ entries, selectedId, onSelect, isRanking = false }
  * Único formulario de edición de la página. Se remonta con `key={entry.id}`
  * al cambiar de entrada, así el estado local arranca limpio.
  */
-export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }) {
+// `where`: de dónde se quita la entrada, para el menú y la confirmación
+// ("la época" en una timeline, "la colección" en una lista o un ranking).
+export function EntryEditor({ entry, onClose, isRanking = false, siblings = [], where = 'la sección' }) {
   const { updateEntry, deleteEntry, setRanks } = useCollectionAdmin()
   const confirm = useConfirm()
   const [form, setForm] = useState({
@@ -260,7 +266,7 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
   const remove = async () => {
     const ok = await confirm({
       title: 'Quitar entrada',
-      message: `¿Quitar "${label}" de esta sección?`,
+      message: `¿Quitar "${label}" de ${where}? El disco sigue en el catálogo.`,
       confirmLabel: 'Quitar',
     })
     if (!ok) return
@@ -271,20 +277,31 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
   }
 
   return (
-    <div className="bg-rock-card border border-rock-accent rounded-lg p-4 space-y-3">
-      <div className="flex items-start gap-3">
+    <div className="card !p-4 border border-rock-accent/60 space-y-4">
+      <div className="flex items-center gap-3">
         {album?.cover_url && (
-          <img src={album.cover_url} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />
+          <img src={album.cover_url} alt="" className="w-12 h-12 rounded-[8px] object-cover flex-none washed" />
         )}
         <div className="flex-1 min-w-0">
           <p className="text-rock-text font-semibold truncate">{label}</p>
-          <p className="text-gray-500 text-xs truncate">
+          <p className="text-gray-500 text-[12.5px] truncate">
             {[(entry.artist || album?.artist)?.name, entry.track ? album?.title : null]
               .filter(Boolean).join(' · ')}
           </p>
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-rock-text text-sm flex-shrink-0">
-          ✕
+        {/* Quitar va al menú y no como texto al pie: se hace poco, y al lado de
+            Guardar era fácil tocarlo sin querer. */}
+        <RowMenu
+          disabled={deleteEntry.isPending}
+          items={[{
+            label: `Quitar de ${where}`,
+            hint: 'El disco sigue en el catálogo.',
+            onClick: remove,
+            danger: true,
+          }]}
+        />
+        <button onClick={onClose} aria-label="Cerrar" title="Cerrar" className="btn btn-secondary btn-icon flex-none">
+          <IconX size={16} />
         </button>
       </div>
 
@@ -317,13 +334,16 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         </label>
       )}
 
-      <textarea
-        value={form.body_text}
-        onChange={set('body_text')}
-        placeholder="Texto editorial. Una línea en blanco separa párrafos."
-        rows={10}
-        className={`w-full ${INPUT}`}
-      />
+      <label className="block">
+        <span className="block text-[13px] text-gray-400 mb-1.5">Texto editorial</span>
+        <textarea
+          value={form.body_text}
+          onChange={set('body_text')}
+          placeholder="Qué significa este disco acá. Una línea en blanco separa párrafos."
+          rows={8}
+          className={`w-full ${INPUT}`}
+        />
+      </label>
 
       {/*
         No se precarga la descripción sola: mientras el campo esté vacío la
@@ -331,16 +351,16 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
         el disco. Copiarla es un acto explícito, para partir de ese texto.
       */}
       {!form.body_text.trim() && album?.description && (
-        <div className="text-gray-500 text-xs space-y-1">
-          <p>
-            Vacío: la timeline muestra la descripción del disco. Escribí acá para
-            contar qué significa en esta colección.
+        <div className="rounded-[14px] bg-rock-dark/50 px-3.5 py-3 space-y-2.5">
+          <p className="text-gray-500 text-[12.5px] leading-relaxed">
+            Vacío, se muestra la descripción del disco. Escribí acá para contar qué
+            significa en esta colección.
           </p>
           <button
             onClick={() => { setSaved(false); setForm({ ...form, body_text: album.description }) }}
-            className="text-rock-accent hover:underline"
+            className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
           >
-            Copiar la descripción para editarla acá
+            Copiar la descripción del disco
           </button>
         </div>
       )}
@@ -355,34 +375,61 @@ export function EntryEditor({ entry, onClose, isRanking = false, siblings = [] }
 
       {error && <p className="text-rock-accentBright text-sm">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end">
+        {saved && <span className="text-xs text-gray-500">Guardado</span>}
         <button
           onClick={save}
           disabled={updateEntry.isPending}
-          className="btn btn-primary"
+          className="btn btn-primary px-7"
         >
           Guardar
         </button>
-        {saved && <span className="text-xs text-gray-500">Guardado</span>}
-        <button onClick={remove} className="ml-auto text-xs text-gray-500 hover:text-rock-accentBright">
-          Quitar de la sección
-        </button>
       </div>
 
-      {album && <YoutubePanel albumId={album.id} artist={album.artist} />}
+      {album && <YoutubePanel albumId={album.id} />}
     </div>
   )
 }
 
 /**
- * Vinculación con YouTube Music. Se dispara a mano porque la búsqueda cuesta
- * 100 de las 10.000 unidades diarias de cuota; el refresco de reproducciones
- * cuesta 1 cada 50 temas y se puede repetir sin problema.
+ * Cuántas canciones del disco ya tienen su video de YouTube. Es una consulta a
+ * nuestra base, no a YouTube: no gasta cuota.
  */
-function YoutubePanel({ albumId, artist }) {
+function useYoutubeLinkStatus(albumId) {
+  return useQuery({
+    queryKey: ['yt-link-status', albumId],
+    enabled: !!albumId,
+    queryFn: async () => {
+      const { data: tracks } = await supabase.from('tracks').select('id').eq('album_id', albumId)
+      const ids = (tracks || []).map(t => t.id)
+      if (ids.length === 0) return { linked: 0, total: 0 }
+      const { count } = await supabase
+        .from('media_links')
+        .select('id', { count: 'exact', head: true })
+        .eq('entity_type', 'track')
+        .eq('provider', 'youtube')
+        .in('entity_id', ids)
+      return { linked: count || 0, total: ids.length }
+    },
+  })
+}
+
+/**
+ * Vinculación con YouTube Music, disco por disco.
+ *
+ * Vincular busca en el canal del artista y gasta cuota (la primera vez, 100 de
+ * las 9.000 diarias para encontrar el canal), así que sólo se ofrece si el disco
+ * todavía no está vinculado. La discografía entera no va acá: es del artista y
+ * vive en su ficha. Refrescar reproducciones cuesta 1 unidad cada 50 temas y
+ * queda siempre a mano.
+ */
+function YoutubePanel({ albumId }) {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const queryClient = useQueryClient()
+  const { data: link } = useYoutubeLinkStatus(albumId)
+  const linked = link?.linked > 0
 
   const run = async (action, label) => {
     setBusy(true)
@@ -390,6 +437,8 @@ function YoutubePanel({ albumId, artist }) {
     setStatus(null)
     try {
       setStatus({ ...(await action(albumId)), label })
+      queryClient.invalidateQueries({ queryKey: ['yt-link-status', albumId] })
+      queryClient.invalidateQueries({ queryKey: ['album-media'] })
     } catch (err) {
       const data = err.response?.data
       const albums = data?.availableAlbums
@@ -403,32 +452,43 @@ function YoutubePanel({ albumId, artist }) {
   }
 
   return (
-    <div className="border-t border-rock-border pt-3 space-y-2">
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          onClick={() => run(linkAlbumToYoutube, 'link')}
-          disabled={busy}
-          className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
-        >
-          Vincular con YouTube
-        </button>
-        {artist?.id && (
+    <div className="border-t border-rock-border pt-4 space-y-2.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <p className="kicker">YouTube Music</p>
+        {link && (
+          <span className={`tag !text-[10.5px] !py-0.5 ${linked ? 'tag-accent' : 'tag-neutral'}`}>
+            {linked ? `Vinculado · ${link.linked} de ${link.total} temas` : 'Sin vincular'}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        {link && !linked && (
           <button
-            onClick={() => run(() => linkArtistDiscography(artist.id), 'discography')}
+            onClick={() => run(linkAlbumToYoutube, 'link')}
             disabled={busy}
-            className="btn btn-secondary !min-h-0 !px-3 !py-1 !text-xs"
+            className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
+            title="Busca en el canal del artista. Gasta cuota de YouTube."
           >
-            Vincular discografía completa
+            Vincular este disco
           </button>
         )}
-        <button
-          onClick={() => run(refreshYoutubeViews, 'refresh')}
-          disabled={busy}
-          className="text-xs text-gray-500 hover:text-rock-accent disabled:opacity-50"
-        >
-          Refrescar reproducciones
-        </button>
+        {linked && (
+          <button
+            onClick={() => run(refreshYoutubeViews, 'refresh')}
+            disabled={busy}
+            className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
+            title="Vuelve a traer las reproducciones de los videos ya vinculados. Casi no gasta cuota."
+          >
+            Refrescar reproducciones
+          </button>
+        )}
       </div>
+      {link && !linked && (
+        <p className="text-gray-500 text-[12px]">
+          Si faltan varios discos del mismo artista, conviene vincular la discografía
+          entera desde su ficha: sale más barato que ir uno por uno.
+        </p>
+      )}
 
       {busy && <p className="text-gray-500 text-xs">Consultando YouTube...</p>}
       {error && <p className="text-rock-accentBright text-xs">{error}</p>}
@@ -458,24 +518,6 @@ function YoutubePanel({ albumId, artist }) {
         </div>
       )}
 
-      {status?.label === 'discography' && (
-        <div className="text-xs space-y-1">
-          {status.skipped ? (
-            <p className="text-gray-400">No se pudo: {status.skipped}</p>
-          ) : (
-            <>
-              <p className="text-gray-400">
-                {status.albums?.filter(a => a.matched).length} de {status.albums?.length} álbumes vinculados
-                {status.albums?.some(a => a.ingested) &&
-                  ` · ${status.albums.filter(a => a.ingested).length} con tracks recién traídos de Spotify`}
-              </p>
-              {status.albums?.filter(a => a.skipped).map(a => (
-                <p key={a.album} className="text-gray-500">{a.album}: {a.skipped}</p>
-              ))}
-            </>
-          )}
-        </div>
-      )}
 
       {status?.label === 'refresh' && (
         <p className="text-gray-400 text-xs">{status.updated} temas actualizados</p>

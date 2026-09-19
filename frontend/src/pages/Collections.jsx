@@ -191,7 +191,8 @@ export function CollectionCard({ collection }) {
       </div>
 
       <div className="p-5 flex-1 flex flex-col">
-        {collection.author && (
+        {/* Las de LetterRock se presentan como de la app, no de quien las cargó. */}
+        {collection.author && !collection.is_official && (
           <p className="text-xs text-gray-500 mb-1.5">por {collection.author.username}</p>
         )}
         {collection.description && (
@@ -245,7 +246,6 @@ export default function Collections() {
   return (
     <div className="animate-fade-up">
       <header className="max-w-[56ch] py-10">
-        <p className="kicker mb-3.5">Para escuchar en orden</p>
         <h1 className="text-screen mb-4">Colecciones</h1>
         <p className="text-[16.5px] leading-relaxed text-gray-300 mb-6">
           Timelines por época, listas y rankings. Elegí una y escuchala de

@@ -190,7 +190,8 @@ export default function CollectionDetail() {
                 Editar
               </Link>
             )}
-            {collection.author && (
+            {/* Las de LetterRock se presentan como de la app, no de quien las cargó. */}
+            {collection.author && !collection.is_official && (
               <span className="text-sm text-gray-500">
                 por{' '}
                 <Link to={`/user/${collection.author.username}`} className="hover:text-rock-accent">
