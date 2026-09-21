@@ -1,132 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import MediaEmbed from './MediaEmbed'
+import { IconExternal, IconSpotify, IconYouTubeMusic } from './Icons'
 import {
   derivedTracks,
   parsePlaylistUrl,
   playlistEmbedProps,
-  playlistLabel,
-  spotifyUriList,
-  YOUTUBE_TEMP_LIMIT,
   youtubeTempPlaylistUrl,
 } from '../../services/playlists'
-import { redirectUri, spotifyConfigured } from '../../services/spotifyAuth'
-import { createSpotifyPlaylist } from '../../services/spotifyPlaylist'
 
 const SPOTIFY_PILL =
-  'btn !text-[13px] text-[#1DB954] border-[#1DB954]/40 hover:bg-[#1DB954]/10'
+  'btn !text-[13px] gap-2 text-[#1DB954] border-[#1DB954]/40 hover:bg-[#1DB954]/10'
 const YOUTUBE_PILL =
-  'btn !text-[13px] text-[#FF4E45] border-[#FF4E45]/40 hover:bg-[#FF4E45]/10'
+  'btn !text-[13px] gap-2 text-[#FF4E45] border-[#FF4E45]/40 hover:bg-[#FF4E45]/10'
 
 /**
- * Crear la playlist en la cuenta de quien está mirando.
+ * Abrir en el servicio lo que ya se está viendo incrustado.
  *
- * El permiso se pide recién en el click y no al entrar a la página: hasta que
- * alguien no quiere la playlist, Spotify no tiene nada que ver acá.
+ * El embed suena en modo muestra —treinta segundos por tema en Spotify— así
+ * que el link que lleva a la app no es un extra: es cómo se escucha de verdad.
  */
-function CreateInSpotify({ tracks, name, description }) {
-  const [state, setState] = useState('idle')
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState('')
-
-  const withSpotify = tracks.filter(t => t.spotifyId).length
-  if (withSpotify === 0) return null
-
-  const create = async () => {
-    setState('working')
-    setError('')
-    try {
-      setResult(await createSpotifyPlaylist(name, description, tracks))
-      setState('done')
-    } catch (err) {
-      setError(err.message)
-      setState('idle')
-    }
-  }
-
-  if (state === 'done' && result) {
-    return (
-      <div>
-        <a href={result.url} target="_blank" rel="noopener noreferrer" className={SPOTIFY_PILL}>
-          Abrir la playlist en Spotify ↗
-        </a>
-        <p className="text-gray-500 text-xs mt-1">
-          {result.added} {result.added === 1 ? 'tema' : 'temas'} en tu cuenta
-          {result.missing > 0 && ` · ${result.missing} sin vincular quedaron afuera`}
-        </p>
-      </div>
-    )
-  }
-
+function OpenIn({ playlist }) {
+  const spotify = playlist.provider === 'spotify'
   return (
-    <div>
-      <button onClick={create} disabled={state === 'working'} className={SPOTIFY_PILL}>
-        {state === 'working'
-          ? 'Creando...'
-          : `Crear playlist en Spotify (${withSpotify})`}
-      </button>
-      {error && (
-        <div className="mt-1 max-w-sm">
-          <p className="text-rock-accentBright text-xs">{error}</p>
-          {/* Cuando la URI de vuelta no está cargada en el dashboard, Spotify
-              lo dice adentro del popup y acá no llega nada: quien cierra la
-              ventana ve "cancelaste". Mostrar la URI exacta es lo único que
-              convierte ese callejón en algo accionable. */}
-          <p className="text-gray-500 text-xs mt-1">
-            Si Spotify mostró un error de configuración, esta página pide volver a{' '}
-            <code className="text-gray-500">{redirectUri()}</code>: tiene que estar cargada
-            tal cual en los Redirect URIs de la app.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * El camino sin permisos: los temas al portapapeles.
- *
- * Sigue existiendo aunque esté el botón que crea la playlist sola, porque una
- * app de Spotify en modo desarrollo sólo autoriza a las cuentas cargadas a mano
- * en su dashboard. Para el resto, esto es lo que hay.
- */
-function CopySpotify({ tracks, subdued }) {
-  const [state, setState] = useState('idle')
-  const uris = useMemo(() => spotifyUriList(tracks), [tracks])
-  const count = uris ? uris.split('\n').length : 0
-
-  if (count === 0) return null
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(uris)
-      setState('done')
-      setTimeout(() => setState('idle'), 2500)
-    } catch {
-      setState('error')
-    }
-  }
-
-  return (
-    <div>
-      <button
-        onClick={copy}
-        className={
-          subdued
-            ? 'text-xs text-gray-500 hover:text-rock-accent underline decoration-dotted'
-            : SPOTIFY_PILL
-        }
-      >
-        {state === 'done' ? `${count} temas copiados` : `Copiar ${count} temas para Spotify`}
-      </button>
-      {state === 'done' && (
-        <p className="text-gray-500 text-xs mt-1">
-          Pegalos dentro de una playlist en la app de escritorio de Spotify.
-        </p>
-      )}
-      {state === 'error' && (
-        <p className="text-rock-accentBright text-xs mt-1">El navegador no dejó copiar.</p>
-      )}
-    </div>
+    <a
+      href={playlist.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={spotify ? SPOTIFY_PILL : YOUTUBE_PILL}
+    >
+      {spotify ? <IconSpotify size={16} /> : <IconYouTubeMusic size={16} />}
+      {spotify
+        ? (playlist.kind === 'album' ? 'Escuchar el álbum en Spotify' : 'Escuchar en Spotify')
+        : 'Escuchar en YouTube'}
+      <IconExternal size={13} />
+    </a>
   )
 }
 
@@ -141,18 +48,23 @@ function CopySpotify({ tracks, subdued }) {
  * —un ranking de diez discos no es la playlist de cien temas que su autor
  * escuchó— y la adjunta no reemplaza a la derivada, porque la mayoría de las
  * colecciones no van a tener ninguna pegada.
+ *
+ * Todo lo que ofrece son links que se abren en el servicio. No hay nada que
+ * cree playlists en la cuenta de quien mira: eso pedía conectar la cuenta con
+ * Spotify, y LetterRock no lo hace. Copiar las URIs al portapapeles tampoco
+ * quedó: era el plan B de ese camino, y sin el camino no significa nada.
  */
-export default function PlaylistPanel({ playlistUrl, entries = [], media = {}, title = '' }) {
+export default function PlaylistPanel({ playlistUrl, entries = [], media = {} }) {
   const attached = parsePlaylistUrl(playlistUrl)
   const tracks = useMemo(() => derivedTracks(entries, media), [entries, media])
-  const youtubeUrl = youtubeTempPlaylistUrl(tracks)
-  const youtubeCount = Math.min(
-    tracks.filter(t => t.youtubeId).length,
-    YOUTUBE_TEMP_LIMIT
-  )
-  const canCreate = spotifyConfigured()
+  // Con una playlist de YouTube pegada, la derivada sobra: serían dos botones
+  // rojos al lado, y el que armó una persona gana siempre.
+  const youtubeUrl = attached?.provider === 'youtube'
+    ? null
+    : youtubeTempPlaylistUrl(tracks)
 
-  if (!attached && tracks.length === 0) return null
+  // Sin playlist pegada y sin un solo tema vinculado no hay nada que escuchar.
+  if (!attached && !youtubeUrl) return null
 
   return (
     <section className="w-full mt-12">
@@ -160,57 +72,32 @@ export default function PlaylistPanel({ playlistUrl, entries = [], media = {}, t
 
       {/* A todo el ancho de la columna, como las entradas de arriba: una caja
           angosta al final de una página ancha parecía un resto. */}
-      <div className="card w-full space-y-5">
+      <div className="card w-full space-y-4">
         {attached && (
-          <div className="space-y-2.5">
+          <>
             <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500">PLAYLIST</p>
             <MediaEmbed {...playlistEmbedProps(attached)} />
-            <a
-              href={attached.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-rock-accent text-xs"
-            >
-              {playlistLabel(attached)} ↗
-            </a>
-          </div>
+          </>
         )}
 
-        {tracks.length > 0 && (
-          <div className={`space-y-3 ${attached ? 'pt-5 border-t border-rock-border' : ''}`}>
-            {attached && (
-              <p className="text-gray-400 text-sm">
-                O con los {tracks.length} temas de esta página:
-              </p>
-            )}
-            <div className="flex items-start gap-2.5 flex-wrap">
-              {youtubeUrl && (
-                <a
-                  href={youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={YOUTUBE_PILL}
-                >
-                  Escuchar {youtubeCount} temas en YouTube ↗
-                </a>
-              )}
-              {canCreate && (
-                <CreateInSpotify
-                  tracks={tracks}
-                  name={title || 'Playlist de LetterRock'}
-                  description={`${title} · armada en LetterRock`}
-                />
-              )}
-              {/* Con el botón que la crea sola, copiar pasa a ser el plan B. */}
-              <CopySpotify tracks={tracks} subdued={canCreate} />
-            </div>
-            {tracks.filter(t => t.youtubeId).length > YOUTUBE_TEMP_LIMIT && (
-              <p className="text-gray-500 text-xs">
-                YouTube corta en {YOUTUBE_TEMP_LIMIT} temas: van los primeros.
-              </p>
-            )}
-          </div>
-        )}
+        {/* Las dos formas de escuchar, una al lado de la otra: son la misma
+            decisión —dónde lo escucho— y separadas por una línea parecían dos
+            secciones distintas. */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {attached && <OpenIn playlist={attached} />}
+          {youtubeUrl && (
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={YOUTUBE_PILL}
+            >
+              <IconYouTubeMusic size={16} />
+              Escuchar en YouTube
+              <IconExternal size={13} />
+            </a>
+          )}
+        </div>
       </div>
     </section>
   )

@@ -9,7 +9,7 @@ import TimelineEntry from '../components/common/TimelineEntry'
 import ReviewForm from '../components/forms/ReviewForm'
 import { useReviews } from '../hooks/useReviews'
 import { EmptyState, NotFoundLine, SkeletonRows } from '../components/common/States'
-import YearRail from '../components/common/YearRail'
+import YearRail, { YearFloat } from '../components/common/YearRail'
 import { groupEntriesByYear, useCollectionSection } from '../hooks/useCollections'
 import { useRole } from '../hooks/useRole'
 import { useAuthStore } from '../store/authStore'
@@ -175,6 +175,10 @@ export default function CollectionSection() {
         comparten borde izquierdo y ancho — antes la playlist y las opiniones
         quedaban afuera del riel de años y arrancaban en otra línea.
       */}
+      {entries.length > 0 && (
+        <YearFloat groups={groups} activeLabel={activeLabel} onSelect={goToYear} />
+      )}
+
       <div className="flex gap-10">
         {entries.length > 0 && (
           <YearRail groups={groups} activeLabel={activeLabel} onSelect={goToYear} />
@@ -232,7 +236,6 @@ export default function CollectionSection() {
             playlistUrl={section.playlist_url}
             entries={entries}
             media={albumMedia}
-            title={`${collection.title} · ${section.title}`}
           />
 
           {/* La opinión va en la época y no en la colección: en una timeline lo
@@ -240,7 +243,7 @@ export default function CollectionSection() {
               épocas. */}
           <section className="w-full mt-14">
             <h2 className="font-display text-[34px] leading-none mb-5">
-              Opiniones sobre {section.title}
+              Opiniones sobre <span className="text-rock-accent">{section.title}</span>
               {reviews.length > 0 && <span className="text-gray-500"> ({reviews.length})</span>}
             </h2>
             <div className="space-y-4">

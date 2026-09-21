@@ -137,15 +137,60 @@ function NarrativeEntry({ entry, standalone = false }) {
   )
 }
 
+/**
+ * La grilla de una ficha, y en qué orden se lee en cada pantalla.
+ *
+ * En escritorio son dos columnas: la portada a la izquierda y el texto a la
+ * derecha. En el teléfono, una sola, y el orden cambia — primero la cabecera
+ * (fecha, título, artista y texto), después la portada. Arrancar por una tapa
+ * que ocupa la pantalla entera obligaba a scrollear para saber de qué disco se
+ * trataba, y en una época de veinte discos eso es veinte veces.
+ *
+ * Con `order` y no con dos copias del encabezado: es el mismo nodo cambiando
+ * de lugar, así no hay dos títulos en el HTML para un lector de pantalla.
+ */
+const GRID = 'grid gap-x-8 gap-y-5 md:grid-cols-[15rem_minmax(0,1fr)]'
+const HEAD = 'order-1 md:order-none md:col-start-2 md:row-start-1 min-w-0'
+const SIDE = 'order-2 md:order-none md:col-start-1 md:row-start-1 md:row-span-2'
+const BODY = 'order-3 md:order-none md:col-start-2 md:row-start-2 min-w-0 space-y-5'
+
 function AlbumEntry({ entry, media, people, standalone = false }) {
   const album = entry.album
   const artist = album?.artist
 
   return (
     <article className="py-10 border-b border-rock-border last:border-0">
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className={GRID}>
+        {/* Cabecera: de qué disco se trata y qué dice la colección de él */}
+        <div className={HEAD}>
+          <PreciseDate album={album} standalone={standalone} />
+          <Link
+            to={`/album/${album.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-display text-[32px] leading-[1.02] hover:text-rock-accent block"
+          >
+            {album.title}
+          </Link>
+          {artist && (
+            <Link
+              to={`/artist/${artist.slug}`}
+              className="text-gray-400 hover:text-rock-accent text-[17px] inline-block mt-1.5"
+            >
+              {artist.name}
+            </Link>
+          )}
+
+          {/*
+            El texto de la entrada pisa al del disco, no lo duplica: `body_text`
+            es lo que este disco significa EN ESTA colección, y `description` es
+            qué es el disco en general. Sin texto propio, se muestra el general.
+          */}
+          <Paragraphs text={entry.body_text || album.description} className="mt-5" />
+        </div>
+
         {/* Portada y formación */}
-        <div className="w-full md:w-60 flex-none">
+        <div className={SIDE}>
           <Cover
             to={`/album/${album.id}`}
             src={album.cover_url}
@@ -164,35 +209,8 @@ function AlbumEntry({ entry, media, people, standalone = false }) {
           </div>
         </div>
 
-        {/* Texto */}
-        <div className="flex-1 min-w-0 space-y-5">
-          <div>
-            <PreciseDate album={album} standalone={standalone} />
-            <Link
-              to={`/album/${album.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-display text-[32px] leading-[1.02] hover:text-rock-accent block"
-            >
-              {album.title}
-            </Link>
-            {artist && (
-              <Link
-                to={`/artist/${artist.slug}`}
-                className="text-gray-400 hover:text-rock-accent text-[17px] inline-block mt-1.5"
-              >
-                {artist.name}
-              </Link>
-            )}
-          </div>
-
-          {/*
-            El texto de la entrada pisa al del disco, no lo duplica: `body_text`
-            es lo que este disco significa EN ESTA colección, y `description` es
-            qué es el disco en general. Sin texto propio, se muestra el general.
-          */}
-          <Paragraphs text={entry.body_text || album.description} />
-
+        {/* Escuchar */}
+        <div className={BODY}>
           <Actions>
             <FavoriteButton entityType="album" entityId={album.id} />
             <PlatformBadges
@@ -249,40 +267,40 @@ function TrackEntry({ entry, media, standalone = false }) {
 
   return (
     <article className="py-10 border-b border-rock-border last:border-0">
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className={GRID}>
+        <div className={HEAD}>
+          {standalone && album && <PreciseDate album={album} standalone />}
+          <Link
+            to={`/track/${track.id}`}
+            className="font-display text-[32px] leading-[1.02] hover:text-rock-accent block"
+          >
+            {track.title}
+          </Link>
+          <p className="text-gray-400 text-[17px] mt-1.5">
+            {artist && (
+              <Link to={`/artist/${artist.slug}`} className="hover:text-rock-accent">
+                {artist.name}
+              </Link>
+            )}
+            {artist && album && ' · '}
+            {album && (
+              <Link to={`/album/${album.id}`} className="hover:text-rock-accent">
+                {album.title}
+              </Link>
+            )}
+          </p>
+
+          <Paragraphs text={entry.body_text} className="mt-5" />
+        </div>
+
         <Cover
           to={`/track/${track.id}`}
           src={album?.cover_url}
           alt={album?.title || track.title}
-          className="w-full md:w-44 flex-none self-start"
+          className={`${SIDE} self-start md:w-44`}
         />
 
-        <div className="flex-1 min-w-0 space-y-5">
-          <div>
-            {standalone && album && <PreciseDate album={album} standalone />}
-            <Link
-              to={`/track/${track.id}`}
-              className="font-display text-[32px] leading-[1.02] hover:text-rock-accent block"
-            >
-              {track.title}
-            </Link>
-            <p className="text-gray-400 text-[17px] mt-1.5">
-              {artist && (
-                <Link to={`/artist/${artist.slug}`} className="hover:text-rock-accent">
-                  {artist.name}
-                </Link>
-              )}
-              {artist && album && ' · '}
-              {album && (
-                <Link to={`/album/${album.id}`} className="hover:text-rock-accent">
-                  {album.title}
-                </Link>
-              )}
-            </p>
-          </div>
-
-          <Paragraphs text={entry.body_text} />
-
+        <div className={BODY}>
           <Actions>
             <FavoriteButton entityType="track" entityId={track.id} />
             <PlatformBadges
@@ -311,22 +329,25 @@ function ArtistEntry({ entry }) {
 
   return (
     <article className="py-10 border-b border-rock-border last:border-0">
-      <div className="flex flex-col md:flex-row gap-8">
-        <Cover
-          to={`/artist/${artist.slug}`}
-          src={artist.image_url}
-          alt={artist.name}
-          className="w-full md:w-60 flex-none self-start"
-        />
-
-        <div className="flex-1 min-w-0 space-y-5">
+      <div className={GRID}>
+        <div className={HEAD}>
           <Link
             to={`/artist/${artist.slug}`}
             className="font-display text-[32px] leading-[1.02] hover:text-rock-accent block"
           >
             {artist.name}
           </Link>
-          <Paragraphs text={entry.body_text} />
+          <Paragraphs text={entry.body_text} className="mt-5" />
+        </div>
+
+        <Cover
+          to={`/artist/${artist.slug}`}
+          src={artist.image_url}
+          alt={artist.name}
+          className={`${SIDE} self-start`}
+        />
+
+        <div className={BODY}>
           <Actions>
             <FavoriteButton entityType="artist" entityId={artist.id} />
             <PlatformBadges fallbacks={{ youtube: youtubeMusicSearch(artist.name) }} />

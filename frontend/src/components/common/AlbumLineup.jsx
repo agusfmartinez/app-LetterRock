@@ -2,6 +2,33 @@ import { Link } from 'react-router-dom'
 import { groupByPerson, lineupAt, roleLabel, useBandMembers } from '../../hooks/useArtistMembers'
 
 /**
+ * La cara del músico dentro de la chapita, como en la formación de la banda.
+ *
+ * Sólo tienen foto los que están en el catálogo, que son minoría: los demás
+ * llevan su inicial para que todas las chapitas midan lo mismo. Sin la foto,
+ * una fila de diez nombres iguales no dejaba reconocer a nadie de un vistazo.
+ */
+function Face({ person }) {
+  if (person.image) {
+    return (
+      <img
+        src={person.image}
+        alt=""
+        loading="lazy"
+        className="w-[18px] h-[18px] rounded-full object-cover flex-none -ml-1.5"
+      />
+    )
+  }
+
+  return (
+    <span className="w-[18px] h-[18px] rounded-full bg-rock-dark/60 grid place-items-center
+                     flex-none -ml-1.5 text-[9px] text-gray-400">
+      {person.name.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
+/**
  * La formación de la banda en el año del disco.
  *
  * No se guarda: se deduce de las fechas de cada etapa. Un músico invitado que
@@ -40,7 +67,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
             ? `${person.name} — ${person.roles.map(roleLabel).join(', ')}`
             : person.name
 
-          const className = 'tag tag-neutral'
+          const className = 'tag tag-neutral gap-1.5'
 
           return target ? (
             <Link
@@ -49,10 +76,12 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
               title={label}
               className={`${className} hover:text-rock-accent hover:border-rock-accent`}
             >
+              <Face person={person} />
               {person.name}
             </Link>
           ) : (
             <span key={person.key} title={label} className={className}>
+              <Face person={person} />
               {person.name}
             </span>
           )

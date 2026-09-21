@@ -219,7 +219,9 @@ export default function ArtistDetail() {
 
       {/* — Opiniones — */}
       <section>
-        <h2 className="font-display text-3xl mb-5">Opiniones</h2>
+        <h2 className="font-display text-3xl mb-5">
+          Opiniones sobre <span className="text-rock-accent">{artist.name}</span>
+        </h2>
         <div className="max-w-2xl space-y-4">
           <ReviewForm entityType="artist" entityId={artist.id} onSubmit={createReview} />
           {reviews.length === 0 ? (

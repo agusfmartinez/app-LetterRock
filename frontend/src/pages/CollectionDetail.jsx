@@ -275,7 +275,6 @@ export default function CollectionDetail() {
         playlistUrl={collection.playlist_url}
         entries={entries}
         media={albumMedia}
-        title={collection.title}
       />
 
       {/* Opinar sobre una lista curada es tan válido como opinar sobre un disco:
@@ -285,7 +284,9 @@ export default function CollectionDetail() {
           se lee —y por lo tanto lo que se opina— está adentro de cada una. */}
       {!isTimeline && (
         <section className="max-w-2xl mt-12">
-          <h2 className="font-display text-3xl mb-5">Opiniones</h2>
+          <h2 className="font-display text-3xl mb-5">
+            Opiniones sobre <span className="text-rock-accent">{collection.title}</span>
+          </h2>
           <div className="space-y-4">
             <ReviewForm entityType="collection" entityId={collection.id} onSubmit={createReview} />
             {reviews.length > 0 ? (
