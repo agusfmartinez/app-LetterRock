@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isFeatured, roleLabel } from '../../hooks/useArtistMembers'
 
@@ -16,13 +16,13 @@ function Avatar({ person }) {
         src={person.image}
         alt=""
         loading="lazy"
-        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
       />
     )
   }
 
   return (
-    <span className="w-8 h-8 rounded-full bg-rock-border grid place-items-center flex-none text-gray-500 text-xs">
+    <span className="w-12 h-12 rounded-full bg-rock-border grid place-items-center flex-none text-gray-500 text-base">
       {person.name.charAt(0).toUpperCase()}
     </span>
   )
@@ -44,7 +44,7 @@ function PersonRow({ person }) {
       : null
 
   return (
-    <div className="flex items-center gap-3 py-2">
+    <div className="flex items-center gap-3.5 py-2.5">
       <Avatar person={person} />
 
       <div className="flex-1 min-w-0">
@@ -78,6 +78,24 @@ function PersonRow({ person }) {
 
 export default function MemberList({ people }) {
   const [expanded, setExpanded] = useState(false)
+  const toggle = useRef(null)
+  const anchor = useRef(null)
+
+  // Al plegar, la lista se achica de golpe por arriba del botón y la página
+  // quedaba scrolleada en cualquier parte, varios músicos más abajo. Se anota
+  // dónde estaba el botón en la pantalla y, ya plegada, se corrige el scroll
+  // para que quede en el mismo lugar: bajo el dedo que lo tocó.
+  useLayoutEffect(() => {
+    if (anchor.current === null || !toggle.current) return
+    const moved = toggle.current.getBoundingClientRect().top - anchor.current
+    anchor.current = null
+    if (moved) window.scrollBy({ top: moved, behavior: 'instant' })
+  }, [expanded])
+
+  const onToggle = () => {
+    if (expanded && toggle.current) anchor.current = toggle.current.getBoundingClientRect().top
+    setExpanded(!expanded)
+  }
 
   if (!people?.length) return null
 
@@ -95,7 +113,8 @@ export default function MemberList({ people }) {
 
       {(rest > 0 || expanded) && featured.length > 0 && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          ref={toggle}
+          onClick={onToggle}
           className="text-gray-500 hover:text-rock-accent text-xs py-2"
         >
           {expanded

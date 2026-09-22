@@ -15,14 +15,14 @@ function Face({ person }) {
         src={person.image}
         alt=""
         loading="lazy"
-        className="w-[18px] h-[18px] rounded-full object-cover flex-none -ml-1.5"
+        className="w-9 h-9 rounded-full object-cover flex-none"
       />
     )
   }
 
   return (
-    <span className="w-[18px] h-[18px] rounded-full bg-rock-dark/60 grid place-items-center
-                     flex-none -ml-1.5 text-[9px] text-gray-400">
+    <span className="w-9 h-9 rounded-full bg-rock-dark/60 grid place-items-center
+                     flex-none text-[13px] text-gray-400">
       {person.name.charAt(0).toUpperCase()}
     </span>
   )
@@ -55,7 +55,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
     return (
       <div>
         <p className="font-mono text-[9.5px] tracking-[0.16em] text-gray-500 mb-2.5">INTEGRANTES</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
         {lineup.map(person => {
           const target = person.slug
             ? `/artist/${person.slug}`
@@ -67,7 +67,7 @@ export default function AlbumLineup({ artistId, year, editHref, variant = 'list'
             ? `${person.name} — ${person.roles.map(roleLabel).join(', ')}`
             : person.name
 
-          const className = 'tag tag-neutral gap-1.5'
+          const className = 'inline-flex items-center gap-2 rounded-full bg-rock-border text-gray-300 text-[13px] p-[3px] pr-4'
 
           return target ? (
             <Link

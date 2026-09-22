@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ArrowLink from '../components/common/ArrowLink'
+import { IconChevronRight } from '../components/common/Icons'
 import FavoriteButton from '../components/common/FavoriteButton'
 import RatingStars from '../components/common/RatingStars'
 import PlaylistPanel from '../components/common/PlaylistPanel'
@@ -47,6 +48,52 @@ function SectionNav({ collectionSlug, prev, next }) {
           </p>
         </Link>
       ) : <span className="flex-1 min-w-[240px] hidden sm:block" />}
+    </nav>
+  )
+}
+
+/*
+ * La misma navegación, chica, arriba de todo.
+ *
+ * Las tarjetas de abajo son para quien terminó de leer. Éstas son para quien
+ * entró, vio que no era la época que buscaba y quiere saltar sin scrollear
+ * veinte discos. Chicas a propósito: lo primero que tiene que verse al entrar
+ * es de qué época se trata, no a dónde más se puede ir.
+ *
+ * En el teléfono, sólo las flechas: "Los primeros años del rock nacional" no
+ * entra al lado del botón de volver. El nombre queda en el tooltip y en el
+ * aria-label.
+ */
+function SectionNavTop({ collectionSlug, prev, next }) {
+  if (!prev && !next) return null
+
+  const pill = 'btn btn-secondary !min-h-0 !py-1.5 !text-[12.5px] gap-1.5 !px-2.5 sm:!px-3.5'
+  const label = 'hidden sm:inline max-w-[18ch] truncate'
+
+  return (
+    <nav aria-label="Otras épocas" className="flex items-center gap-2 flex-none">
+      {prev && (
+        <Link
+          to={`/coleccion/${collectionSlug}/${prev.slug}`}
+          title={`Época anterior: ${prev.title}`}
+          aria-label={`Época anterior: ${prev.title}`}
+          className={pill}
+        >
+          <IconChevronRight size={15} className="rotate-180 flex-none" />
+          <span className={label}>{prev.title}</span>
+        </Link>
+      )}
+      {next && (
+        <Link
+          to={`/coleccion/${collectionSlug}/${next.slug}`}
+          title={`Época siguiente: ${next.title}`}
+          aria-label={`Época siguiente: ${next.title}`}
+          className={pill}
+        >
+          <span className={label}>{next.title}</span>
+          <IconChevronRight size={15} className="flex-none" />
+        </Link>
+      )}
     </nav>
   )
 }
@@ -121,7 +168,12 @@ export default function CollectionSection() {
 
   return (
     <div className="animate-fade-up">
-      <ArrowLink back to={`/coleccion/${collection.slug}`} className="mt-4">{collection.title}</ArrowLink>
+      <div className="flex items-center gap-3 mt-4">
+        <ArrowLink back to={`/coleccion/${collection.slug}`} className="min-w-0">{collection.title}</ArrowLink>
+        <div className="ml-auto">
+          <SectionNavTop collectionSlug={collection.slug} prev={prev} next={next} />
+        </div>
+      </div>
 
       {/* La misma portada que identifica a la época en la tarjeta de la
           colección. Sin esto sólo se veía en la grilla de la que venís. */}

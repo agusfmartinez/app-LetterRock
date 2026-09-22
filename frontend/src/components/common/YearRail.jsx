@@ -42,7 +42,7 @@ const IDLE = 1400
  * uno nuevo. Alcanza para cubrir la inercia del teléfono después de soltar el
  * dedo, que sigue disparando eventos: eso es el mismo gesto, no otro.
  */
-const GESTURE_GAP = 400
+const GESTURE_GAP = 600
 
 /**
  * El mismo índice en el teléfono, donde no hay una columna libre al lado.
