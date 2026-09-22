@@ -166,6 +166,8 @@ export default function CollectionSection() {
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : null
 
+  const years = [section.year_from, section.year_to].filter(Boolean).join('–')
+
   return (
     <div className="animate-fade-up">
       <div className="flex items-center gap-3 mt-4">
@@ -175,48 +177,67 @@ export default function CollectionSection() {
         </div>
       </div>
 
-      {/* La misma portada que identifica a la época en la tarjeta de la
-          colección. Sin esto sólo se veía en la grilla de la que venís. */}
-      {section.cover_url && (
-        <div className="relative mt-5 rounded-3xl overflow-hidden aspect-[16/6] bg-rock-card shadow-card">
-          <img
-            src={section.cover_url}
-            alt=""
-            className="w-full h-full object-cover washed opacity-70"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-rock-dark to-transparent" />
+      {/*
+        La cabecera de la época, igual que la de una lista o un ranking: la
+        portada de fondo con el título encima, y el subtítulo debajo del
+        título. Antes eran una imagen suelta y un encabezado aparte, con el
+        subtítulo arriba del título como si fuera un rótulo.
+      */}
+      {/* Con portada, la proporción de siempre (16:6): la imagen es la protagonista
+          de la época. Sin portada, alcanza con el alto mínimo para el título. */}
+      <div className={`relative mt-5 rounded-3xl overflow-hidden bg-rock-card shadow-card
+                      min-h-[220px] flex items-end p-7 md:p-10 ${section.cover_url ? 'aspect-[16/6]' : ''}`}>
+        {section.cover_url && (
+          <>
+            <img
+              src={section.cover_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover washed opacity-70"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-rock-dark via-rock-dark/50 to-transparent" />
+          </>
+        )}
+        <div className="relative max-w-[30ch]">
+          {years && (
+            <p className="font-mono text-[10.5px] tracking-[0.16em] text-gray-400 mb-3 uppercase">
+              {years}
+            </p>
+          )}
+          <h1 className="text-screen">{section.title}</h1>
+          {section.subtitle && (
+            <p className="text-[17px] text-gray-300 leading-snug mt-3">{section.subtitle}</p>
+          )}
         </div>
-      )}
+      </div>
 
       <header className="max-w-2xl py-8">
-        {section.subtitle && <p className="kicker mb-3">{section.subtitle}</p>}
-        <div className="flex items-baseline gap-3 flex-wrap mb-4">
-          <h1 className="text-screen">{section.title}</h1>
+        {section.intro_text && (
+          <div className="space-y-3 mb-5">
+            {section.intro_text.split(/\n+/).filter(Boolean).map((p, i) => (
+              <p key={i} className="text-[17px] leading-[1.7] text-gray-300 max-w-[62ch]">{p}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Favorito y editar en la misma fila, como en la lista y el ranking. */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <FavoriteButton entityType="collection_section" entityId={section.id} />
           {canEdit && (
             <Link
               to={`/coleccion/${collection.slug}/${section.slug}/editar`}
-              className="btn btn-secondary !min-h-0 !px-3.5 !py-1.5 !text-[12.5px]"
+              className="btn btn-secondary !min-h-0 !px-4 !py-2 !text-[13px]"
             >
               Editar
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <FavoriteButton entityType="collection_section" entityId={section.id} />
-          {average !== null && (
-            <>
-              <RatingStars value={Math.round(average)} />
-              <span className="text-gray-500 text-sm">
-                {average.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'opinión' : 'opiniones'}
-              </span>
-            </>
-          )}
-        </div>
-        {section.intro_text && (
-          <div className="mt-5 space-y-3">
-            {section.intro_text.split(/\n+/).filter(Boolean).map((p, i) => (
-              <p key={i} className="text-[17px] leading-[1.7] text-gray-300 max-w-[62ch]">{p}</p>
-            ))}
+
+        {average !== null && (
+          <div className="flex items-center gap-2 mt-3">
+            <RatingStars value={Math.round(average)} />
+            <span className="text-gray-500 text-sm">
+              {average.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+            </span>
           </div>
         )}
       </header>

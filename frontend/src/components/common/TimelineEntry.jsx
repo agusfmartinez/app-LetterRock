@@ -105,16 +105,14 @@ function TopTracks({ tracks }) {
  * Va en una tarjeta tintada y a todo el ancho para que se lea como lo que es —
  * una pausa en el recorrido, no otro disco—. Sin la caja, entre dos fichas de
  * álbum se confundía con la descripción de la de arriba.
+ *
+ * Sin rótulo: la caja tintada ya dice que es una nota. Y sin año: `entry.year`
+ * sólo sirve para ubicarla entre los discos de una timeline.
  */
-function NarrativeEntry({ entry, standalone = false }) {
+function NarrativeEntry({ entry }) {
   return (
     <article className="py-8">
       <div className="w-full rounded-2xl bg-rock-accent/[0.07] px-6 py-7 md:px-9 md:py-8">
-        <p className="font-mono text-[10px] tracking-[0.16em] text-rock-accent mb-3">
-          {/* Mismo caso que la fecha del disco: fuera de una timeline no hay
-              encabezado de año que lo diga. */}
-          NOTA{standalone && entry.year ? ` · ${entry.year}` : ''}
-        </p>
         {entry.title && (
           <h3
             className="font-display leading-[1.04] mb-5 max-w-[24ch]"
@@ -370,5 +368,5 @@ export default function TimelineEntry({ entry, media, people, standalone = false
     return <TrackEntry entry={entry} media={media} standalone={standalone} />
   }
   if (entry.entry_type === 'artist' && entry.artist) return <ArtistEntry entry={entry} />
-  return <NarrativeEntry entry={entry} standalone={standalone} />
+  return <NarrativeEntry entry={entry} />
 }

@@ -15,6 +15,7 @@ import { useCollection } from '../hooks/useCollections'
 import { SkeletonPanel } from '../components/common/States'
 import ArrowLink from '../components/common/ArrowLink'
 import RowMenu from '../components/common/RowMenu'
+import { IconChevronRight } from '../components/common/Icons'
 
 const LABEL = 'block text-[13px] text-gray-400 mb-1.5'
 
@@ -105,89 +106,125 @@ function CollectionHeader({ collection }) {
   )
 }
 
+/**
+ * Los datos de la colección.
+ *
+ * Mismo formulario que el de una época, para que editar una cosa y la otra se
+ * sienta igual: plegado por defecto con un resumen de lo que tiene, la flecha
+ * para abrirlo, y los campos en el mismo orden — título y portada arriba,
+ * playlist y descripción a todo el ancho.
+ *
+ * Plegado porque a esta pantalla se viene a cargar discos o épocas: abierto,
+ * empujaba la lista fuera de la vista.
+ */
 function CollectionFields({ collection }) {
   const { updateCollection } = useCollectionAdmin()
-  const [title, setTitle] = useState(collection.title)
-  const [description, setDescription] = useState(collection.description || '')
-  const [coverUrl, setCoverUrl] = useState(collection.cover_url || '')
-  const [playlistUrl, setPlaylistUrl] = useState(collection.playlist_url || '')
+  const initial = () => ({
+    title: collection.title,
+    description: collection.description || '',
+    cover_url: collection.cover_url || '',
+    playlist_url: collection.playlist_url || '',
+  })
+  const [form, setForm] = useState(initial)
+  const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const dirty =
-    title !== collection.title ||
-    description !== (collection.description || '') ||
-    coverUrl !== (collection.cover_url || '') ||
-    playlistUrl !== (collection.playlist_url || '')
+  const set = (key) => (e) => { setSaved(false); setForm({ ...form, [key]: e.target.value }) }
+  const setValue = (key) => (value) => { setSaved(false); setForm(f => ({ ...f, [key]: value })) }
+
+  const saved0 = initial()
+  const dirty = Object.keys(saved0).some(k => form[k] !== saved0[k])
 
   const save = () => {
     updateCollection.mutate(
       {
         id: collection.id,
-        title: title.trim(),
-        description: description.trim() || null,
-        cover_url: coverUrl.trim() || null,
-        playlist_url: playlistUrl.trim() || null,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        cover_url: form.cover_url.trim() || null,
+        playlist_url: form.playlist_url.trim() || null,
       },
       { onSuccess: () => { setError(''); setSaved(true) }, onError: e => setError(e.message) }
     )
   }
 
-  const touch = (fn) => (v) => { setSaved(false); fn(v) }
+  const summary = [
+    collection.cover_url ? 'con portada' : 'sin portada',
+    collection.playlist_url ? 'con playlist' : 'sin playlist',
+    collection.description ? 'con descripción' : 'sin descripción',
+  ].join(' · ')
 
   return (
     <div className="card space-y-4">
-      <h2 className="font-display text-xl">Datos</h2>
-
-      {/* En escritorio, el texto a la izquierda y lo que se engancha (portada
-          y playlist) a la derecha. En el teléfono, uno debajo del otro. */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-4">
-          <label className="block">
-            <span className={LABEL}>Título</span>
-            <input value={title} onChange={e => touch(setTitle)(e.target.value)} className="input" />
-          </label>
-          <label className="block">
-            <span className={LABEL}>Descripción</span>
-            <textarea
-              value={description}
-              onChange={e => touch(setDescription)(e.target.value)}
-              placeholder="De qué se trata la colección"
-              rows={4}
-              className="input"
-            />
-          </label>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-3 text-left group"
+      >
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-xl group-hover:text-rock-accent transition-colors">Datos de la colección</h2>
+          {!open && (
+            <p className="text-gray-500 text-[12.5px] mt-0.5 truncate">
+              {dirty ? <span className="text-rock-accent">Cambios sin guardar · </span> : null}
+              {summary}
+            </p>
+          )}
         </div>
+        <span className={`btn btn-secondary btn-icon flex-none transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>
+          <IconChevronRight size={16} />
+        </span>
+      </button>
 
-        <div className="space-y-4">
-          <div>
-            <span className={LABEL}>Portada</span>
-            <ImageField
-              value={coverUrl}
-              onChange={touch(setCoverUrl)}
-              folder="collections"
-              placeholder="URL de portada (opcional)"
-            />
+      {open && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 items-start">
+            <label className="block">
+              <span className={LABEL}>Título</span>
+              <input value={form.title} onChange={set('title')} className="input" />
+            </label>
+            <div>
+              <span className={LABEL}>Portada</span>
+              <ImageField
+                value={form.cover_url}
+                onChange={setValue('cover_url')}
+                folder="collections"
+                placeholder="URL de portada (opcional)"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <span className={LABEL}>Playlist</span>
+              <PlaylistField value={form.playlist_url} onChange={setValue('playlist_url')} />
+            </div>
+
+            <label className="block md:col-span-2">
+              <span className={LABEL}>Descripción</span>
+              <textarea
+                value={form.description}
+                onChange={set('description')}
+                placeholder="De qué se trata la colección. Una línea en blanco separa párrafos."
+                rows={5}
+                className="input"
+              />
+            </label>
           </div>
-          <div>
-            <span className={LABEL}>Playlist</span>
-            <PlaylistField value={playlistUrl} onChange={touch(setPlaylistUrl)} />
+
+          {error && <p className="field-error">{error}</p>}
+
+          <div className="flex items-center gap-3 justify-end border-t border-rock-border pt-4">
+            {saved && !dirty && <span className="text-xs text-gray-500">Guardado</span>}
+            <button
+              onClick={save}
+              disabled={!dirty || updateCollection.isPending}
+              className="btn btn-primary px-7"
+            >
+              Guardar
+            </button>
           </div>
-        </div>
-      </div>
-
-      {error && <p className="field-error">{error}</p>}
-
-      <div className="flex items-center gap-3 justify-end border-t border-rock-border pt-4">
-        {saved && !dirty && <span className="text-xs text-gray-500">Guardado</span>}
-        <button
-          onClick={save}
-          disabled={!dirty || updateCollection.isPending}
-          className="btn btn-primary px-7"
-        >
-          Guardar
-        </button>
-      </div>
+        </>
+      )}
     </div>
   )
 }
@@ -373,7 +410,9 @@ function SectionCard({ collection, section }) {
  * edición y buscador a la derecha— pero sobre la colección entera: una lista o
  * un ranking no se dividen en décadas, se leen de corrido.
  */
-function FlatEntriesEditor({ collection, entries, sections }) {
+// `fields`: los datos de la colección, arriba de la columna izquierda —el mismo
+// lugar que ocupan los de la época en su editor, con el panel a la derecha.
+function FlatEntriesEditor({ collection, entries, sections, fields }) {
   const [selectedId, setSelectedId] = useState(null)
   const selected = entries.find(e => e.id === selectedId) || null
   const isRanking = collection.type === 'ranking'
@@ -405,6 +444,7 @@ function FlatEntriesEditor({ collection, entries, sections }) {
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
       <div className="flex-1 min-w-0 space-y-4">
+        {fields}
         {inSections && (
           <div className="bg-rock-card rounded-xl p-3 text-sm">
             <p className="text-gray-400">
@@ -489,9 +529,11 @@ export default function AdminCollectionEdit() {
 
           <CollectionHeader collection={data.collection} />
 
-          <CollectionFields key={data.collection.id} collection={data.collection} />
-
           {data.collection.type === 'timeline' ? (
+            <>
+            {/* La timeline no tiene panel a la derecha: sus discos se cargan
+                adentro de cada época. Acá los datos van a todo el ancho. */}
+            <CollectionFields key={data.collection.id} collection={data.collection} />
             <section className="space-y-4">
               <div>
                 <h2 className="font-display text-2xl">Épocas ({data.sections.length})</h2>
@@ -508,11 +550,13 @@ export default function AdminCollectionEdit() {
               )}
               <NewSectionForm collection={data.collection} nextPosition={data.sections.length + 1} />
             </section>
+            </>
           ) : (
             <FlatEntriesEditor
               collection={data.collection}
               entries={data.entries}
               sections={data.sections}
+              fields={<CollectionFields key={data.collection.id} collection={data.collection} />}
             />
           )}
         </div>

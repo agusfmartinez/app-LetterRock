@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ArrowLink from '../components/common/ArrowLink'
 import FavoriteButton from '../components/common/FavoriteButton'
@@ -22,33 +22,67 @@ const TYPE_KICKER = { timeline: 'Timeline', list: 'Lista', ranking: 'Ranking' }
  * Las entradas de una lista o un ranking, de corrido.
  *
  * Reusa la misma tarjeta que la timeline: el disco se lee igual, con su texto,
- * su reproductor y su formación. Lo único que cambia es qué manda el orden, y en
- * un ranking, el número gigante al costado.
+ * su reproductor y su formación. Lo único que cambia es qué manda el orden.
+ *
+ * En un ranking la posición hace de lo que en la timeline hace el año: el
+ * mismo encabezado naranja con la línea, fijo arriba mientras se lee el disco.
+ * Antes el número iba en una columna al costado, que en el teléfono le robaba
+ * ancho a la portada y quedaba colgado al lado de la cabecera.
  */
 function FlatEntries({ entries, isRanking, albumMedia, membersByArtist }) {
+  const card = (entry) => (
+    <TimelineEntry
+      entry={entry}
+      media={albumMedia[entry.album?.id || entry.track?.album?.id] || null}
+      people={membersByArtist[entry.album?.artist?.id || entry.track?.album?.artist?.id] || null}
+      standalone
+    />
+  )
+
+  if (!isRanking) {
+    // Sin envoltorio por entrada: la línea entre discos es el `border-b` de
+    // cada tarjeta, que se apaga en la última (`last:`). Envuelta cada una en
+    // su div, todas eran "la última" y la lista quedaba sin separadores.
+    return <div>{entries.map(entry => <Fragment key={entry.id}>{card(entry)}</Fragment>)}</div>
+  }
+
   return (
     <div>
       {entries.map((entry, i) => (
-        <div key={entry.id} className="flex gap-4 md:gap-6">
-          {isRanking && (
-            <div className="pt-10 flex-none w-12 md:w-20 text-right">
-              <span className="font-display text-3xl md:text-5xl text-rock-accent tabular-nums">
-                {entry.rank ?? i + 1}
-              </span>
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <TimelineEntry
-              entry={entry}
-              media={albumMedia[entry.album?.id || entry.track?.album?.id] || null}
-              people={membersByArtist[entry.album?.artist?.id || entry.track?.album?.artist?.id] || null}
-              standalone
-            />
+        <section key={entry.id} aria-label={`Puesto ${entry.rank ?? i + 1}`}>
+          <div className="sticky top-[61px] z-10 bg-rock-dark/95 backdrop-blur-md py-3
+                          flex items-center gap-5">
+            <h2
+              className="font-display text-rock-accent leading-none tabular-nums"
+              style={{ fontSize: 'clamp(38px, 4.6vw, 54px)', letterSpacing: '-0.03em' }}
+            >
+              {entry.rank ?? i + 1}
+            </h2>
+            <span className="flex-1 h-px bg-rock-border" />
           </div>
-        </div>
+          {card(entry)}
+        </section>
       ))}
     </div>
   )
+}
+
+/**
+ * "12 discos", "10 temas" o, si están mezclados, "12 entradas".
+ *
+ * "Entradas" es la palabra del modelo de datos; quien lee una lista de discos
+ * cuenta discos.
+ */
+function countLabel(entries) {
+  const n = entries.length
+  const types = new Set(entries.map(e => e.entry_type))
+  const only = types.size === 1 ? [...types][0] : null
+  const [one, many] = {
+    album: ['disco', 'discos'],
+    track: ['tema', 'temas'],
+    artist: ['artista', 'artistas'],
+  }[only] || ['entrada', 'entradas']
+  return `${n} ${n === 1 ? one : many}`
 }
 
 /*
@@ -219,9 +253,7 @@ export default function CollectionDetail() {
             </span>
           )}
           {entries.length > 0 && (
-            <span className="tag tag-neutral">
-              {entries.length} {entries.length === 1 ? 'entrada' : 'entradas'}
-            </span>
+            <span className="tag tag-neutral">{countLabel(entries)}</span>
           )}
         </div>
       </div>
