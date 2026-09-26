@@ -1,6 +1,7 @@
 # 🎸 LetterRock — Letterboxd de Rock Nacional Argentino
 
 Red social para descubrir, opinar y compartir rock nacional argentino.
+![alt text](docs/img/letterrock.webp)
 
 ## Stack
 

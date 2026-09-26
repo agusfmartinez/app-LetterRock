@@ -103,6 +103,16 @@ Anotados el 2026-09-21. En este orden:
      la invitación; el candado es la base.
    - **Home con sesión tipo feed de red social**: reordenarla alrededor del
      feed de actividad y posteos.
+   - **Navegación dentro de la app, sin pestañas nuevas.** Sacar los
+     `target="_blank"` de los links internos: hoy hay 19 en 13 archivos
+     (timeline, panel de admin, "Ver la página"). Los externos —Spotify,
+     YouTube, el footer— siguen abriendo aparte: salir de la app es otra cosa.
+   - **Volver sin perderse**, como en una red social: que "volver" regrese a
+     donde estabas (con el scroll donde lo dejaste), no a una página fija.
+     Hoy los botones de volver van a una ruta armada a mano ("← Almendra"
+     siempre lleva al artista, vengas de donde vengas). Pensar: volver con el
+     historial cuando hay de dónde, y la ruta fija sólo cuando se entró por un
+     link directo; restaurar el scroll al volver.
 4. **Menú lateral desde el avatar** (arriba a la derecha): hoy no hay menú y
    las opciones quedan muy escondidas. Perfil, mis colecciones, favoritos,
    ajustes, panel para editores, salir.
